@@ -19,11 +19,13 @@ fn main() {
     parse_config();
     parse_profiles();
 
-    unsafe {
-        let profile = PROFILES_INFO.as_ref().unwrap().get_active_profile();
-        profile.cpu_settings.apply();
-        profile.cpu_core_settings.apply();
-    }
+    let profile = unsafe { PROFILES_INFO.as_ref().unwrap().get_active_profile() };
+
+    profile.cpu_settings.apply();
+    profile.cpu_core_settings.apply();
+    profile.screen_settings.apply();
+    profile.radio_settings.apply();
+    profile.network_settings.apply();
 }
 
 fn parse_config() {

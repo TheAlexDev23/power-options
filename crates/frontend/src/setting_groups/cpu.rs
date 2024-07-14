@@ -15,7 +15,7 @@ pub fn CPUGroup() -> Element {
                         "Set EPP for all"
                     }
                     Dropdown {
-                        items: vec!["default", "peformance", "balance_performance", "balance_power", "power"]
+                        items: vec!["Don't override", "default", "peformance", "balance_performance", "balance_power", "power"]
                     }
                 }
                 div {
@@ -24,7 +24,7 @@ pub fn CPUGroup() -> Element {
                         "Set governor for all"
                     }
                     Dropdown {
-                        items: vec!["performance", "powersave"]
+                        items: vec!["Don't override", "performance", "powersave"]
                     }
                 }
             }

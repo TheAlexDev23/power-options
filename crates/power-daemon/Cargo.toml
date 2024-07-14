@@ -6,5 +6,7 @@ edition = "2021"
 [dependencies]
 glob = "0.3.1"
 lazy_static = "1.5.0"
+regex = "1.10.5"
 serde = { version = "1.0.204", features = ["serde_derive"] }
+shell-words = "1.1.0"
 toml = "0.8.14"
