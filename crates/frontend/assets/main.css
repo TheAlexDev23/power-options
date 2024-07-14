@@ -1,0 +1,201 @@
+html {
+    overflow: hidden;
+}
+
+body {
+    background-color: #242424;
+    margin: 0;
+    padding: 0;
+}
+
+nav ul {
+    display: flex;
+    justify-content: space-around;
+
+    padding: 0;
+    list-style-type: none;
+}
+
+.power-modes {
+    position: absolute;
+    top: 0;
+
+    width: 100vw;
+
+    background-color: #373737;
+    border-bottom: black solid 1px;
+}
+
+.power-modes button {
+    width: 100px;
+    height: 30px;
+
+    border: none;
+    border-radius: 7px;
+
+    background-color: #656565;
+
+    color: #FDFDFF;
+    font-size: 15px;
+
+    transition: all 100ms ease-in-out;
+}
+
+.power-modes button:hover {
+    background-color: #707070;
+    cursor: pointer;
+}
+
+.power-modes button.active {
+    background-color: #B4B4B4;
+    cursor: pointer;
+}
+
+.setting-groups-selector {
+    position: absolute;
+    top: 60px;
+    height: calc(100vh - 50px);
+
+    overflow: auto;
+
+    background-color: #323232;
+
+    padding-left: 15px;
+    padding-right: 20px;
+}
+
+.setting-groups-selector ul {
+    flex-direction: column;
+}
+
+.setting-groups-selector button {
+    font-size: 17px;
+
+    border: none;
+    background-color: transparent;
+    color: white;
+}
+
+.setting-groups-selector li {
+    margin-top: 10px;
+    border-radius: 7px;
+    padding: 5px;
+    transition: all 100ms ease-in-out;
+}
+
+.setting-groups-selector li:hover {
+    background-color: #525252;
+    cursor: pointer;
+}
+
+.setting-groups-selector li.selected {
+    background-color: #525252;
+}
+
+.settings-group {
+    position: absolute;
+    top: 60px;
+    left: 185px;
+    width: calc(100vw - 185px);
+    height: calc(100vh - 60px);
+    padding: 25px;
+}
+
+input {
+    background-color: #404040;
+    border: none;
+    color: white;
+    border-radius: 5px;
+}
+
+input[type="checkbox"] {
+    appearance: none;
+
+    width: 20px;
+    height: 20px;
+
+    border: none;
+    border-radius: 3px;
+
+    background-color: #404040;
+
+    transition: all 100ms linear;
+}
+
+input[type="checkbox"]:checked {
+    background-image: url("icons/icon-checked.svg");
+    background-color: #0860F2;
+    background-size: 80%;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+form input[type="submit"] {
+    background-color: #0860F2;
+}
+
+label {
+    color: white;
+}
+
+select,
+option {
+    appearance: none;
+
+    background: #404040;
+    color: #C0C0C0;
+
+    border: none;
+    border-radius: 5px;
+
+    font-size: 15px;
+
+    padding: 3px 5px;
+}
+
+.option-group {
+    margin-bottom: 15px;
+}
+
+.option-group * {
+    margin-top: 3px;
+}
+
+.option * {
+    display: inline-block;
+}
+
+.confirm-buttons {
+    position: absolute;
+    top: calc(100vh - 100px);
+    width: calc(100% - 100px);
+    margin-right: 250px;
+    display: flex;
+    justify-content: space-around;
+    padding: 0;
+    margin: 0;
+}
+
+.confirm-buttons * {
+    margin: 0;
+    width: 200px;
+    height: 35px;
+    font-size: 15px;
+}
+
+.confirm-buttons *:hover {
+    cursor: pointer;
+}
+
+.cpu-form {
+    display: flex;
+    flex-direction: column;
+}
+
+.cpu-form label {
+    width: 220px;
+}
+
+.cpu-form select {
+    width: 170px;
+}

@@ -1,0 +1,3 @@
+[workspace]
+members = ["crates/power-daemon", "crates/frontend"]
+resolver = "2"
