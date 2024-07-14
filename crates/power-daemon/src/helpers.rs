@@ -27,6 +27,8 @@ pub fn run_command(command: &str) {
     }
 }
 
+// Runs command, returns (stdout, stdin), does not check for argument validity or program succesful completion.
+// Wil panic if: can't parse arguments, can't create command, can't run command
 pub fn run_command_with_output_unchecked(command: &str) -> (String, String) {
     let args = shell_words::split(command).unwrap();
 

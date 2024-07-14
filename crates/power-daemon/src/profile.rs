@@ -225,8 +225,6 @@ impl NetworkSettings {
             false
         };
 
-        let firmware_name = if uses_iwlmvm { "iwlmvm" } else { "iwldvm" };
-
         let firmware_parameters = if let Some(power_level) = self.power_level {
             if uses_iwlmvm {
                 &format!("power_scheme = {}", power_level)
@@ -250,6 +248,24 @@ impl NetworkSettings {
         if self.disable_wifi_7 {
             driver_parameters.push_str("disable_11be=1 ")
         }
+
+        if let Some(enable_powersave) = self.enable_power_save {
+            driver_parameters.push_str(&format!(
+                "power_save={} ",
+                if enable_powersave { "1" } else { "0" }
+            ))
+        }
+        if let Some(power_level) = self.power_level {
+            driver_parameters.push_str(&format!("power_level={power_level} "))
+        }
+        if let Some(enable_uapsd) = self.enable_uapsd {
+            driver_parameters.push_str(&format!(
+                "uapsd_disable={} ",
+                if enable_uapsd { "0" } else { "1" }
+            ))
+        }
+
+        let firmware_name = if uses_iwlmvm { "iwlmvm" } else { "iwldvm" };
 
         run_command(&format!(
             "modprobe -r {firmware_name} && modprobe -r iwlwifi && modprobe {firmware_name} {} && modprobe iwlwifi {}", firmware_parameters, driver_parameters,
