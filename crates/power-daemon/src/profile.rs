@@ -1,4 +1,7 @@
-use std::fs;
+use std::{
+    fs::{self, File},
+    io::Read,
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -31,6 +34,9 @@ pub struct Profile {
     pub screen_settings: ScreenSettings,
     pub radio_settings: RadioSettings,
     pub network_settings: NetworkSettings,
+    pub aspm_settings: ASPMSettings,
+    pub pci_settings: PCISettings,
+    pub usb_settings: USBSettings,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -285,6 +291,139 @@ impl NetworkSettings {
                     run_command(&format!("ifconfig {} down", &name_str))
                 }
             }
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+
+pub struct ASPMSettings {
+    pub mode: Option<String>,
+}
+
+impl ASPMSettings {
+    pub fn apply(&self) {
+        if let Some(ref mode) = self.mode {
+            run_command(&format!(
+                "echo {} > /sys/module/pcie_aspm/parameters/policy",
+                mode
+            ));
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub enum WhiteBlackList<T> {
+    Whitelist(Vec<T>),
+    Blacklist(Vec<T>),
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct PCISettings {
+    pub enable_power_management: bool,
+    // whitelist or blacklist to exlude/include
+    pub whiteblacklist: Option<WhiteBlackList<String>>,
+}
+
+impl PCISettings {
+    pub fn apply(&self) {
+        let entries = fs::read_dir("/sys/bus/pci/devices")
+            .expect("Could not read pci devices sysfs directory");
+
+        for entry in entries {
+            let entry = entry.expect("Could not read usb device sysfs entry");
+            let path = entry.path();
+
+            if let Some(ref whiteblacklist) = self.whiteblacklist {
+                if let WhiteBlackList::Whitelist(ref list) = whiteblacklist {
+                    if !list
+                        .iter()
+                        .find(|item| *item == path.file_name().unwrap().to_str().unwrap())
+                        .is_none()
+                    {
+                        continue;
+                    }
+                } else if let WhiteBlackList::Blacklist(ref list) = whiteblacklist {
+                    if list
+                        .iter()
+                        .find(|item| *item == path.file_name().unwrap().to_str().unwrap())
+                        .is_none()
+                    {
+                        continue;
+                    }
+                }
+            }
+
+            run_command(&format!(
+                "echo {} > {}",
+                if self.enable_power_management {
+                    "auto"
+                } else {
+                    "on"
+                },
+                path.join("power/control").to_str().unwrap()
+            ))
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct USBSettings {
+    pub enable_power_management: bool,
+    // whitelist or blacklist to exlude/include (vendor id, product id)
+    pub whiteblacklist: Option<WhiteBlackList<(String, String)>>,
+}
+
+impl USBSettings {
+    pub fn apply(&self) {
+        let entries = fs::read_dir("/sys/bus/usb/devices")
+            .expect("Could not read usb devices sysfs directory");
+
+        'outer: for entry in entries {
+            let entry = entry.expect("Could not read usb device sysfs entry");
+            let path = entry.path();
+
+            let mut vendor_id = String::new();
+            File::open(path.join("idVendor"))
+                .expect("Could not read usb device vendor id")
+                .read_to_string(&mut vendor_id)
+                .expect("Could not read usb device vendor id");
+
+            let mut product_id = String::new();
+            File::open(path.join("idProduct"))
+                .expect("Could not read usb device product id")
+                .read_to_string(&mut product_id)
+                .expect("Could not read usb device product id");
+
+            if let Some(ref whiteblacklist) = self.whiteblacklist {
+                if let WhiteBlackList::Whitelist(ref list) = whiteblacklist {
+                    let mut found = false;
+                    for item in list.iter() {
+                        if vendor_id == item.0 && product_id == item.1 {
+                            found = true;
+                        }
+                    }
+                    if !found {
+                        continue;
+                    }
+                } else if let WhiteBlackList::Blacklist(ref list) = whiteblacklist {
+                    for item in list.iter() {
+                        if vendor_id == item.0 && product_id == item.1 {
+                            continue 'outer;
+                        }
+                    }
+                }
+            }
+
+            run_command(&format!(
+                "echo {} > {}",
+                if self.enable_power_management {
+                    "auto"
+                } else {
+                    "on"
+                },
+                path.join("power/control").to_str().unwrap()
+            ))
         }
     }
 }

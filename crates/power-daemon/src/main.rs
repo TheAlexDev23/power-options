@@ -26,6 +26,9 @@ fn main() {
     profile.screen_settings.apply();
     profile.radio_settings.apply();
     profile.network_settings.apply();
+    profile.aspm_settings.apply();
+    profile.pci_settings.apply();
+    profile.usb_settings.apply();
 }
 
 fn parse_config() {

@@ -74,7 +74,7 @@ fn SettingGroupsNav(current_tab: Signal<u8>) -> Element {
         ("icons/navbar-screen.svg", "Screen"),
         ("icons/navbar-radio.svg", "Radio devices"),
         ("icons/navbar-network.svg", "Network"),
-        ("icons/navbar-aspm.svg", "PCI and ASPM"),
+        ("icons/navbar-aspm.svg", "PCI"),
         ("icons/navbar-usb.svg", "USB"),
         ("icons/navbar-sata.svg", "SATA"),
     ];
