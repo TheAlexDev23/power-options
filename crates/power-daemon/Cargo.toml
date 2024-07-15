@@ -4,9 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+colored = "2.1.0"
 glob = "0.3.1"
 lazy_static = "1.5.0"
+log = "0.4.22"
+nix = { version = "0.29.0", features = ["user"] }
 regex = "1.10.5"
 serde = { version = "1.0.204", features = ["serde_derive"] }
-shell-words = "1.1.0"
 toml = "0.8.14"

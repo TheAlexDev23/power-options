@@ -1,9 +1,10 @@
 use std::{
     fs::{self, File},
-    io::{Read, Write},
-    process::{Child, Command, Stdio},
+    io::Read,
+    process::{Command, Stdio},
 };
 
+use log::trace;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -46,44 +47,27 @@ impl<T: PartialEq> WhiteBlackList<T> {
     }
 }
 
-static mut SHELL_INSTANCE: Option<Child> = None;
-
 pub fn run_command(command: &str) {
-    unsafe {
-        if SHELL_INSTANCE.is_none() {
-            SHELL_INSTANCE = Some(
-                Command::new("sh")
-                    .stdin(Stdio::piped())
-                    .spawn()
-                    .expect("Could not spawn shell process"),
-            );
-        }
-
-        let stdin = SHELL_INSTANCE
-            .as_mut()
-            .unwrap()
-            .stdin
-            .as_mut()
-            .expect("Could not open attached shell process stdin");
-
-        writeln!(stdin, "{command}").expect("Could not write to attached shell stdin");
-    }
+    trace!("running: {command}");
+    Command::new("zsh")
+        .args(["-c", command])
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .spawn()
+        .expect("Could not run command")
+        .wait()
+        .expect("Could not wait command");
 }
 
 // Runs command, returns (stdout, stdin), does not check for argument validity or program succesful completion.
 // Wil panic if: can't parse arguments, can't create command, can't run command
-pub fn run_command_with_output_unchecked(command: &str) -> (String, String) {
-    let args = shell_words::split(command).unwrap();
+pub fn run_command_with_output(command: &str) -> (String, String) {
+    trace!("getting output of: {command}");
 
-    let mut args_iter = args.iter();
+    let mut command_proc = Command::new("sh");
+    command_proc.args(["-c", command]);
 
-    let mut command_proc = Command::new(args_iter.next().unwrap());
-
-    for arg in args_iter {
-        command_proc.arg(arg);
-    }
-
-    let result = command_proc.output().unwrap();
+    let result = command_proc.output().expect("Could not run command");
 
     let stdout = String::from_utf8_lossy(&result.stdout).to_string();
     let stderr = String::from_utf8_lossy(&result.stderr).to_string();
@@ -96,7 +80,12 @@ pub fn run_command_with_output_unchecked(command: &str) -> (String, String) {
 pub fn file_content_to_list(path: &str) -> Vec<String> {
     let mut file = File::open(path).expect("Could not open file");
     let mut content = String::new();
-    file.read_to_string(&mut content);
+    file.read_to_string(&mut content)
+        .expect("Could not read file");
+
+    content = content.strip_suffix("\n").unwrap_or(&content).to_string();
+    content = content.strip_suffix(" ").unwrap_or(&content).to_string();
+
     content.split(" ").map(String::from).collect()
 }
 
@@ -105,7 +94,12 @@ pub fn file_content_to_list(path: &str) -> Vec<String> {
 pub fn file_content_to_u32(path: &str) -> u32 {
     let mut file = File::open(path).expect("Could not open file");
     let mut content = String::new();
-    file.read_to_string(&mut content);
+    file.read_to_string(&mut content)
+        .expect("Could not read file");
+
+    content = content.strip_suffix("\n").unwrap_or(&content).to_string();
+    content = content.strip_suffix(" ").unwrap_or(&content).to_string();
+
     content.parse().unwrap()
 }
 
@@ -118,7 +112,12 @@ pub fn file_content_to_bool(path: &str) -> bool {
 
     let mut file = File::open(path).expect("Could not open file");
     let mut content = String::new();
-    file.read_to_string(&mut content);
+    file.read_to_string(&mut content)
+        .expect("Could not read file");
+
+    content = content.strip_suffix("\n").unwrap_or(&content).to_string();
+    content = content.strip_suffix(" ").unwrap_or(&content).to_string();
+
     if content == "1" {
         true
     } else {

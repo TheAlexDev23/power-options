@@ -3,12 +3,10 @@ use std::{
     io::Read,
 };
 
+use log::debug;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    helpers::{run_command, run_command_with_output_unchecked, WhiteBlackList},
-    systeminfo::{CPUFreqDriver, SystemInfo},
-};
+use crate::helpers::{run_command, run_command_with_output, WhiteBlackList};
 
 pub fn find_profile_index_by_name(vec: &Vec<Profile>, name: &str) -> usize {
     vec.iter().position(|p| p.profile_name == name).unwrap()
@@ -69,6 +67,8 @@ pub struct CPUSettings {
 
 impl CPUSettings {
     pub fn apply(&self) {
+        debug!("Applying CPU settings");
+
         if let Some(ref mode) = self.mode {
             if fs::metadata("/sys/devices/system/cpu/intel_pstate").is_ok() {
                 run_command(&format!(
@@ -181,6 +181,8 @@ pub struct CoreSetting {
 
 impl CPUCoreSettings {
     pub fn apply(&self) {
+        debug!("Applying CPU core settings");
+
         if self.cores.is_none() {
             return;
         }
@@ -225,6 +227,8 @@ pub struct ScreenSettings {
 
 impl ScreenSettings {
     pub fn apply(&self) {
+        debug!("Applying screen settings");
+
         if let Some(ref resolution) = self.resolution {
             run_command(&format!("xrandr --mode {}", resolution));
         }
@@ -246,6 +250,8 @@ pub struct RadioSettings {
 
 impl RadioSettings {
     pub fn apply(&self) {
+        debug!("Applying radio settings");
+
         if let Some(wifi) = self.block_wifi {
             run_command(&format!(
                 "rfkill {} wifi",
@@ -289,11 +295,13 @@ pub struct NetworkSettings {
 
 impl NetworkSettings {
     pub fn apply(&self) {
+        debug!("Applying network settings");
+
         if self.disable_ethernet {
             Self::disable_all_ethernet_cards()
         }
 
-        let uses_iwlmvm = if run_command_with_output_unchecked("lsmod | grep '^iwl.vm'")
+        let uses_iwlmvm = if run_command_with_output("lsmod | grep '^iwl.vm'")
             .0
             .contains("iwlmvm")
         {
@@ -302,11 +310,11 @@ impl NetworkSettings {
             false
         };
 
-        let firmware_parameters = if let Some(power_level) = self.power_level {
+        let firmware_parameters = if let Some(power_scheme) = self.power_scheme {
             if uses_iwlmvm {
-                &format!("power_scheme = {}", power_level)
-            } else if power_level == 3 {
-                "force_cam = 0"
+                &format!("power_scheme={}", power_scheme)
+            } else if power_scheme == 3 {
+                "force_cam=0"
             } else {
                 ""
             }
@@ -374,6 +382,8 @@ pub struct ASPMSettings {
 
 impl ASPMSettings {
     pub fn apply(&self) {
+        debug!("Applying ASPM settings");
+
         if let Some(ref mode) = self.mode {
             run_command(&format!(
                 "echo {} > /sys/module/pcie_aspm/parameters/policy",
@@ -393,6 +403,8 @@ pub struct PCISettings {
 
 impl PCISettings {
     pub fn apply(&self) {
+        debug!("Applying PCI settings");
+
         let entries = fs::read_dir("/sys/bus/pci/devices").expect("Could not read sysfs directory");
 
         for entry in entries {
@@ -431,11 +443,18 @@ pub struct USBSettings {
 
 impl USBSettings {
     pub fn apply(&self) {
+        debug!("Applying USB settings");
+
         let entries = fs::read_dir("/sys/bus/usb/devices").expect("Could not read sysfs directory");
 
         for entry in entries {
             let entry = entry.expect("Could not read sysfs entry");
             let path = entry.path();
+
+            // Those are hubs I believe, and they do not have product/vendor info so we skip them
+            if path.file_name().unwrap().to_string_lossy().contains(":") {
+                continue;
+            }
 
             let mut vendor_id = String::new();
             File::open(path.join("idVendor"))
@@ -473,6 +492,8 @@ pub struct SATASettings {
 
 impl SATASettings {
     pub fn apply(&self) {
+        debug!("Applying SATA settings");
+
         if self.active_link_pm_policy.is_none() {
             return;
         }
@@ -515,6 +536,8 @@ pub struct KernelSettings {
 
 impl KernelSettings {
     pub fn apply(&self) {
+        debug!("Applying Kernel settings");
+
         if let Some(disable_wd) = self.disable_nmi_watchdog {
             run_command(&format!(
                 "echo {} > /proc/sys/kernel/nmi_watchdog",

@@ -1,7 +1,10 @@
 use std::fs;
 
+use log::debug;
+
 use crate::helpers::{file_content_to_bool, file_content_to_list, file_content_to_u32};
 
+#[derive(Debug)]
 pub struct SystemInfo {
     pub cpu_info: CPUInfo,
     pub aspm_info: ASPMInfo,
@@ -9,6 +12,7 @@ pub struct SystemInfo {
 
 impl SystemInfo {
     pub fn obtain() -> SystemInfo {
+        debug!("Obtaining system info");
         SystemInfo {
             cpu_info: CPUInfo::obtain(),
             aspm_info: ASPMInfo::obtain(),
@@ -16,13 +20,14 @@ impl SystemInfo {
     }
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum CPUFreqDriver {
     Intel,
     Amd,
     Other,
 }
 
+#[derive(Debug)]
 pub struct CPUInfo {
     pub driver: CPUFreqDriver,
 
@@ -56,27 +61,27 @@ impl CPUInfo {
             driver: driver.clone(),
 
             governors: file_content_to_list(
-                "/sys/devices/system/cpu0/cpufreq/scaling_available_governors",
+                "/sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors",
             ),
             energy_performance_preferences: file_content_to_list(
-                "/sys/devices/system/cpu0/cpufreq/energy_performance_available_preferences",
+                "/sys/devices/system/cpu/cpu0/cpufreq/energy_performance_available_preferences",
             ),
 
             scaling_cur_frequency: file_content_to_u32(
-                "/sys/devices/sytem/cpu0/cpufreq/scaling_cur_freq",
+                "/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq",
             ),
             scaling_min_frequency: file_content_to_u32(
-                "/sys/devices/sytem/cpu0/cpufreq/scaling_min_freq",
+                "/sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq",
             ),
             scaling_max_frequency: file_content_to_u32(
-                "/sys/devices/sytem/cpu0/cpufreq/scaling_max_freq",
+                "/sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq",
             ),
 
             total_min_frequency: file_content_to_u32(
-                "/sys/devices/sytem/cpu0/cpufreq/cpuinfo_min_freq",
+                "/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_min_freq",
             ),
             total_max_frequency: file_content_to_u32(
-                "/sys/devices/sytem/cpu0/cpufreq/cpuinfo_max_freq",
+                "/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq",
             ),
 
             boost: match driver {
@@ -99,6 +104,7 @@ impl CPUInfo {
     }
 }
 
+#[derive(Debug)]
 pub struct ASPMInfo {
     pub supported_modes: Option<Vec<String>>,
 }
@@ -106,12 +112,11 @@ pub struct ASPMInfo {
 impl ASPMInfo {
     pub fn obtain() -> ASPMInfo {
         ASPMInfo {
-            supported_modes: if fs::metadata("path/sys/module/pcie_aspm/parameters/policy").is_err()
-            {
+            supported_modes: if fs::metadata("/sys/module/pcie_aspm/parameters/policy").is_err() {
                 None
             } else {
                 Some(
-                    file_content_to_list("path/sys/module/pcie_aspm/parameters/policy")
+                    file_content_to_list("/sys/module/pcie_aspm/parameters/policy")
                         .into_iter()
                         .map(|s| {
                             // The current enabled mode is written [mode_name] when reading the sysfs entry

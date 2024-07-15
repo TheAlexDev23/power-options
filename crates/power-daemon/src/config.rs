@@ -14,7 +14,7 @@ impl Config {
     pub fn create_default() -> Config {
         Config {
             ac_profile: String::from("performance"),
-            bat_profile: String::from("powersave"),
+            bat_profile: String::from("superpowersave"),
 
             profile_override: None,
 

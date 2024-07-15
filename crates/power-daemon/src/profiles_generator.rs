@@ -6,6 +6,7 @@ use crate::{
     systeminfo::{CPUFreqDriver, SystemInfo},
 };
 
+#[derive(Debug)]
 pub enum DefaultProfileType {
     Superpowersave,
     Powersave,
