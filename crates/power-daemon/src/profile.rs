@@ -357,9 +357,6 @@ pub struct PCISettings {
     pub enable_power_management: bool,
     // whitelist or blacklist device to exlude/include.
     // Should be the name of the device under /sys/bus/pci/devices excluding the beggining 0000:
-    // For devices outside of whitelist or inside of blacklist, it won't mean that their PM options would
-    // be set to the opposite of `enable_power_management`, they will just be ignored and their current
-    // pm settings
     pub whiteblacklist: Option<WhiteBlackList<String>>,
 }
 
