@@ -313,15 +313,53 @@ impl ASPMSettings {
 }
 
 #[derive(Deserialize, Serialize, Debug)]
-pub enum WhiteBlackList<T> {
+pub enum WhiteBlackList<T: PartialEq> {
     Whitelist(Vec<T>),
     Blacklist(Vec<T>),
+}
+
+impl<T: PartialEq> WhiteBlackList<T> {
+    // If enable = true and no list provided, will return true for all items
+    // If enable = true, will return true for items in whitelist or only for items outside of blacklist
+    // If enable = false, will return false for all items
+    pub fn should_enable_item(whiteblacklist: &Option<Self>, item: &T, enable: bool) -> bool {
+        if !enable {
+            // Always disable
+            false
+        } else if let Some(ref whiteblacklist) = whiteblacklist {
+            match whiteblacklist {
+                // If on whitelist always enable, otherwise always disable
+                WhiteBlackList::Whitelist(ref list) => {
+                    if list.iter().any(|i| i == item) {
+                        true
+                    } else {
+                        false
+                    }
+                }
+                // If on blacklist always disable, otherwise always enable
+                WhiteBlackList::Blacklist(ref list) => {
+                    if list.iter().any(|i| i == item) {
+                        false
+                    } else {
+                        true
+                    }
+                }
+            }
+        } else {
+            // No list, always enable
+            true
+        }
+    }
 }
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct PCISettings {
     pub enable_power_management: bool,
-    // whitelist or blacklist device to exlude/include. Should be the name of the device under /sys/bus/pci/devices excluding the beggining 0000:
+    // whitelist or blacklist device to exlude/include.
+    // Should be the name of the device under /sys/bus/pci/devices excluding the beggining 0000:
+    // For devices outside of whitelist or inside of blacklist, it won't mean that their PM options would
+    // be set to the opposite of `enable_power_management`, they will just be ignored and their current
+    // pm settings
     pub whiteblacklist: Option<WhiteBlackList<String>>,
 }
 
@@ -342,25 +380,15 @@ impl PCISettings {
                 .strip_prefix("0000:")
                 .unwrap();
 
-            if let Some(ref whiteblacklist) = self.whiteblacklist {
-                if let WhiteBlackList::Whitelist(ref list) = whiteblacklist {
-                    if !list.iter().any(|item| *item == device_name) {
-                        continue;
-                    }
-                } else if let WhiteBlackList::Blacklist(ref list) = whiteblacklist {
-                    if list.iter().any(|item| *item == device_name) {
-                        continue;
-                    }
-                }
-            }
+            let enable_pm = WhiteBlackList::should_enable_item(
+                &self.whiteblacklist,
+                &device_name.to_string(),
+                self.enable_power_management,
+            );
 
             run_command(&format!(
                 "echo {} > {}",
-                if self.enable_power_management {
-                    "auto"
-                } else {
-                    "on"
-                },
+                if enable_pm { "auto" } else { "on" },
                 path.join("power/control").to_str().unwrap()
             ))
         }
@@ -379,7 +407,7 @@ impl USBSettings {
         let entries = fs::read_dir("/sys/bus/usb/devices")
             .expect("Could not read usb devices sysfs directory");
 
-        'outer: for entry in entries {
+        for entry in entries {
             let entry = entry.expect("Could not read usb device sysfs entry");
             let path = entry.path();
 
@@ -395,33 +423,15 @@ impl USBSettings {
                 .read_to_string(&mut product_id)
                 .expect("Could not read usb device product id");
 
-            if let Some(ref whiteblacklist) = self.whiteblacklist {
-                if let WhiteBlackList::Whitelist(ref list) = whiteblacklist {
-                    let mut found = false;
-                    for item in list.iter() {
-                        if vendor_id == item.0 && product_id == item.1 {
-                            found = true;
-                        }
-                    }
-                    if !found {
-                        continue;
-                    }
-                } else if let WhiteBlackList::Blacklist(ref list) = whiteblacklist {
-                    for item in list.iter() {
-                        if vendor_id == item.0 && product_id == item.1 {
-                            continue 'outer;
-                        }
-                    }
-                }
-            }
+            let enable_pm = WhiteBlackList::should_enable_item(
+                &self.whiteblacklist,
+                &(vendor_id, product_id),
+                self.enable_power_management,
+            );
 
             run_command(&format!(
                 "echo {} > {}",
-                if self.enable_power_management {
-                    "auto"
-                } else {
-                    "on"
-                },
+                if enable_pm { "auto" } else { "on" },
                 path.join("power/control").to_str().unwrap()
             ))
         }
