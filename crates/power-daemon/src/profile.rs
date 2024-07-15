@@ -43,18 +43,46 @@ pub struct Profile {
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct CPUSettings {
+    // Scaling driver mode (active, passive) for intel_pstate (active, passive, guided) for amd_pstate
+    pub mode: Option<String>,
+
     pub governor: Option<String>,
     pub energy_performance_preference: Option<String>,
 
     pub min_frequency: Option<u32>,
     pub max_frequency: Option<u32>,
 
+    // Minimum allowed P-state scalling as percentage
+    // Only supported on intel
+    pub min_perf_pct: Option<u8>,
+    // Maximum allowed P-state scalling as percentage
+    // Only supported on intel
+    pub max_perf_pct: Option<u8>,
+
     // Performance boosting cpu tech. intel turbo or amd precission boost
-    pub boost: bool,
+    pub boost: Option<bool>,
+    // Won't work in passive mode
+    pub hwp_dynamic_boost: Option<bool>,
 }
 
 impl CPUSettings {
     pub fn apply(&self) {
+        if let Some(ref mode) = self.mode {
+            if fs::metadata("/sys/devices/system/cpu/intel_pstate").is_ok() {
+                run_command(&format!(
+                    "echo {} > /sys/devices/system/cpu/intel_pstate/status",
+                    mode
+                ))
+            } else if fs::metadata("/sys/devices/system/cpu/amd_pstate").is_ok() {
+                run_command(&format!(
+                    "echo {} > /sys/devices/system/cpu/amd_pstate/status",
+                    mode
+                ))
+            } else {
+                // Inform about unsupported driver
+            }
+        }
+
         if let Some(ref epp) = self.energy_performance_preference {
             run_command(&format!(
                 "echo {} > /sys/devices/system/cpu/cpu*/cpufreq/energy_performance_preference",
@@ -69,18 +97,22 @@ impl CPUSettings {
             ));
         }
 
-        if fs::metadata("/sys/devices/system/cpu/intel_pstate/no_turbo").is_ok() {
-            // using intel turbo
-            run_command(&format!(
-                "echo {} > /sys/devices/system/cpu/intel_pstate/no_turbo",
-                if self.boost { '0' } else { '1' }
-            ));
-        } else if fs::metadata("/sys/devices/system/cpu/cpufreq/boost").is_ok() {
-            // using amd precission boost
-            run_command(&format!(
-                "echo {} > /sys/devices/system/cpu/cpufreq/boost",
-                if self.boost { '1' } else { '0' }
-            ));
+        if let Some(boost) = self.boost {
+            if fs::metadata("/sys/devices/system/cpu/intel_pstate/no_turbo").is_ok() {
+                // using intel turbo
+                run_command(&format!(
+                    "echo {} > /sys/devices/system/cpu/intel_pstate/no_turbo",
+                    if boost { '0' } else { '1' }
+                ));
+            } else if fs::metadata("/sys/devices/system/cpu/cpufreq/boost").is_ok() {
+                // using amd precission boost
+                run_command(&format!(
+                    "echo {} > /sys/devices/system/cpu/cpufreq/boost",
+                    if boost { '1' } else { '0' }
+                ));
+            } else {
+                // Inform about unsupported driver
+            }
         }
 
         if let Some(min_frequency) = self.min_frequency {
@@ -94,6 +126,39 @@ impl CPUSettings {
                 "echo {} > /sys/devices/system/cpu/cpu*/cpufreq/scaling_max_freq",
                 max_frequency
             ));
+        }
+
+        if let Some(min_perf_pct) = self.min_perf_pct {
+            if fs::metadata("/sys/devices/system/cpu/intel_pstate").is_ok() {
+                run_command(&format!(
+                    "echo {} > /sys/devices/system/cpu/intel_pstate/min_perf_pct",
+                    min_perf_pct
+                ))
+            } else {
+                // Inform about unsupported driver
+            }
+        }
+        if let Some(max_perf_pct) = self.max_perf_pct {
+            if fs::metadata("/sys/devices/system/cpu/intel_pstate").is_ok() {
+                run_command(&format!(
+                    "echo {} > /sys/devices/system/cpu/intel_pstate/max_perf_pct",
+                    max_perf_pct
+                ))
+            } else {
+                // Inform about unsupported driver
+            }
+        }
+
+        if let Some(hwp_dynamic_boost) = self.hwp_dynamic_boost {
+            let value = if hwp_dynamic_boost { "1" } else { "0" };
+            if fs::metadata("/sys/devices/system/cpu/intel_pstate").is_ok() {
+                run_command(&format!(
+                    "echo {} > /sys/devices/system/cpu/intel_pstate/hwp_dynamic_boost",
+                    value
+                ))
+            } else {
+                // Inform about unsupported driver
+            }
         }
     }
 }
