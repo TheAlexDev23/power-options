@@ -9,3 +9,25 @@ pub struct Config {
 
     pub profiles: Vec<String>,
 }
+
+impl Config {
+    pub fn create_default() -> Config {
+        Config {
+            ac_profile: String::from("performance"),
+            bat_profile: String::from("powersave"),
+
+            profile_override: None,
+
+            profiles: vec![
+                "superpowersave",
+                "powersave",
+                "balanced",
+                "performance",
+                "ultraperformance",
+            ]
+            .into_iter()
+            .map(String::from)
+            .collect(),
+        }
+    }
+}

@@ -5,7 +5,10 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::helpers::{run_command, run_command_with_output_unchecked, WhiteBlackList};
+use crate::{
+    helpers::{run_command, run_command_with_output_unchecked, WhiteBlackList},
+    systeminfo::{CPUFreqDriver, SystemInfo},
+};
 
 pub fn find_profile_index_by_name(vec: &Vec<Profile>, name: &str) -> usize {
     vec.iter().position(|p| p.profile_name == name).unwrap()
@@ -40,7 +43,6 @@ pub struct Profile {
     pub sata_settings: SATASettings,
     pub kernel_settings: KernelSettings,
 }
-
 #[derive(Deserialize, Serialize, Debug)]
 pub struct CPUSettings {
     // Scaling driver mode (active, passive) for intel_pstate (active, passive, guided) for amd_pstate
@@ -61,7 +63,7 @@ pub struct CPUSettings {
 
     // Performance boosting cpu tech. intel turbo or amd precission boost
     pub boost: Option<bool>,
-    // Won't work in passive mode
+    // Intel only. Won't work in passive mode
     pub hwp_dynamic_boost: Option<bool>,
 }
 
@@ -163,7 +165,7 @@ impl CPUSettings {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Default)]
 pub struct CPUCoreSettings {
     pub cores: Option<Vec<CoreSetting>>,
 }
@@ -214,7 +216,7 @@ impl CPUCoreSettings {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Default)]
 pub struct ScreenSettings {
     pub resolution: Option<String>,
     pub refresh_rate: Option<String>,

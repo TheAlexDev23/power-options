@@ -1,11 +1,19 @@
-use std::{fs, io::Read, path::PathBuf};
+use std::{
+    fs::{self, File},
+    io::{Read, Write},
+    path::{Path, PathBuf},
+    str::FromStr,
+};
 
 use config::Config;
 use profile::{Profile, ProfilesInfo};
+use profiles_generator::DefaultProfileType;
+use systeminfo::SystemInfo;
 
 mod config;
 mod helpers;
 mod profile;
+mod profiles_generator;
 mod systeminfo;
 
 const CONFIG_FILE: &str = "/etc/power-daemon/config.toml";
@@ -16,6 +24,29 @@ static mut CONFIG: Option<Config> = None;
 static mut PROFILES_INFO: Option<ProfilesInfo> = None;
 
 fn main() {
+    if fs::metadata("/etc/power-daemon").is_err() {
+        fs::create_dir_all("/etc/power-daemon").expect("Could not create config directory");
+    }
+    if fs::metadata(CONFIG_FILE).is_err() {
+        let mut config = File::create(CONFIG_FILE).expect("Could not create config file");
+        config
+            .write(
+                &toml::to_string_pretty(&Config::create_default())
+                    .unwrap()
+                    .as_bytes(),
+            )
+            .expect("Could not write to config");
+    }
+    if fs::metadata(PROFILES_DIRECTORY).is_err() {
+        fs::create_dir_all(PROFILES_DIRECTORY).expect("Could not create profiles directory");
+        let system_info = SystemInfo::obtain();
+        create_profile_file(DefaultProfileType::Superpowersave, &system_info);
+        create_profile_file(DefaultProfileType::Powersave, &system_info);
+        create_profile_file(DefaultProfileType::Balanced, &system_info);
+        create_profile_file(DefaultProfileType::Performance, &system_info);
+        create_profile_file(DefaultProfileType::Ultraperformance, &system_info);
+    }
+
     parse_config();
     parse_profiles();
 
@@ -31,6 +62,26 @@ fn main() {
     profile.usb_settings.apply();
     profile.sata_settings.apply();
     profile.kernel_settings.apply();
+}
+
+fn create_profile_file(profile_type: DefaultProfileType, system_info: &SystemInfo) {
+    let name = match profile_type {
+        DefaultProfileType::Superpowersave => "superpowersave",
+        DefaultProfileType::Powersave => "powersave",
+        DefaultProfileType::Balanced => "balanced",
+        DefaultProfileType::Performance => "performance",
+        DefaultProfileType::Ultraperformance => "ultraperformance",
+    };
+
+    let profile = profiles_generator::create_default(name, profile_type, system_info);
+
+    let path = PathBuf::from_str(PROFILES_DIRECTORY)
+        .unwrap()
+        .join(format!("{name}.toml"));
+
+    let mut file = File::create(path).expect("Could not create profile file");
+    file.write(toml::to_string_pretty(&profile).unwrap().as_bytes())
+        .expect("Could not write to profile file");
 }
 
 fn parse_config() {

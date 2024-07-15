@@ -1,5 +1,6 @@
 use std::{
-    io::Write,
+    fs::{self, File},
+    io::{Read, Write},
     process::{Child, Command, Stdio},
 };
 
@@ -88,4 +89,39 @@ pub fn run_command_with_output_unchecked(command: &str) -> (String, String) {
     let stderr = String::from_utf8_lossy(&result.stderr).to_string();
 
     (stdout, stderr)
+}
+
+// Will read file at path and return a list of elements with space as the separator
+// Will panic with io errors
+pub fn file_content_to_list(path: &str) -> Vec<String> {
+    let mut file = File::open(path).expect("Could not open file");
+    let mut content = String::new();
+    file.read_to_string(&mut content);
+    content.split(" ").map(String::from).collect()
+}
+
+// Will read file at path and parse u32
+// Will panic with io errors and parsing errors
+pub fn file_content_to_u32(path: &str) -> u32 {
+    let mut file = File::open(path).expect("Could not open file");
+    let mut content = String::new();
+    file.read_to_string(&mut content);
+    content.parse().unwrap()
+}
+
+// Will read file at path and return true if content is 1 false otherwise
+// Will return false if the file doesn't exist but will panic if some io issues appear
+pub fn file_content_to_bool(path: &str) -> bool {
+    if fs::metadata(path).is_err() {
+        return false;
+    }
+
+    let mut file = File::open(path).expect("Could not open file");
+    let mut content = String::new();
+    file.read_to_string(&mut content);
+    if content == "1" {
+        true
+    } else {
+        false
+    }
 }
