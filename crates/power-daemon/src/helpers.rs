@@ -3,6 +3,48 @@ use std::{
     process::{Child, Command, Stdio},
 };
 
+use serde::{Deserialize, Serialize};
+
+#[derive(Deserialize, Serialize, Debug)]
+pub enum WhiteBlackList<T: PartialEq> {
+    Whitelist(Vec<T>),
+    Blacklist(Vec<T>),
+}
+
+impl<T: PartialEq> WhiteBlackList<T> {
+    // If enable = true and no list provided, will return true for all items
+    // If enable = true, will return true for items in whitelist or only for items outside of blacklist
+    // If enable = false, will return false for all items
+    pub fn should_enable_item(whiteblacklist: &Option<Self>, item: &T, enable: bool) -> bool {
+        if !enable {
+            // Always disable
+            false
+        } else if let Some(ref whiteblacklist) = whiteblacklist {
+            match whiteblacklist {
+                // If on whitelist always enable, otherwise always disable
+                WhiteBlackList::Whitelist(ref list) => {
+                    if list.iter().any(|i| i == item) {
+                        true
+                    } else {
+                        false
+                    }
+                }
+                // If on blacklist always disable, otherwise always enable
+                WhiteBlackList::Blacklist(ref list) => {
+                    if list.iter().any(|i| i == item) {
+                        false
+                    } else {
+                        true
+                    }
+                }
+            }
+        } else {
+            // No list, always enable
+            true
+        }
+    }
+}
+
 static mut SHELL_INSTANCE: Option<Child> = None;
 
 pub fn run_command(command: &str) {

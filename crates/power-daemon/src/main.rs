@@ -29,6 +29,7 @@ fn main() {
     profile.aspm_settings.apply();
     profile.pci_settings.apply();
     profile.usb_settings.apply();
+    profile.sata_settings.apply();
 }
 
 fn parse_config() {

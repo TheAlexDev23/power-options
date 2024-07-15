@@ -5,7 +5,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::helpers::{run_command, run_command_with_output_unchecked};
+use crate::helpers::{run_command, run_command_with_output_unchecked, WhiteBlackList};
 
 pub fn find_profile_index_by_name(vec: &Vec<Profile>, name: &str) -> usize {
     vec.iter().position(|p| p.profile_name == name).unwrap()
@@ -37,6 +37,7 @@ pub struct Profile {
     pub aspm_settings: ASPMSettings,
     pub pci_settings: PCISettings,
     pub usb_settings: USBSettings,
+    pub sata_settings: SATASettings,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -67,12 +68,14 @@ impl CPUSettings {
             ));
         }
 
-        if fs::metadata("/sys/devices/system/cpu/intel_pstate").is_ok() {
+        if fs::metadata("/sys/devices/system/cpu/intel_pstate/no_turbo").is_ok() {
+            // using intel turbo
             run_command(&format!(
                 "echo {} > /sys/devices/system/cpu/intel_pstate/no_turbo",
                 if self.boost { '0' } else { '1' }
             ));
         } else if fs::metadata("/sys/devices/system/cpu/cpufreq/boost").is_ok() {
+            // using amd precission boost
             run_command(&format!(
                 "echo {} > /sys/devices/system/cpu/cpufreq/boost",
                 if self.boost { '1' } else { '0' }
@@ -313,46 +316,6 @@ impl ASPMSettings {
 }
 
 #[derive(Deserialize, Serialize, Debug)]
-pub enum WhiteBlackList<T: PartialEq> {
-    Whitelist(Vec<T>),
-    Blacklist(Vec<T>),
-}
-
-impl<T: PartialEq> WhiteBlackList<T> {
-    // If enable = true and no list provided, will return true for all items
-    // If enable = true, will return true for items in whitelist or only for items outside of blacklist
-    // If enable = false, will return false for all items
-    pub fn should_enable_item(whiteblacklist: &Option<Self>, item: &T, enable: bool) -> bool {
-        if !enable {
-            // Always disable
-            false
-        } else if let Some(ref whiteblacklist) = whiteblacklist {
-            match whiteblacklist {
-                // If on whitelist always enable, otherwise always disable
-                WhiteBlackList::Whitelist(ref list) => {
-                    if list.iter().any(|i| i == item) {
-                        true
-                    } else {
-                        false
-                    }
-                }
-                // If on blacklist always disable, otherwise always enable
-                WhiteBlackList::Blacklist(ref list) => {
-                    if list.iter().any(|i| i == item) {
-                        false
-                    } else {
-                        true
-                    }
-                }
-            }
-        } else {
-            // No list, always enable
-            true
-        }
-    }
-}
-
-#[derive(Deserialize, Serialize, Debug)]
 pub struct PCISettings {
     pub enable_power_management: bool,
     // whitelist or blacklist device to exlude/include.
@@ -362,11 +325,10 @@ pub struct PCISettings {
 
 impl PCISettings {
     pub fn apply(&self) {
-        let entries = fs::read_dir("/sys/bus/pci/devices")
-            .expect("Could not read pci devices sysfs directory");
+        let entries = fs::read_dir("/sys/bus/pci/devices").expect("Could not read sysfs directory");
 
         for entry in entries {
-            let entry = entry.expect("Could not read usb device sysfs entry");
+            let entry = entry.expect("Could not read sysfs entry");
             let path = entry.path();
 
             let device_name = path
@@ -386,7 +348,7 @@ impl PCISettings {
             run_command(&format!(
                 "echo {} > {}",
                 if enable_pm { "auto" } else { "on" },
-                path.join("power/control").to_str().unwrap()
+                path.join("power/control").display()
             ))
         }
     }
@@ -401,11 +363,10 @@ pub struct USBSettings {
 
 impl USBSettings {
     pub fn apply(&self) {
-        let entries = fs::read_dir("/sys/bus/usb/devices")
-            .expect("Could not read usb devices sysfs directory");
+        let entries = fs::read_dir("/sys/bus/usb/devices").expect("Could not read sysfs directory");
 
         for entry in entries {
-            let entry = entry.expect("Could not read usb device sysfs entry");
+            let entry = entry.expect("Could not read sysfs entry");
             let path = entry.path();
 
             let mut vendor_id = String::new();
@@ -429,7 +390,49 @@ impl USBSettings {
             run_command(&format!(
                 "echo {} > {}",
                 if enable_pm { "auto" } else { "on" },
-                path.join("power/control").to_str().unwrap()
+                path.join("power/control").display()
+            ))
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct SATASettings {
+    pub active_link_pm_policy: Option<String>,
+    // whitelist or blacklist to exclude/include should be the name just as in /sys/class/scsi_host/{name}
+    pub whiteblacklist: Option<WhiteBlackList<String>>,
+}
+
+impl SATASettings {
+    pub fn apply(&self) {
+        if self.active_link_pm_policy.is_none() {
+            return;
+        }
+
+        let pm_policy = self.active_link_pm_policy.as_ref().unwrap();
+
+        let entries =
+            fs::read_dir("/sys/class/scsi_host/").expect("Could not read sysfs directory");
+
+        for entry in entries {
+            let entry = entry.expect("Could not read sysfs entry");
+            let path = entry.path();
+
+            let enable_pm = WhiteBlackList::should_enable_item(
+                &self.whiteblacklist,
+                &path.file_name().unwrap().to_string_lossy().to_string(),
+                // setting max_performance means disabling power saving
+                pm_policy != "max_performance",
+            );
+
+            run_command(&format!(
+                "echo {} > {}",
+                if enable_pm {
+                    pm_policy
+                } else {
+                    "max_performance"
+                },
+                path.join("link_power_management_policy").display()
             ))
         }
     }
