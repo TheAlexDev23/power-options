@@ -1,5 +1,5 @@
 use std::{
-    io::{Read, Write},
+    io::Write,
     process::{Child, Command, Stdio},
 };
 

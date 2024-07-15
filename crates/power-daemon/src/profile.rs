@@ -321,7 +321,7 @@ pub enum WhiteBlackList<T> {
 #[derive(Deserialize, Serialize, Debug)]
 pub struct PCISettings {
     pub enable_power_management: bool,
-    // whitelist or blacklist to exlude/include
+    // whitelist or blacklist device to exlude/include. Should be the name of the device under /sys/bus/pci/devices excluding the beggining 0000:
     pub whiteblacklist: Option<WhiteBlackList<String>>,
 }
 
@@ -334,21 +334,21 @@ impl PCISettings {
             let entry = entry.expect("Could not read usb device sysfs entry");
             let path = entry.path();
 
+            let device_name = path
+                .file_name()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .strip_prefix("0000:")
+                .unwrap();
+
             if let Some(ref whiteblacklist) = self.whiteblacklist {
                 if let WhiteBlackList::Whitelist(ref list) = whiteblacklist {
-                    if !list
-                        .iter()
-                        .find(|item| *item == path.file_name().unwrap().to_str().unwrap())
-                        .is_none()
-                    {
+                    if !list.iter().any(|item| *item == device_name) {
                         continue;
                     }
                 } else if let WhiteBlackList::Blacklist(ref list) = whiteblacklist {
-                    if list
-                        .iter()
-                        .find(|item| *item == path.file_name().unwrap().to_str().unwrap())
-                        .is_none()
-                    {
+                    if list.iter().any(|item| *item == device_name) {
                         continue;
                     }
                 }
