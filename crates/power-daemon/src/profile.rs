@@ -38,6 +38,7 @@ pub struct Profile {
     pub pci_settings: PCISettings,
     pub usb_settings: USBSettings,
     pub sata_settings: SATASettings,
+    pub kernel_settings: KernelSettings,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -434,6 +435,33 @@ impl SATASettings {
                 },
                 path.join("link_power_management_policy").display()
             ))
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct KernelSettings {
+    pub disable_nmi_watchdog: Option<bool>,
+    pub vm_writeback: Option<u32>,
+    pub laptop_mode: Option<u32>,
+}
+
+impl KernelSettings {
+    pub fn apply(&self) {
+        if let Some(disable_wd) = self.disable_nmi_watchdog {
+            run_command(&format!(
+                "echo {} > /proc/sys/kernel/nmi_watchdog",
+                if disable_wd { "0" } else { "1" }
+            ))
+        }
+        if let Some(vm_writeback) = self.vm_writeback {
+            run_command(&format!(
+                "echo {} > /proc/sys/vm/dirty_writeback_centisecs",
+                vm_writeback * 100
+            ))
+        }
+        if let Some(lm) = self.laptop_mode {
+            run_command(&format!("echo {} > /proc/sys/vm/laptop_mode", lm))
         }
     }
 }

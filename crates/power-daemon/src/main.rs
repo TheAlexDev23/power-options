@@ -30,6 +30,7 @@ fn main() {
     profile.pci_settings.apply();
     profile.usb_settings.apply();
     profile.sata_settings.apply();
+    profile.kernel_settings.apply();
 }
 
 fn parse_config() {
