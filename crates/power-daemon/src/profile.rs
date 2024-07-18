@@ -3,7 +3,7 @@ use std::{
     io::Read,
 };
 
-use log::debug;
+use log::{debug, error};
 use serde::{Deserialize, Serialize};
 
 use crate::helpers::{run_command, run_command_with_output, WhiteBlackList};
@@ -11,8 +11,11 @@ use crate::helpers::{run_command, run_command_with_output, WhiteBlackList};
 pub fn find_profile_index_by_name(vec: &Vec<Profile>, name: &str) -> usize {
     vec.iter().position(|p| p.profile_name == name).unwrap()
 }
+pub fn try_find_profile_index_by_name(vec: &Vec<Profile>, name: &str) -> Option<usize> {
+    vec.iter().position(|p| p.profile_name == name)
+}
 
-#[derive(Default)]
+#[derive(Serialize, Deserialize, Default, Clone)]
 pub struct ProfilesInfo {
     pub active_profile: usize,
     pub profiles: Vec<Profile>,
@@ -24,9 +27,8 @@ impl ProfilesInfo {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub struct Profile {
-    #[serde(skip_deserializing, skip_serializing)]
     /// Name of the profile. Should match the profile filename
     pub profile_name: String,
 
@@ -41,7 +43,25 @@ pub struct Profile {
     pub sata_settings: SATASettings,
     pub kernel_settings: KernelSettings,
 }
-#[derive(Deserialize, Serialize, Debug)]
+
+impl Profile {
+    pub fn apply_all(&self) {
+        debug!("Applying profile: {}", self.profile_name);
+
+        self.cpu_settings.apply();
+        self.cpu_core_settings.apply();
+        self.screen_settings.apply();
+        self.radio_settings.apply();
+        self.network_settings.apply();
+        self.aspm_settings.apply();
+        self.pci_settings.apply();
+        self.usb_settings.apply();
+        self.sata_settings.apply();
+        self.kernel_settings.apply();
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub struct CPUSettings {
     // Scaling driver mode (active, passive) for intel_pstate (active, passive, guided) for amd_pstate
     pub mode: Option<String>,
@@ -81,7 +101,7 @@ impl CPUSettings {
                     mode
                 ))
             } else {
-                // Inform about unsupported driver
+                error!("Scaling driver operation mode is only supported on intel_pstate and amd_pstate drivers.")
             }
         }
 
@@ -113,7 +133,7 @@ impl CPUSettings {
                     if boost { '1' } else { '0' }
                 ));
             } else {
-                // Inform about unsupported driver
+                error!("CPU boost technology is unsupported by your CPU/driver")
             }
         }
 
@@ -137,7 +157,7 @@ impl CPUSettings {
                     min_perf_pct
                 ))
             } else {
-                // Inform about unsupported driver
+                error!("Min/Max scaling perf percentage is currently only supported for intel CPUs with intel_pstate");
             }
         }
         if let Some(max_perf_pct) = self.max_perf_pct {
@@ -147,7 +167,7 @@ impl CPUSettings {
                     max_perf_pct
                 ))
             } else {
-                // Inform about unsupported driver
+                error!("Min/Max scaling perf percentage is currently only supported for intel CPUs with intel_pstate");
             }
         }
 
@@ -159,18 +179,18 @@ impl CPUSettings {
                     value
                 ))
             } else {
-                // Inform about unsupported driver
+                error!("HWP dynamic boost is currently only supported for intel CPUs with intel_pstate");
             }
         }
     }
 }
 
-#[derive(Deserialize, Serialize, Debug, Default)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Default)]
 pub struct CPUCoreSettings {
     pub cores: Option<Vec<CoreSetting>>,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub struct CoreSetting {
     pub cpu_id: u32,
     pub max_frequency: Option<u32>,
@@ -218,7 +238,7 @@ impl CPUCoreSettings {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug, Default)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Default)]
 pub struct ScreenSettings {
     pub resolution: Option<String>,
     pub refresh_rate: Option<String>,
@@ -241,7 +261,7 @@ impl ScreenSettings {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub struct RadioSettings {
     pub block_wifi: Option<bool>,
     pub block_nfc: Option<bool>,
@@ -273,7 +293,7 @@ impl RadioSettings {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub struct NetworkSettings {
     pub disable_ethernet: bool,
 
@@ -374,7 +394,7 @@ impl NetworkSettings {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 
 pub struct ASPMSettings {
     pub mode: Option<String>,
@@ -393,7 +413,7 @@ impl ASPMSettings {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub struct PCISettings {
     pub enable_power_management: bool,
     // whitelist or blacklist device to exlude/include.
@@ -434,7 +454,7 @@ impl PCISettings {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub struct USBSettings {
     pub enable_power_management: bool,
     // whitelist or blacklist to exlude/include (vendor id, product id)
@@ -483,7 +503,7 @@ impl USBSettings {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub struct SATASettings {
     pub active_link_pm_policy: Option<String>,
     // whitelist or blacklist to exclude/include should be the name just as in /sys/class/scsi_host/{name}
@@ -527,7 +547,7 @@ impl SATASettings {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub struct KernelSettings {
     pub disable_nmi_watchdog: Option<bool>,
     pub vm_writeback: Option<u32>,

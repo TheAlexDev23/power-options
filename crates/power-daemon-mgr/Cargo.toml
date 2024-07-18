@@ -1,0 +1,14 @@
+[package]
+name = "power-daemon-mgr"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.5.9", features = ["derive"] }
+log = "0.4.22"
+nix = { version = "0.29.0", features = ["user"] }
+power-daemon = { path = "../power-daemon", features = ["server"] }
+proctitle = "0.1.1"
+toml = "0.8.15"
+colored = "2.1.0"
+tokio = { version = "1.38.1", features = ["full"] }

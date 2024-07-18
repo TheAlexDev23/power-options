@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Serialize, Debug)]
+use crate::profiles_generator::DefaultProfileType;
+
+#[derive(Deserialize, Serialize, Debug, PartialEq)]
 pub struct Config {
     pub ac_profile: String,
     pub bat_profile: String,
@@ -13,21 +15,12 @@ pub struct Config {
 impl Config {
     pub fn create_default() -> Config {
         Config {
-            ac_profile: String::from("performance"),
-            bat_profile: String::from("superpowersave"),
+            ac_profile: DefaultProfileType::Performance.get_name(),
+            bat_profile: DefaultProfileType::Powersave.get_name(),
 
             profile_override: None,
 
-            profiles: vec![
-                "superpowersave",
-                "powersave",
-                "balanced",
-                "performance",
-                "ultraperformance",
-            ]
-            .into_iter()
-            .map(String::from)
-            .collect(),
+            profiles: DefaultProfileType::get_name_of_all(),
         }
     }
 }

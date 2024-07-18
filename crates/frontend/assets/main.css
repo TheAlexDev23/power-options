@@ -16,18 +16,36 @@ nav ul {
     list-style-type: none;
 }
 
-.power-modes {
+.hidden {
+    display: none !important;
+}
+
+.optin-toggle {
+    display: inline-flex !important;
+}
+
+.optin-toggle * {
+    margin-right: 7px;
+}
+
+.optin-toggle input[type="checkbox"] {
+    width: 27px;
+    height: 27px;
+}
+
+.profiles {
     position: absolute;
     top: 0;
 
     width: 100vw;
+    height: 60px;
 
     background-color: #373737;
     border-bottom: black solid 1px;
 }
 
-.power-modes button {
-    width: 100px;
+.profiles button {
+    max-width: 220px;
     height: 30px;
 
     border: none;
@@ -38,15 +56,18 @@ nav ul {
     color: #FDFDFF;
     font-size: 15px;
 
+    overflow: hidden;
+    text-overflow: ellipsis;
+
     transition: all 100ms ease-in-out;
 }
 
-.power-modes button:hover {
+.profiles button:hover {
     background-color: #707070;
     cursor: pointer;
 }
 
-.power-modes button.active {
+.profiles button.active {
     background-color: #B4B4B4;
     cursor: pointer;
 }
@@ -151,6 +172,8 @@ option {
     font-size: 15px;
 
     padding: 3px 5px;
+
+    height: 28px;
 }
 
 .option-group {

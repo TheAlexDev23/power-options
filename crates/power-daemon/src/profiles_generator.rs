@@ -1,3 +1,7 @@
+use std::{fs::File, io::Write, path::PathBuf, str::FromStr};
+
+use log::{debug, trace};
+
 use crate::{
     profile::{
         ASPMSettings, CPUCoreSettings, CPUSettings, KernelSettings, NetworkSettings, PCISettings,
@@ -15,7 +19,55 @@ pub enum DefaultProfileType {
     Ultraperformance,
 }
 
-pub fn create_default(
+impl DefaultProfileType {
+    pub fn get_name_of_all() -> Vec<String> {
+        use DefaultProfileType::*;
+        vec![
+            Superpowersave.get_name(),
+            Powersave.get_name(),
+            Balanced.get_name(),
+            Performance.get_name(),
+            Ultraperformance.get_name(),
+        ]
+    }
+
+    pub fn get_name(&self) -> String {
+        String::from(match self {
+            DefaultProfileType::Superpowersave => "Powersave++",
+            DefaultProfileType::Powersave => "Powersave",
+            DefaultProfileType::Balanced => "Balanced",
+            DefaultProfileType::Performance => "Performance",
+            DefaultProfileType::Ultraperformance => "Performance++",
+        })
+    }
+}
+
+pub fn create_profile_file(
+    directory_path: &str,
+    profile_type: DefaultProfileType,
+    system_info: &SystemInfo,
+) {
+    debug!("Creating profile of type {profile_type:?}");
+
+    let name = profile_type.get_name();
+
+    let profile = create_default(&name, profile_type, system_info);
+
+    let path = PathBuf::from_str(directory_path)
+        .unwrap()
+        .join(format!("{name}.toml"));
+
+    let mut file = File::create(path).expect("Could not create profile file");
+
+    let content = toml::to_string_pretty(&profile).unwrap();
+
+    trace!("{content}");
+
+    file.write(content.as_bytes())
+        .expect("Could not write to profile file");
+}
+
+fn create_default(
     name: &str,
     profile_type: DefaultProfileType,
     system_info: &SystemInfo,

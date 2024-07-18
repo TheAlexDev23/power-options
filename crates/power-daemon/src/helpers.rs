@@ -7,7 +7,7 @@ use std::{
 use log::trace;
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub enum WhiteBlackList<T: PartialEq> {
     Whitelist(Vec<T>),
     Blacklist(Vec<T>),
@@ -123,4 +123,26 @@ pub fn file_content_to_bool(path: &str) -> bool {
     } else {
         false
     }
+}
+
+pub fn system_on_ac() -> bool {
+    let mut ac_online = false;
+
+    if let Ok(entries) = fs::read_dir("/sys/class/power_supply/") {
+        for entry in entries {
+            if let Ok(entry) = entry {
+                let entry_path = entry.path();
+                if let Ok(type_path) = fs::read_to_string(entry_path.join("type")) {
+                    let supply_type = type_path.trim();
+                    if supply_type == "Mains" {
+                        if let Ok(ac_status) = fs::read_to_string(entry_path.join("online")) {
+                            ac_online = ac_status.trim() == "1";
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    ac_online
 }
