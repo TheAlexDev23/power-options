@@ -15,7 +15,7 @@ pub fn try_find_profile_index_by_name(vec: &Vec<Profile>, name: &str) -> Option<
     vec.iter().position(|p| p.profile_name == name)
 }
 
-#[derive(Serialize, Deserialize, Default, Clone)]
+#[derive(Serialize, Deserialize, Default, Clone, Debug)]
 pub struct ProfilesInfo {
     pub active_profile: usize,
     pub profiles: Vec<Profile>,

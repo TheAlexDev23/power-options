@@ -90,7 +90,7 @@ async fn daemon() {
     handle.update();
     let _com_server = CommunicationServer::new(handle)
         .await
-        .expect("Could not intialize communications server");
+        .expect("Could not initialize communications server");
 
     loop {
         std::thread::park();

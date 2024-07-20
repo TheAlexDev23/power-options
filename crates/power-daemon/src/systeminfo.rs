@@ -3,7 +3,9 @@ use std::fs;
 use log::debug;
 use serde::{Deserialize, Serialize};
 
-use crate::helpers::{file_content_to_bool, file_content_to_list, file_content_to_u32};
+use crate::helpers::{
+    file_content_to_bool, file_content_to_list, file_content_to_string, file_content_to_u32,
+};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SystemInfo {
@@ -32,9 +34,10 @@ pub enum CPUFreqDriver {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CPUInfo {
     pub driver: CPUFreqDriver,
+    pub active_mode: Option<bool>,
 
-    pub governors: Vec<String>,
-    pub energy_performance_preferences: Vec<String>,
+    pub has_epp: bool,
+    pub has_perf_pct_scaling: bool,
 
     pub scaling_min_frequency: u32,
     pub scaling_max_frequency: u32,
@@ -60,15 +63,37 @@ impl CPUInfo {
             CPUFreqDriver::Other
         };
 
+        let well_known_driver_name = if driver == CPUFreqDriver::Intel {
+            "intel_pstate"
+        } else if driver == CPUFreqDriver::Amd {
+            "amd_pstate"
+        } else {
+            ""
+        };
+
         CPUInfo {
             driver: driver.clone(),
 
-            governors: file_content_to_list(
-                "/sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors",
-            ),
-            energy_performance_preferences: file_content_to_list(
+            active_mode: if driver == CPUFreqDriver::Other {
+                None
+            } else {
+                Some(
+                    file_content_to_string(&format!(
+                        "/sys/devices/system/cpu/{}/status",
+                        well_known_driver_name
+                    )) == "active",
+                )
+            },
+
+            has_epp: fs::metadata(
                 "/sys/devices/system/cpu/cpu0/cpufreq/energy_performance_available_preferences",
-            ),
+            )
+            .is_ok(),
+            // This feature is exclusive to intel, but there's no need to check whether we use intel because if we do not then the file won't exist anyways
+            has_perf_pct_scaling: fs::metadata(&format!(
+                "/sys/devices/system/cpu/intel_pstate/min_perf_pct"
+            ))
+            .is_ok(),
 
             scaling_min_frequency: file_content_to_u32(
                 "/sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq",

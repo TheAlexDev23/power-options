@@ -41,8 +41,6 @@ impl Instance {
     }
 
     pub fn set_profile_override(&mut self, name: String) {
-        debug!("Setting profile override: {name}");
-
         self.temporary_override = Some(name);
         self.update();
     }

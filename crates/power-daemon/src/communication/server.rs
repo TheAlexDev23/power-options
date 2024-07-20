@@ -37,14 +37,17 @@ struct SystemInfoServer;
 #[interface(name = "io.github.thealexdev23.power_daemon.system_info")]
 impl SystemInfoServer {
     async fn get_system_info(&self) -> String {
+        debug!("DBUS: returning system info");
         serde_json::to_string(&SystemInfo::obtain()).unwrap()
     }
 
     async fn get_cpu_info(&self) -> String {
+        debug!("DBUS: returning cpu info");
         serde_json::to_string(&CPUInfo::obtain()).unwrap()
     }
 
     async fn get_aspm_info(&self) -> String {
+        debug!("DBUS: returning aspm info");
         serde_json::to_string(&ASPMInfo::obtain()).unwrap()
     }
 }
@@ -56,13 +59,16 @@ struct ControlServer {
 #[interface(name = "io.github.thealexdev23.power_daemon.control")]
 impl ControlServer {
     async fn get_config(&self) -> String {
+        debug!("DBUS: returning config...");
         serde_json::to_string(&self.instance.lock().await.config).unwrap()
     }
     async fn get_profiles_info(&self) -> String {
+        debug!("DBUS: returning profiles info...");
         serde_json::to_string(&self.instance.lock().await.profiles_info).unwrap()
     }
 
     async fn update_config(&mut self, updated: String) {
+        debug!("DBUS: updating config...");
         match serde_json::from_str(&updated) {
             Ok(conf) => {
                 self.instance.get_mut().update_config(conf);
@@ -74,6 +80,7 @@ impl ControlServer {
     }
 
     async fn update_profile(&mut self, idx: u32, updated: String) {
+        debug!("DBUS: updating profile...");
         match serde_json::from_str(&updated) {
             Ok(profile) => {
                 self.instance
@@ -87,11 +94,13 @@ impl ControlServer {
     }
 
     async fn set_profile_override(&mut self, profile_name: String) {
+        debug!("DBUS: setting profile override...");
         self.instance
             .get_mut()
             .try_set_profile_override(profile_name);
     }
     async fn remove_profile_override(&mut self) {
+        debug!("DBUS: removing profile override...");
         self.instance.get_mut().remove_profile_override();
     }
 }

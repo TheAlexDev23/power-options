@@ -8,6 +8,23 @@ body {
     padding: 0;
 }
 
+button,
+select,
+option,
+input {
+    background-color: #525252;
+    color: white;
+}
+
+button:disabled,
+select:disabled,
+option:disabled,
+input:disabled {
+    background-color: #404040;
+    color: #C0C0C0;
+}
+
+
 nav ul {
     display: flex;
     justify-content: space-around;
@@ -16,21 +33,58 @@ nav ul {
     list-style-type: none;
 }
 
+input {
+    border: none;
+    border-radius: 5px;
+}
+
+input[type="checkbox"] {
+    appearance: none;
+
+    width: 20px;
+    height: 20px;
+
+    border: none;
+    border-radius: 3px;
+
+    transition: all 100ms linear;
+}
+
+input[type="checkbox"]:checked {
+    background-image: url("icons/icon-checked.svg");
+    background-color: #0860F2;
+    background-size: 80%;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+input[type="checkbox"]:checked:disabled {
+    background-color: #404040;
+}
+
+form input[type="submit"] {
+    background-color: #0860F2;
+}
+
+label {
+    color: white;
+}
+
+select,
+option {
+    appearance: none;
+
+    border: none;
+    border-radius: 5px;
+
+    font-size: 15px;
+
+    padding: 3px 5px;
+}
+
+
 .hidden {
     display: none !important;
-}
-
-.optin-toggle {
-    display: inline-flex !important;
-}
-
-.optin-toggle * {
-    margin-right: 7px;
-}
-
-.optin-toggle input[type="checkbox"] {
-    width: 27px;
-    height: 27px;
 }
 
 .profiles {
@@ -51,9 +105,6 @@ nav ul {
     border: none;
     border-radius: 7px;
 
-    background-color: #656565;
-
-    color: #FDFDFF;
     font-size: 15px;
 
     overflow: hidden;
@@ -69,6 +120,7 @@ nav ul {
 
 .profiles button.active {
     background-color: #B4B4B4;
+    color: black;
     cursor: pointer;
 }
 
@@ -101,7 +153,6 @@ nav ul {
     margin-top: 10px;
     border-radius: 7px;
     padding: 5px;
-    transition: all 100ms ease-in-out;
 }
 
 .setting-groups-selector li:hover {
@@ -115,84 +166,44 @@ nav ul {
 
 .settings-group {
     position: absolute;
+    overflow-x: auto;
     top: 60px;
-    left: 185px;
-    width: calc(100vw - 185px);
+    left: 180px;
+    width: calc(100vw - 230px);
     height: calc(100vh - 60px);
     padding: 25px;
-}
-
-input {
-    background-color: #404040;
-    border: none;
-    color: white;
-    border-radius: 5px;
-}
-
-input[type="checkbox"] {
-    appearance: none;
-
-    width: 20px;
-    height: 20px;
-
-    border: none;
-    border-radius: 3px;
-
-    background-color: #404040;
-
-    transition: all 100ms linear;
-}
-
-input[type="checkbox"]:checked {
-    background-image: url("icons/icon-checked.svg");
-    background-color: #0860F2;
-    background-size: 80%;
-    background-repeat: no-repeat;
-    background-position: center;
-}
-
-form input[type="submit"] {
-    background-color: #0860F2;
-}
-
-label {
-    color: white;
-}
-
-select,
-option {
-    appearance: none;
-
-    background: #404040;
-    color: #C0C0C0;
-
-    border: none;
-    border-radius: 5px;
-
-    font-size: 15px;
-
-    padding: 3px 5px;
-
-    height: 28px;
 }
 
 .option-group {
     margin-bottom: 15px;
 }
 
-.option-group * {
-    margin-top: 3px;
+.option {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    background-color: #323232;
+    border-radius: 15px;
+
+    padding: 12px;
+    margin-bottom: 5px;
 }
 
-.option * {
-    display: inline-block;
+/* Label + toggle groups */
+.option div {
+    display: flex;
+    align-items: center;
+}
+
+.option div * {
+    margin-right: 10px;
 }
 
 .confirm-buttons {
-    position: absolute;
-    top: calc(100vh - 100px);
-    width: calc(100% - 100px);
-    margin-right: 250px;
+    position: sticky;
+    bottom: 30px;
+    width: 100%;
     display: flex;
     justify-content: space-around;
     padding: 0;
@@ -210,15 +221,15 @@ option {
     cursor: pointer;
 }
 
-.cpu-form {
+#cpu-form {
     display: flex;
     flex-direction: column;
 }
 
-.cpu-form label {
-    width: 220px;
+#cpu-form label {
+    width: 300px;
 }
 
-.cpu-form select {
+#cpu-form select {
     width: 170px;
 }

@@ -101,7 +101,7 @@ pub async fn control_service(
 ) {
     let control_client = ControlClient::new()
         .await
-        .expect("Could not intialize control client");
+        .expect("Could not initialize control client");
 
     loop {
         if let Ok(Some(msg)) = rx.try_next() {

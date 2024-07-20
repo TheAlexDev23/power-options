@@ -3,13 +3,29 @@ use std::time::Duration;
 use dioxus::prelude::*;
 
 #[component]
-pub fn Dropdown(items: Vec<String>, selected: String) -> Element {
+pub fn Dropdown(
+    name: String,
+    items: Vec<String>,
+    selected: String,
+    disabled: Option<bool>,
+    onchange: Option<EventHandler<String>>,
+) -> Element {
     rsx! {
         select {
-            value: selected,
+            onchange: move |f| {
+                if let Some(handler) = onchange {
+                    handler.call(f.value());
+                }
+            },
+            name: name,
+            disabled: if disabled.is_some() {
+                disabled.unwrap()
+            } else {
+                false
+            },
             for value in items {
                 option {
-                    value: value,
+                    initial_selected: selected == value,
                     "{value}"
                 }
             }
@@ -18,47 +34,15 @@ pub fn Dropdown(items: Vec<String>, selected: String) -> Element {
 }
 
 #[component]
-pub fn OptInToggle(overwriting: bool, value: bool) -> Element {
-    let mut overwriting = use_signal(|| overwriting);
-    let mut value = use_signal(|| value);
-
+pub fn Toggle(mut val: Signal<bool>, initial: bool) -> Element {
+    val.set(initial);
     rsx! {
-        div {
-            class: "optin-toggle",
-            select {
-                onchange: move |e| {
-                    overwriting.set(e.value() == "overwrite");
-                },
-
-                value: if overwriting.cloned() {
-                    "overwrite"
-                } else {
-                    "no overwrite"
-                },
-
-                option {
-                    value: "overwrite",
-                    "Overwrite"
-                }
-                option {
-                    value: "no overwrite",
-                    "Don't overwrite"
-                }
-            }
-            input {
-                onchange: move |e| {
-                    value.set(e.value() == "true")
-                },
-
-                class: if !overwriting.cloned() {
-                    "hidden"
-                } else {
-                    ""
-                },
-
-                checked: value,
-                r#type: "checkbox"
-            }
+        input {
+            onchange: move |e| {
+                val.set(e.value() == "true");
+            },
+            initial_checked: initial,
+            r#type: "checkbox"
         }
     }
 }

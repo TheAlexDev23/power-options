@@ -75,6 +75,18 @@ pub fn run_command_with_output(command: &str) -> (String, String) {
     (stdout, stderr)
 }
 
+pub fn file_content_to_string(path: &str) -> String {
+    let mut file = File::open(path).expect("Could not open file");
+    let mut content = String::new();
+    file.read_to_string(&mut content)
+        .expect("Could not read file");
+
+    content = content.strip_suffix("\n").unwrap_or(&content).to_string();
+    content = content.strip_suffix(" ").unwrap_or(&content).to_string();
+
+    content
+}
+
 // Will read file at path and return a list of elements with space as the separator
 // Will panic with io errors
 pub fn file_content_to_list(path: &str) -> Vec<String> {
