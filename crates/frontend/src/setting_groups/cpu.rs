@@ -115,7 +115,15 @@ pub fn CPUGroup(
     let boost_supported = cpu_info.boost.is_some();
     let hwp_dyn_boost_supported = cpu_info.hwp_dynamic_boost.is_some();
 
+    // The CPUSettings used to configure the form if these change, it means that the daemon settings changed so we would neet to refresh.
+    let mut form_used_settings = use_signal(|| cpu_settings.clone());
+
     let mut form = use_hook(|| CPUForm::new(&cpu_settings));
+
+    if cpu_settings != *form_used_settings.read() {
+        form.set_values(&cpu_settings);
+        form_used_settings.set(cpu_settings.clone());
+    }
 
     let onsubmit = move || {
         let active_profile_idx = profiles_info.read().as_ref().unwrap().active_profile;
