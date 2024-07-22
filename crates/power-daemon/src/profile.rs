@@ -82,7 +82,7 @@ pub struct CPUSettings {
     // Performance boosting cpu tech. intel turbo or amd precission boost
     pub boost: Option<bool>,
     // Intel only. Won't work in passive mode
-    pub hwp_dynamic_boost: Option<bool>,
+    pub hwp_dyn_boost: Option<bool>,
 }
 
 impl CPUSettings {
@@ -171,7 +171,7 @@ impl CPUSettings {
             }
         }
 
-        if let Some(hwp_dynamic_boost) = self.hwp_dynamic_boost {
+        if let Some(hwp_dynamic_boost) = self.hwp_dyn_boost {
             let value = if hwp_dynamic_boost { "1" } else { "0" };
             if fs::metadata("/sys/devices/system/cpu/intel_pstate").is_ok() {
                 run_command(&format!(

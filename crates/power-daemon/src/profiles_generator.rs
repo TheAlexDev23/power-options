@@ -116,7 +116,7 @@ pub fn cpu_settings_default(
             min_perf_pct: Some(0),
             max_perf_pct: Some(70),
             boost: if widespread_driver { Some(false) } else { None },
-            hwp_dynamic_boost: if intel { Some(false) } else { None },
+            hwp_dyn_boost: if intel { Some(false) } else { None },
         },
         DefaultProfileType::Powersave => CPUSettings {
             mode,
@@ -136,7 +136,7 @@ pub fn cpu_settings_default(
             min_perf_pct: Some(0),
             max_perf_pct: Some(100),
             boost: if widespread_driver { Some(false) } else { None },
-            hwp_dynamic_boost: if intel { Some(false) } else { None },
+            hwp_dyn_boost: if intel { Some(false) } else { None },
         },
         DefaultProfileType::Balanced => CPUSettings {
             mode,
@@ -155,7 +155,7 @@ pub fn cpu_settings_default(
             min_perf_pct: Some(0),
             max_perf_pct: Some(100),
             boost: if widespread_driver { Some(true) } else { None },
-            hwp_dynamic_boost: if intel { Some(false) } else { None },
+            hwp_dyn_boost: if intel { Some(false) } else { None },
         },
         DefaultProfileType::Performance => CPUSettings {
             mode,
@@ -170,7 +170,7 @@ pub fn cpu_settings_default(
             min_perf_pct: Some(0),
             max_perf_pct: Some(100),
             boost: if widespread_driver { Some(true) } else { None },
-            hwp_dynamic_boost: if intel { Some(true) } else { None },
+            hwp_dyn_boost: if intel { Some(true) } else { None },
         },
         DefaultProfileType::Ultraperformance => CPUSettings {
             mode,
@@ -185,7 +185,7 @@ pub fn cpu_settings_default(
             min_perf_pct: Some(30),
             max_perf_pct: Some(100),
             boost: if widespread_driver { Some(true) } else { None },
-            hwp_dynamic_boost: if intel { Some(true) } else { None },
+            hwp_dyn_boost: if intel { Some(true) } else { None },
         },
     }
 }

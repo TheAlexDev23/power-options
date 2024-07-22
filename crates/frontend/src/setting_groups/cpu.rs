@@ -1,12 +1,88 @@
-use std::{rc::Rc, time::Duration};
+use std::time::Duration;
 
 use dioxus::prelude::*;
 use power_daemon::{CPUSettings, ProfilesInfo, SystemInfo};
 
-use crate::{
-    communication_services::{ControlAction, SystemInfoSyncType},
-    helpers::{Dropdown, Toggle},
-};
+use crate::communication_services::{ControlAction, SystemInfoSyncType};
+
+use crate::helpers::{ToggleableDropdown, ToggleableNumericField, ToggleableToggle};
+
+type ToggleableString = (Signal<bool>, Signal<String>);
+type ToggleableInt = (Signal<bool>, Signal<i32>);
+type ToggleableBool = (Signal<bool>, Signal<bool>);
+
+#[derive(Default, Debug, Clone)]
+struct CPUForm {
+    pub mode: ToggleableString,
+    pub epp: ToggleableString,
+    pub governor: ToggleableString,
+    pub min_freq: ToggleableInt,
+    pub max_freq: ToggleableInt,
+    pub min_perf_pct: ToggleableInt,
+    pub max_perf_pct: ToggleableInt,
+    pub boost: ToggleableBool,
+    pub hwp_dyn_boost: ToggleableBool,
+}
+
+impl CPUForm {
+    pub fn new(cpu_settings: &CPUSettings) -> CPUForm {
+        let mut form = CPUForm::default();
+        form.set_values(cpu_settings);
+        form
+    }
+
+    pub fn set_values(&mut self, cpu_settings: &CPUSettings) {
+        self.mode.0.set(cpu_settings.mode.is_some());
+        self.mode
+            .1
+            .set(cpu_settings.mode.clone().unwrap_or(String::from("passive")));
+
+        self.epp
+            .0
+            .set(cpu_settings.energy_performance_preference.is_some());
+        self.epp.1.set(
+            cpu_settings
+                .energy_performance_preference
+                .clone()
+                .unwrap_or_default(),
+        );
+
+        self.governor.0.set(cpu_settings.governor.is_some());
+        self.governor
+            .1
+            .set(cpu_settings.governor.clone().unwrap_or_default());
+
+        self.min_freq.0.set(cpu_settings.min_frequency.is_some());
+        self.min_freq
+            .1
+            .set(cpu_settings.min_frequency.unwrap_or_default() as i32);
+
+        self.max_freq.0.set(cpu_settings.max_frequency.is_some());
+        self.max_freq
+            .1
+            .set(cpu_settings.max_frequency.unwrap_or_default() as i32);
+
+        self.min_perf_pct.0.set(cpu_settings.min_perf_pct.is_some());
+        self.min_perf_pct
+            .1
+            .set(cpu_settings.min_perf_pct.unwrap_or_default() as i32);
+
+        self.max_perf_pct.0.set(cpu_settings.max_perf_pct.is_some());
+        self.max_perf_pct
+            .1
+            .set(cpu_settings.max_perf_pct.unwrap_or_default() as i32);
+
+        self.boost.0.set(cpu_settings.boost.is_some());
+        self.boost.1.set(cpu_settings.boost.unwrap_or_default());
+
+        self.hwp_dyn_boost
+            .0
+            .set(cpu_settings.hwp_dyn_boost.is_some());
+        self.hwp_dyn_boost
+            .1
+            .set(cpu_settings.hwp_dyn_boost.unwrap_or_default());
+    }
+}
 
 #[component]
 pub fn CPUGroup(
@@ -29,48 +105,19 @@ pub fn CPUGroup(
         .cpu_settings
         .clone();
 
-    let system_info = system_info.read().as_ref().unwrap().clone();
+    let cpu_info = system_info.read().as_ref().unwrap().clone().cpu_info;
 
     let mut changed = use_signal(|| false);
 
-    let mode_supported = system_info.cpu_info.active_mode.is_some();
-    let epp_supported = system_info.cpu_info.has_epp;
-    let perf_pct_scaling_supported = system_info.cpu_info.has_perf_pct_scaling;
-    let boost_supported = system_info.cpu_info.boost.is_some();
-    let hwp_dyn_boost_supported = system_info.cpu_info.hwp_dynamic_boost.is_some();
+    let mode_supported = cpu_info.mode.is_some();
+    let epp_supported = cpu_info.has_epp;
+    let perf_pct_scaling_supported = cpu_info.has_perf_pct_scaling;
+    let boost_supported = cpu_info.boost.is_some();
+    let hwp_dyn_boost_supported = cpu_info.hwp_dynamic_boost.is_some();
 
-    let toggle_mode_initial = cpu_settings.mode.is_some();
-    let toggle_epp_initial = cpu_settings.energy_performance_preference.is_some();
-    let toggle_governor_initial = cpu_settings.governor.is_some();
-    let toggle_min_freq_initial = cpu_settings.min_frequency.is_some();
-    let toggle_max_freq_initial = cpu_settings.max_frequency.is_some();
-    let toggle_min_perf_pct_initial = cpu_settings.min_perf_pct.is_some();
-    let toggle_max_perf_pct_initial = cpu_settings.max_perf_pct.is_some();
-    let toggle_boost_initial = cpu_settings.boost.is_some();
-    let toggle_hwp_dyn_boost_initial = cpu_settings.hwp_dynamic_boost.is_some();
+    let mut form = use_hook(|| CPUForm::new(&cpu_settings));
 
-    let mut toggle_mode = use_signal(|| toggle_mode_initial);
-    let mut toggle_epp = use_signal(|| toggle_epp_initial);
-    let mut toggle_governor = use_signal(|| toggle_governor_initial);
-    let mut toggle_min_freq = use_signal(|| toggle_min_freq_initial);
-    let mut toggle_max_freq = use_signal(|| toggle_max_freq_initial);
-    let mut toggle_min_perf_pct = use_signal(|| toggle_min_perf_pct_initial);
-    let mut toggle_max_perf_pct = use_signal(|| toggle_max_perf_pct_initial);
-    let mut toggle_boost = use_signal(|| toggle_boost_initial);
-    let mut toggle_hwp_dyn_boost = use_signal(|| toggle_hwp_dyn_boost_initial);
-
-    // Required for reactivity for elements that depend on it. Will not be accurate with the actual selection,
-    // And therefore should not be used for form parsing
-    let mut current_mode = use_signal(|| {
-        if let Some(ref mode) = cpu_settings.mode {
-            mode.clone()
-        } else {
-            String::from("passive")
-        }
-    });
-
-    let onsubmit = move |f: Rc<FormData>| {
-        let f = f.values();
+    let onsubmit = move || {
         let active_profile_idx = profiles_info.read().as_ref().unwrap().active_profile;
         let mut active_profile = profiles_info
             .read()
@@ -80,56 +127,53 @@ pub fn CPUGroup(
             .clone();
 
         active_profile.cpu_settings = CPUSettings {
-            mode: if mode_supported && toggle_mode.cloned() {
-                Some(f.get("mode").unwrap().0[0].clone())
+            mode: if mode_supported && form.mode.0.cloned() {
+                Some(form.mode.1.cloned())
             } else {
                 None
             },
-            governor: if toggle_governor.cloned() {
-                Some(f.get("governor").unwrap().0[0].clone())
+            governor: if form.governor.0.cloned() {
+                Some(form.governor.1.cloned())
             } else {
                 None
             },
-            energy_performance_preference: if *current_mode.read() == "active"
-                && epp_supported
-                && toggle_epp.cloned()
-            {
-                Some(f.get("epp").unwrap().0[0].clone())
+            energy_performance_preference: if epp_supported && form.epp.0.cloned() {
+                Some(form.epp.1.cloned())
             } else {
                 None
             },
-            min_frequency: if toggle_min_freq.cloned() {
-                Some(f.get("min_frequency").unwrap().0[0].parse().unwrap())
+            min_frequency: if form.min_freq.0.cloned() {
+                Some(form.min_freq.1.cloned() as u32)
             } else {
                 None
             },
-            max_frequency: if toggle_max_freq.cloned() {
-                Some(f.get("max_frequency").unwrap().0[0].parse().unwrap())
+            max_frequency: if form.max_freq.0.cloned() {
+                Some(form.max_freq.1.cloned() as u32)
             } else {
                 None
             },
-            min_perf_pct: if toggle_min_perf_pct.cloned() {
-                Some(f.get("min_perf_pct").unwrap().0[0].parse().unwrap())
+            min_perf_pct: if form.min_perf_pct.0.cloned() {
+                Some(form.min_perf_pct.1.cloned() as u8)
             } else {
                 None
             },
-            max_perf_pct: if toggle_max_perf_pct.cloned() {
-                Some(f.get("max_perf_pct").unwrap().0[0].parse().unwrap())
-            } else {
-                None
-            },
-
-            boost: if toggle_boost.cloned() {
-                Some(f.get("boost").unwrap().0[0] == "on")
+            max_perf_pct: if form.max_perf_pct.0.cloned() {
+                Some(form.max_perf_pct.1.cloned() as u8)
             } else {
                 None
             },
 
-            hwp_dynamic_boost: if *current_mode.read() == "active"
+            boost: if form.boost.0.cloned() {
+                Some(form.boost.1.cloned())
+            } else {
+                None
+            },
+
+            hwp_dyn_boost: if *form.mode.1.read() == "active"
                 && hwp_dyn_boost_supported
-                && toggle_hwp_dyn_boost.cloned()
+                && form.hwp_dyn_boost.0.cloned()
             {
-                Some(f.get("hwp_dyn_boost").unwrap().0[0] == "on")
+                Some(form.hwp_dyn_boost.1.cloned())
             } else {
                 None
             },
@@ -142,13 +186,12 @@ pub fn CPUGroup(
     };
 
     use_effect(move || {
-        if !*toggle_mode.read() {
-            if let Some(mode) = system_info.cpu_info.active_mode.clone() {
-                current_mode.set(if mode {
-                    String::from("active")
-                } else {
-                    String::from("passive")
-                });
+        // If the mode overwriting is disabled we set it to reflect the system current opmode
+        // The reasoning is: you do not set an explicit override so the opmode is not guaranteed, therefore we will assume the value is what the system is currently at
+        // And even though the current value of the system does not reflect the users selection, it still won't be set by the daemon as the override is disabled
+        if !*form.mode.0.read() {
+            if let Some(ref mode) = cpu_info.mode {
+                form.mode.1.set(mode.clone());
             }
         }
     });
@@ -165,7 +208,7 @@ pub fn CPUGroup(
     .map(String::from)
     .collect();
 
-    let governors = if *current_mode.read() == "active" {
+    let governors = if *form.mode.1.read() == "active" {
         vec!["performance", "powersave"]
     } else {
         vec![
@@ -187,127 +230,58 @@ pub fn CPUGroup(
             onchange: move |_| {
                 changed.set(true);
             },
-            onsubmit: move |f| {
-                onsubmit(f.data());
+            onsubmit: move |_| {
+                onsubmit();
                 changed.set(false);
-            },
-            onreset: move |f| {
-                println!("A: {}", f.value());
-                println!("B: {:?}", f.values());
             },
             if mode_supported {
                 div { class: "option-group",
                     div { class: "option",
-                        div {
-                            Toggle { val: toggle_mode, initial: toggle_mode_initial }
-                            label { "Scaling driver operation mode" }
-                        }
-                        Dropdown {
-                            name: String::from("mode"),
-                            onchange: move |f: String| {
-                                current_mode.set(f);
-                            },
+                        ToggleableDropdown {
+                            name: String::from("Scaling driver operation mode"),
                             items: vec![String::from("active"), String::from("passive")],
-                            selected: current_mode.read().clone(),
-                            disabled: Some(!toggle_mode.cloned())
+                            value: form.mode
                         }
                     }
                 }
             }
 
             div { class: "option-group",
-                // EPP might be unsupported on some CPUs and on those that are, it might not take effect if the mode is passive
-                if epp_supported && *current_mode.read() == "active" {
+                if epp_supported {
                     div { class: "option",
-                        div {
-                            Toggle { val: toggle_epp, initial: toggle_epp_initial }
-                            label { "Set EPP for all" }
-                        }
-                        Dropdown {
-                            name: String::from("epp"),
+                        ToggleableDropdown {
+                            name: String::from("Energy Performance Preference"),
                             items: epps,
-                            selected: if let Some(ref epp) = cpu_settings.energy_performance_preference {
-                                epp.clone()
-                            } else {
-                                String::new()
-                            },
-                            disabled: Some(!toggle_epp.cloned())
+                            value: form.epp
                         }
                     }
                 }
                 div { class: "option",
-                    div {
-                        Toggle { val: toggle_governor, initial: toggle_governor_initial }
-                        label { "Set governor for all" }
-                    }
-                    Dropdown {
-                        name: String::from("governor"),
-                        items: governors,
-                        selected: if let Some(ref epp) = cpu_settings.energy_performance_preference {
-                            epp.clone()
-                        } else {
-                            String::new()
-                        },
-                        disabled: Some(!toggle_governor.cloned())
-                    }
+                    ToggleableDropdown { name: String::from("Governor"), items: governors, value: form.governor }
                 }
             }
 
             div { class: "option-group",
                 div { class: "option",
-                    div {
-                        Toggle { val: toggle_min_freq, initial: toggle_min_freq_initial }
-                        label { "Minimum frequency (MHz)" }
-                    }
-                    input {
-                        class: "numeric-input",
-                        name: "min_frequency",
-                        initial_value: cpu_settings.min_frequency.map(|v| format!("{v}")).unwrap_or(String::new()),
-                        disabled: !toggle_min_freq.cloned(),
-                        r#type: "text"
-                    }
+                    ToggleableNumericField { name: String::from("Minimum frequency (MHz)"), value: form.min_freq }
                 }
                 div { class: "option",
-                    div {
-                        Toggle { val: toggle_max_freq, initial: toggle_max_freq_initial }
-                        label { "Maximum frequency (MHz)" }
-                    }
-                    input {
-                        class: "numeric-input",
-                        name: "max_frequency",
-                        initial_value: cpu_settings.max_frequency.map(|v| format!("{v}")).unwrap_or(String::new()),
-                        disabled: !toggle_max_freq.cloned(),
-                        r#type: "text"
-                    }
+                    ToggleableNumericField { name: String::from("Maximum frequency (MHz)"), value: form.max_freq }
                 }
             }
 
             if perf_pct_scaling_supported {
                 div { class: "option-group",
                     div { class: "option",
-                        div {
-                            Toggle { val: toggle_min_perf_pct, initial: toggle_min_perf_pct_initial }
-                            label { "Minimum performance percentage" }
-                        }
-                        input {
-                            class: "numeric-input",
-                            name: "min_perf_pct",
-                            initial_value: cpu_settings.min_perf_pct.map(|v| format!("{v}")).unwrap_or(String::new()),
-                            disabled: !toggle_min_perf_pct.cloned(),
-                            r#type: "text"
+                        ToggleableNumericField {
+                            name: String::from("Minimum performance percentage"),
+                            value: form.min_perf_pct
                         }
                     }
                     div { class: "option",
-                        div {
-                            Toggle { val: toggle_max_perf_pct, initial: toggle_max_perf_pct_initial }
-                            label { "Maximum performance percentage" }
-                        }
-                        input {
-                            class: "numeric-input",
-                            name: "max_perf_pct",
-                            initial_value: cpu_settings.max_perf_pct.map(|v| format!("{v}")).unwrap_or(String::new()),
-                            disabled: !toggle_max_perf_pct.cloned(),
-                            r#type: "text"
+                        ToggleableNumericField {
+                            name: String::from("Maximum performance percentage"),
+                            value: form.max_perf_pct
                         }
                     }
                 }
@@ -316,31 +290,13 @@ pub fn CPUGroup(
             div { class: "option-group",
                 if boost_supported {
                     div { class: "option",
-                        div {
-                            Toggle { val: toggle_boost, initial: toggle_boost_initial }
-                            label { "Allow boost" }
-                        }
-                        input {
-                            name: "boost",
-                            initial_checked: if let Some(val) = cpu_settings.boost { val } else { false },
-                            disabled: !toggle_boost.cloned(),
-                            r#type: "checkbox"
-                        }
+                        ToggleableToggle { name: String::from("Boost technology"), value: form.boost }
                     }
                 }
 
-                if hwp_dyn_boost_supported && *current_mode.read() == "active" {
+                if hwp_dyn_boost_supported && *form.mode.1.read() == "active" {
                     div { class: "option",
-                        div {
-                            Toggle { val: toggle_hwp_dyn_boost, initial: toggle_hwp_dyn_boost_initial }
-                            label { "Allow HWP dynamic boost" }
-                        }
-                        input {
-                            name: "hwp_dyn_boost",
-                            initial_checked: if let Some(val) = cpu_settings.hwp_dynamic_boost { val } else { false },
-                            disabled: !toggle_hwp_dyn_boost.cloned(),
-                            r#type: "checkbox"
-                        }
+                        ToggleableToggle { name: String::from("HWP Dynamic Boost"), value: form.hwp_dyn_boost }
                     }
                 }
             }
@@ -356,23 +312,10 @@ pub fn CPUGroup(
                 }
                 input {
                     onclick: move |_| {
-                        if let Some(mode) = system_info.cpu_info.active_mode.clone() {
-                            current_mode
-                                .set(
-                                    if mode { String::from("active") } else { String::from("passive") },
-                                );
-                        }
-                        toggle_mode.set(toggle_mode_initial);
-                        toggle_epp.set(toggle_epp_initial);
-                        toggle_governor.set(toggle_governor_initial);
-                        toggle_min_freq.set(toggle_min_freq_initial);
-                        toggle_max_freq.set(toggle_max_freq_initial);
-                        toggle_min_perf_pct.set(toggle_min_perf_pct_initial);
-                        toggle_max_perf_pct.set(toggle_max_perf_pct_initial);
-                        toggle_boost.set(toggle_boost_initial);
-                        toggle_hwp_dyn_boost.set(toggle_hwp_dyn_boost_initial);
+                        form.set_values(&cpu_settings);
+                        changed.set(false);
                     },
-                    r#type: "reset",
+                    r#type: "button",
                     value: "Cancel"
                 }
             }

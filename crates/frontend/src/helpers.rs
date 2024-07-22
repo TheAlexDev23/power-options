@@ -3,46 +3,108 @@ use std::time::Duration;
 use dioxus::prelude::*;
 
 #[component]
-pub fn Dropdown(
+pub fn ToggleableNumericField(name: String, value: (Signal<bool>, Signal<i32>)) -> Element {
+    rsx! {
+        div {
+            input {
+                checked: "{value.0}",
+                r#type: "checkbox",
+                onchange: move |v| {
+                    println!("{}", v.value());
+                    value.0.set(v.value() == "true");
+                }
+            }
+            label { "{name}" }
+        }
+        input {
+            class: "numeric-input",
+            r#type: "text",
+            onchange: move |v| {
+                value.1.set(v.value().parse().unwrap_or_default());
+            },
+            value: "{value.1}",
+            disabled: !value.0.cloned()
+        }
+    }
+}
+
+#[component]
+pub fn ToggleableTextField(name: String, value: (Signal<bool>, Signal<String>)) -> Element {
+    rsx! {
+        div {
+            input {
+                checked: "{value.0}",
+                r#type: "checkbox",
+                onchange: move |v| {
+                    println!("{}", v.value());
+                    value.0.set(v.value() == "true");
+                }
+            }
+            label { "{name}" }
+        }
+        input {
+            r#type: "text",
+            onchange: move |v| {
+                value.1.set(v.value());
+            },
+            value: "{value.1}",
+            disabled: !value.0.cloned()
+        }
+    }
+}
+
+#[component]
+pub fn ToggleableDropdown(
     name: String,
     items: Vec<String>,
-    selected: String,
-    disabled: Option<bool>,
-    onchange: Option<EventHandler<String>>,
+    value: (Signal<bool>, Signal<String>),
 ) -> Element {
     rsx! {
+        div {
+            input {
+                checked: "{value.0}",
+                r#type: "checkbox",
+                onchange: move |v| {
+                    println!("{}", v.value());
+                    value.0.set(v.value() == "true");
+                }
+            }
+            label { "{name}" }
+        }
         select {
-            onchange: move |f| {
-                if let Some(handler) = onchange {
-                    handler.call(f.value());
-                }
+            onchange: move |v| {
+                value.1.set(v.value());
             },
-            name: name,
-            disabled: if disabled.is_some() {
-                disabled.unwrap()
-            } else {
-                false
-            },
-            for value in items {
-                option {
-                    initial_selected: selected == value,
-                    "{value}"
-                }
+            disabled: !value.0.cloned(),
+            for item in items {
+                option { selected: item == *value.1.read(), "{item}" }
             }
         }
     }
 }
 
 #[component]
-pub fn Toggle(mut val: Signal<bool>, initial: bool) -> Element {
-    val.set(initial);
+pub fn ToggleableToggle(name: String, value: (Signal<bool>, Signal<bool>)) -> Element {
     rsx! {
+        div {
+            input {
+                checked: "{value.0}",
+                r#type: "checkbox",
+                onchange: move |v| {
+                    println!("{}", v.value());
+                    value.0.set(v.value() == "true");
+                }
+            }
+            label { "{name}" }
+        }
         input {
-            onchange: move |e| {
-                val.set(e.value() == "true");
+            r#type: "checkbox",
+            onchange: move |v| {
+                println!("{}", v.value());
+                value.1.set(v.value() == "true")
             },
-            initial_checked: initial,
-            r#type: "checkbox"
+            checked: "{value.1}",
+            disabled: !value.0.cloned()
         }
     }
 }

@@ -34,7 +34,7 @@ pub enum CPUFreqDriver {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CPUInfo {
     pub driver: CPUFreqDriver,
-    pub active_mode: Option<bool>,
+    pub mode: Option<String>,
 
     pub has_epp: bool,
     pub has_perf_pct_scaling: bool,
@@ -74,15 +74,13 @@ impl CPUInfo {
         CPUInfo {
             driver: driver.clone(),
 
-            active_mode: if driver == CPUFreqDriver::Other {
+            mode: if driver == CPUFreqDriver::Other {
                 None
             } else {
-                Some(
-                    file_content_to_string(&format!(
-                        "/sys/devices/system/cpu/{}/status",
-                        well_known_driver_name
-                    )) == "active",
-                )
+                Some(file_content_to_string(&format!(
+                    "/sys/devices/system/cpu/{}/status",
+                    well_known_driver_name
+                )))
             },
 
             has_epp: fs::metadata(
