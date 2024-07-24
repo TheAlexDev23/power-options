@@ -1,11 +1,11 @@
 use std::time::Duration;
 
 use dioxus::prelude::*;
-use power_daemon::{CPUSettings, ProfilesInfo, SystemInfo};
+use power_daemon::{CPUSettings, CoreSetting, Profile, ProfilesInfo, SystemInfo};
 
 use crate::communication_services::{ControlAction, SystemInfoSyncType};
 
-use crate::helpers::{ToggleableDropdown, ToggleableNumericField, ToggleableToggle};
+use crate::helpers::{Dropdown, ToggleableDropdown, ToggleableNumericField, ToggleableToggle};
 
 type ToggleableString = (Signal<bool>, Signal<String>);
 type ToggleableInt = (Signal<bool>, Signal<i32>);
@@ -91,21 +91,42 @@ pub fn CPUGroup(
     control_routine: Coroutine<ControlAction>,
     system_info_routine: Coroutine<(Duration, SystemInfoSyncType)>,
 ) -> Element {
-    system_info_routine.send((Duration::from_secs_f32(10.0), SystemInfoSyncType::CPU));
-    use_context_provider(|| 0);
+    system_info_routine.send((Duration::from_secs_f32(0.5), SystemInfoSyncType::CPU));
     if profiles_info.read().is_none() || system_info.read().is_none() {
         return rsx! { "Connecting to the daemon..." };
     }
 
-    let cpu_settings = profiles_info
-        .read()
-        .as_ref()
-        .unwrap()
-        .get_active_profile()
-        .cpu_settings
-        .clone();
+    let profiles_info = profiles_info.read().as_ref().unwrap().clone();
+    let system_info = system_info.read().as_ref().unwrap().clone();
 
-    let cpu_info = system_info.read().as_ref().unwrap().clone().cpu_info;
+    rsx! {
+        CPUSettingsForm {
+            system_info: system_info.clone(),
+            profiles_info: profiles_info.clone(),
+            control_routine
+        }
+
+        br {}
+
+        h2 { "Per-core settings" }
+
+        CoreSettings {
+            system_info: system_info.clone(),
+            profiles_info: profiles_info.clone(),
+            control_routine
+        }
+    }
+}
+
+#[component]
+fn CPUSettingsForm(
+    system_info: SystemInfo,
+    profiles_info: ProfilesInfo,
+    control_routine: Coroutine<ControlAction>,
+) -> Element {
+    let cpu_settings = profiles_info.get_active_profile().cpu_settings.clone();
+
+    let cpu_info = system_info.clone().cpu_info;
 
     let mut changed = use_signal(|| false);
 
@@ -126,13 +147,8 @@ pub fn CPUGroup(
     }
 
     let onsubmit = move || {
-        let active_profile_idx = profiles_info.read().as_ref().unwrap().active_profile;
-        let mut active_profile = profiles_info
-            .read()
-            .as_ref()
-            .unwrap()
-            .get_active_profile()
-            .clone();
+        let active_profile_idx = profiles_info.active_profile;
+        let mut active_profile = profiles_info.get_active_profile().clone();
 
         active_profile.cpu_settings = CPUSettings {
             mode: if mode_supported && form.mode.0.cloned() {
@@ -204,33 +220,8 @@ pub fn CPUGroup(
         }
     });
 
-    // No need to check wether EPP is available as when it's not it won't even be rendered
-    let epps = vec![
-        "performance",
-        "balance_performance",
-        "default",
-        "balance_power",
-        "power",
-    ]
-    .into_iter()
-    .map(String::from)
-    .collect();
-
-    let governors = if *form.mode.1.read() == "active" {
-        vec!["performance", "powersave"]
-    } else {
-        vec![
-            "conservative",
-            "ondemand",
-            "userspace",
-            "powersave",
-            "performance",
-            "schedutil",
-        ]
-    }
-    .into_iter()
-    .map(String::from)
-    .collect();
+    let epps = get_epps();
+    let governors = get_governors(&*form.mode.1.read());
 
     rsx! {
         form {
@@ -255,7 +246,7 @@ pub fn CPUGroup(
             }
 
             div { class: "option-group",
-                if epp_supported {
+                if epp_supported && *form.governor.1.read() != "performance" {
                     div { class: "option",
                         ToggleableDropdown {
                             name: String::from("Energy Performance Preference"),
@@ -309,9 +300,6 @@ pub fn CPUGroup(
                 }
             }
 
-            br {}
-            br {}
-
             div { class: "confirm-buttons",
                 input {
                     r#type: "submit",
@@ -329,4 +317,259 @@ pub fn CPUGroup(
             }
         }
     }
+}
+
+#[component]
+fn CoreSettings(
+    system_info: SystemInfo,
+    profiles_info: ProfilesInfo,
+    control_routine: Coroutine<ControlAction>,
+) -> Element {
+    let cpu_info = system_info.cpu_info.clone();
+    let cpu_core_settings = &profiles_info.get_active_profile().cpu_core_settings;
+
+    let epps = get_epps();
+    let governors = get_governors(&cpu_info.mode.clone().unwrap_or(String::from("passive")));
+
+    let current_profile = profiles_info.get_active_profile().clone();
+    let profile_id = profiles_info.active_profile as u32;
+
+    rsx! {
+        table { id: "cpu-cores-table",
+            tr {
+                th { "" }
+                th { "On" }
+
+                th { "CPU" }
+
+                th { "Base" }
+                th { "Current" }
+
+                th { "Range" }
+
+                th { "Governor" }
+                if cpu_info.has_epp {
+                    th { "EPP" }
+                }
+            }
+
+            for (logical_cpu_id , core) in cpu_info.cores.into_iter().map(|c| (c.logical_cpu_id, c)) {
+                tr {
+                    class: if let Some(ref cores) = cpu_core_settings.cores {
+                        if cores.iter().any(|c| c.cpu_id == logical_cpu_id as u32) {
+                            "overriden"
+                        } else {
+                            ""
+                        }
+                    } else {
+                        ""
+                    },
+
+                    td {
+                        button {
+                            onclick: {
+                                let mut current_profile = current_profile.clone();
+                                move |_| {
+                                    reset_core_settings(
+                                        &mut current_profile,
+                                        profile_id,
+                                        logical_cpu_id,
+                                        control_routine,
+                                    )
+                                }
+                            },
+                            "Reset"
+                        }
+                    }
+
+                    td {
+                        if core.online.is_some() {
+                            input {
+                                onchange: {
+                                    let mut current_profile = current_profile.clone();
+                                    move |v| {
+                                        update_core_settings(
+                                            &mut current_profile,
+                                            profile_id,
+                                            logical_cpu_id,
+                                            move |core_settings| {
+                                                core_settings.online = Some(v.value() == "true");
+                                            },
+                                            control_routine,
+                                        );
+                                    }
+                                },
+                                checked: "{core.online.unwrap()}",
+                                r#type: "checkbox"
+                            }
+                        }
+                    }
+
+                    if core.online.unwrap_or(true) {
+
+                        if cpu_info.hybrid {
+                            td {
+                                if core.is_performance_core.unwrap() {
+                                    "P ({core.physical_core_id}-{logical_cpu_id})"
+                                } else {
+                                    "E ({core.physical_core_id}-{logical_cpu_id})"
+                                }
+                            }
+                        } else {
+                            td { "{core.physical_core_id}" }
+                        }
+
+                        td { "{core.base_frequency}" }
+                        td { "{core.current_frequency}" }
+
+                        td { "{core.min_frequency}-{core.max_frequency}" }
+
+                        td {
+                            Dropdown {
+                                id: "governor-dd-cpu{logical_cpu_id}",
+                                selected: "{core.governor}",
+                                items: governors.clone(),
+                                disabled: false,
+                                onchange: {
+                                    let mut current_profile = current_profile.clone();
+                                    move |v: String| {
+                                        update_core_settings(
+                                            &mut current_profile,
+                                            profile_id,
+                                            logical_cpu_id,
+                                            move |core_settings| {
+                                                core_settings.governor = Some(v.clone());
+                                            },
+                                            control_routine,
+                                        );
+                                    }
+                                }
+                            }
+                        }
+                        if cpu_info.has_epp {
+                            td {
+                                Dropdown {
+                                    id: "epp-dd-cpu{logical_cpu_id}",
+                                    selected: "{core.epp.clone().unwrap()}",
+                                    items: epps.clone(),
+                                    disabled: cpu_info.mode.as_ref().unwrap() != "active",
+                                    onchange: {
+                                        let mut current_profile = current_profile.clone();
+                                        move |v: String| {
+                                            update_core_settings(
+                                                &mut current_profile,
+                                                profile_id,
+                                                logical_cpu_id,
+                                                move |core_settings| {
+                                                    core_settings.governor = Some(v.clone());
+                                                },
+                                                control_routine,
+                                            );
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        td { "{logical_cpu_id}" }
+
+                        td { "-" }
+                        td { "-" }
+
+                        td { "-" }
+
+                        td { "-" }
+
+                        if cpu_info.has_epp {
+                            td { "-" }
+                        }
+                    }
+                }
+            }
+        }
+
+        br {}
+        br {}
+        br {}
+    }
+}
+
+fn update_core_settings<F>(
+    profile: &mut Profile,
+    profile_id: u32,
+    cpu_id: u32,
+    mut update: F,
+    control_routine: Coroutine<ControlAction>,
+) where
+    F: FnMut(&mut CoreSetting),
+{
+    let core_setting = if let Some(ref mut cores) = profile.cpu_core_settings.cores {
+        if cores.iter().any(|c| c.cpu_id == cpu_id) {
+            // Yeah yeah two pointless searches instead of one, but otherwise the borrow checker complains
+            cores.iter_mut().find(|c| c.cpu_id == cpu_id).unwrap()
+        } else {
+            cores.push(CoreSetting {
+                cpu_id,
+                ..Default::default()
+            });
+            cores.last_mut().unwrap()
+        }
+    } else {
+        profile.cpu_core_settings.cores = Some(vec![CoreSetting {
+            cpu_id,
+            ..Default::default()
+        }]);
+        &mut profile.cpu_core_settings.cores.as_mut().unwrap()[0]
+    };
+
+    update(core_setting);
+
+    control_routine.send(ControlAction::UpdateProfile(profile_id, profile.clone()));
+    control_routine.send(ControlAction::GetProfilesInfo);
+}
+
+fn reset_core_settings(
+    profile: &mut Profile,
+    profile_id: u32,
+    cpu_id: u32,
+    control_routine: Coroutine<ControlAction>,
+) {
+    if let Some(ref mut cores) = profile.cpu_core_settings.cores {
+        if let Some(pos) = cores.iter().position(|c| c.cpu_id == cpu_id) {
+            cores.remove(pos);
+            control_routine.send(ControlAction::UpdateProfile(profile_id, profile.clone()));
+            control_routine.send(ControlAction::GetProfilesInfo);
+        }
+    };
+}
+
+fn get_epps() -> Vec<String> {
+    [
+        "performance",
+        "balance_performance",
+        "default",
+        "balance_power",
+        "power",
+    ]
+    .into_iter()
+    .map(String::from)
+    .collect()
+}
+
+fn get_governors(mode: &str) -> Vec<String> {
+    if mode == "active" {
+        vec!["performance", "powersave"]
+    } else {
+        vec![
+            "conservative",
+            "ondemand",
+            "userspace",
+            "powersave",
+            "performance",
+            "schedutil",
+        ]
+    }
+    .into_iter()
+    .map(String::from)
+    .collect()
 }

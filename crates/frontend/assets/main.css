@@ -13,7 +13,6 @@ select,
 option,
 input {
     background-color: #525252;
-    color: white;
 }
 
 button:disabled,
@@ -66,7 +65,11 @@ form input[type="submit"] {
     background-color: #0860F2;
 }
 
-label {
+form input[type="submit"]:disabled {
+    background-color: #525252;
+}
+
+* {
     color: white;
 }
 
@@ -80,6 +83,42 @@ option {
     font-size: 15px;
 
     padding: 3px 5px;
+}
+
+button {
+    border: none;
+    border-radius: 5px;
+    background-color: #525252;
+}
+
+button:hover {
+    cursor: pointer;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th {
+    text-align: left;
+}
+
+td:first-child,
+th:first-child {
+    border-top-left-radius: 10px;
+    border-bottom-left-radius: 10px;
+}
+
+td:last-child,
+th:last-child {
+    border-top-right-radius: 10px;
+    border-bottom-right-radius: 10px;
+}
+
+td,
+th {
+    padding: 5px;
 }
 
 
@@ -101,9 +140,6 @@ option {
 .profiles button {
     max-width: 220px;
     height: 30px;
-
-    border: none;
-    border-radius: 7px;
 
     font-size: 15px;
 
@@ -144,9 +180,7 @@ option {
 .setting-groups-selector button {
     font-size: 17px;
 
-    border: none;
     background-color: transparent;
-    color: white;
 }
 
 .setting-groups-selector li {
@@ -167,6 +201,11 @@ option {
 .settings-group {
     position: absolute;
     overflow-x: auto;
+
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+
     top: 60px;
     left: 180px;
     width: calc(100vw - 230px);
@@ -184,7 +223,6 @@ option {
     align-items: center;
 
     background-color: #323232;
-    border-radius: 15px;
 
     padding: 12px;
     margin-bottom: 5px;
@@ -202,12 +240,12 @@ option {
 
 .confirm-buttons {
     position: sticky;
-    bottom: 30px;
     width: 100%;
+    bottom: 40px;
+
     display: flex;
     justify-content: space-around;
-    padding: 0;
-    margin: 0;
+    align-items: center;
 }
 
 .confirm-buttons * {
@@ -226,10 +264,33 @@ option {
     flex-direction: column;
 }
 
+
 #cpu-form label {
     width: 300px;
 }
 
 #cpu-form select {
     width: 170px;
+}
+
+#cpu-cores-table tr {
+    border-radius: 15px;
+    padding: 5px;
+}
+
+#cpu-cores-table tr.overriden {
+    background-color: #323232;
+}
+
+#cpu-cores-table tr button {
+    visibility: hidden;
+    background-color: #323232;
+}
+
+#cpu-cores-table tr.overriden button {
+    visibility: visible;
+}
+
+#cpu-cores-table tr:hover {
+    background-color: #606060;
 }

@@ -1,10 +1,11 @@
 use std::{
     fs::{self, File},
     io::Read,
+    path::Path,
     process::{Command, Stdio},
 };
 
-use log::trace;
+use log::{debug, trace};
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
@@ -48,7 +49,7 @@ impl<T: PartialEq> WhiteBlackList<T> {
 }
 
 pub fn run_command(command: &str) {
-    trace!("running: {command}");
+    debug!("running: {command}");
     Command::new("zsh")
         .args(["-c", command])
         .stdout(Stdio::inherit())
@@ -62,7 +63,7 @@ pub fn run_command(command: &str) {
 // Runs command, returns (stdout, stdin), does not check for argument validity or program succesful completion.
 // Wil panic if: can't parse arguments, can't create command, can't run command
 pub fn run_command_with_output(command: &str) -> (String, String) {
-    trace!("getting output of: {command}");
+    debug!("getting output of: {command}");
 
     let mut command_proc = Command::new("sh");
     command_proc.args(["-c", command]);
@@ -72,10 +73,12 @@ pub fn run_command_with_output(command: &str) -> (String, String) {
     let stdout = String::from_utf8_lossy(&result.stdout).to_string();
     let stderr = String::from_utf8_lossy(&result.stderr).to_string();
 
+    trace!("Output is: {stdout} {stderr}");
+
     (stdout, stderr)
 }
 
-pub fn file_content_to_string(path: &str) -> String {
+pub fn file_content_to_string<P: AsRef<Path>>(path: P) -> String {
     let mut file = File::open(path).expect("Could not open file");
     let mut content = String::new();
     file.read_to_string(&mut content)
@@ -89,7 +92,7 @@ pub fn file_content_to_string(path: &str) -> String {
 
 // Will read file at path and return a list of elements with space as the separator
 // Will panic with io errors
-pub fn file_content_to_list(path: &str) -> Vec<String> {
+pub fn file_content_to_list<P: AsRef<Path>>(path: P) -> Vec<String> {
     let mut file = File::open(path).expect("Could not open file");
     let mut content = String::new();
     file.read_to_string(&mut content)
@@ -103,7 +106,7 @@ pub fn file_content_to_list(path: &str) -> Vec<String> {
 
 // Will read file at path and parse u32
 // Will panic with io errors and parsing errors
-pub fn file_content_to_u32(path: &str) -> u32 {
+pub fn file_content_to_u32<P: AsRef<Path>>(path: P) -> u32 {
     let mut file = File::open(path).expect("Could not open file");
     let mut content = String::new();
     file.read_to_string(&mut content)
@@ -117,8 +120,8 @@ pub fn file_content_to_u32(path: &str) -> u32 {
 
 // Will read file at path and return true if content is 1 false otherwise
 // Will return false if the file doesn't exist but will panic if some io issues appear
-pub fn file_content_to_bool(path: &str) -> bool {
-    if fs::metadata(path).is_err() {
+pub fn file_content_to_bool<P: AsRef<Path>>(path: P) -> bool {
+    if fs::metadata(path.as_ref()).is_err() {
         return false;
     }
 

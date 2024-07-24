@@ -159,7 +159,8 @@ pub fn cpu_settings_default(
         },
         DefaultProfileType::Performance => CPUSettings {
             mode,
-            governor: Some(String::from("performance")),
+            // To set EPP balance_performance we cannot set governor to performance. idk why the scaling driver behaves like that
+            governor: Some(String::from("powersave")),
             energy_performance_preference: if widespread_driver {
                 Some(String::from("balance_performance"))
             } else {

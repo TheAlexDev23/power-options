@@ -49,21 +49,16 @@ fn App() -> Element {
     let current_settings_tab = use_signal(|| 0);
     rsx! {
         link { rel: "stylesheet", href: "main.css" }
-        script { src:"helpers.js" }
+        script { src: "helpers.js" }
 
-        PowerProfilesNav {
-            profiles_info,
-            control_routine
-        }
-        SettingGroupsNav {
-            current_tab: current_settings_tab
-        }
+        PowerProfilesNav { profiles_info, control_routine }
+        SettingGroupsNav { current_tab: current_settings_tab }
         SettingGroup {
             current_tab: current_settings_tab,
             system_info,
             profiles_info,
             control_routine,
-            system_info_routine,
+            system_info_routine
         }
     }
 }
@@ -92,8 +87,7 @@ fn PowerProfilesNav(
         }
 
         rsx! {
-            nav {
-                class: "profiles",
+            nav { class: "profiles",
                 ul {
                     for button in buttons {
                         li {
@@ -120,7 +114,6 @@ fn PowerProfilesNav(
 fn SettingGroupsNav(current_tab: Signal<u8>) -> Element {
     let setting_groups = vec![
         ("icons/navbar-cpu.svg", "CPU"),
-        ("icons/navbar-cpu.svg", "CPU extra"),
         ("icons/navbar-screen.svg", "Screen"),
         ("icons/navbar-radio.svg", "Radio devices"),
         ("icons/navbar-network.svg", "Network"),
@@ -130,23 +123,16 @@ fn SettingGroupsNav(current_tab: Signal<u8>) -> Element {
     ];
 
     rsx! {
-        nav {
-            class: "setting-groups-selector",
+        nav { class: "setting-groups-selector",
             ul {
-                for (group_id, group) in setting_groups.iter().enumerate() {
+                for (group_id , group) in setting_groups.iter().enumerate() {
                     li {
                         onclick: move |_| {
                             current_tab.set(group_id as u8);
                         },
-                        class: if current_tab() == group_id as u8 {
-                            "selected"
-                        } else {
-                            ""
-                        },
+                        class: if current_tab() == group_id as u8 { "selected" } else { "" },
                         img { src: group.0 }
-                        button {
-                            "{group.1}"
-                        }
+                        button { "{group.1}" }
                     }
                 }
             }
@@ -163,8 +149,7 @@ fn SettingGroup(
     system_info_routine: Coroutine<(Duration, SystemInfoSyncType)>,
 ) -> Element {
     rsx! {
-        div {
-            class: "settings-group",
+        div { class: "settings-group",
             match current_tab() {
                 0 => {
                     cpu::CPUGroup(CPUGroupProps {system_info, profiles_info, control_routine, system_info_routine})
@@ -175,7 +160,6 @@ fn SettingGroup(
                 4 => PlaceholderGroup(current_tab),
                 5 => PlaceholderGroup(current_tab),
                 6 => PlaceholderGroup(current_tab),
-                7 => PlaceholderGroup(current_tab),
                 _ => rsx! { "Unknown group" },
             }
         }
@@ -184,8 +168,6 @@ fn SettingGroup(
 
 fn PlaceholderGroup(current_tab: Signal<u8>) -> Element {
     rsx! {
-        div {
-            "Placeholder group {current_tab}"
-        }
+        div { "Placeholder group {current_tab}" }
     }
 }

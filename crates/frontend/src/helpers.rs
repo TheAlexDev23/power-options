@@ -10,7 +10,6 @@ pub fn ToggleableNumericField(name: String, value: (Signal<bool>, Signal<i32>)) 
                 checked: "{value.0}",
                 r#type: "checkbox",
                 onchange: move |v| {
-                    println!("{}", v.value());
                     value.0.set(v.value() == "true");
                 }
             }
@@ -36,7 +35,6 @@ pub fn ToggleableTextField(name: String, value: (Signal<bool>, Signal<String>)) 
                 checked: "{value.0}",
                 r#type: "checkbox",
                 onchange: move |v| {
-                    println!("{}", v.value());
                     value.0.set(v.value() == "true");
                 }
             }
@@ -65,7 +63,6 @@ pub fn ToggleableDropdown(
                 checked: "{value.0}",
                 r#type: "checkbox",
                 onchange: move |v| {
-                    println!("{}", v.value());
                     value.0.set(v.value() == "true");
                 }
             }
@@ -91,7 +88,6 @@ pub fn ToggleableToggle(name: String, value: (Signal<bool>, Signal<bool>)) -> El
                 checked: "{value.0}",
                 r#type: "checkbox",
                 onchange: move |v| {
-                    println!("{}", v.value());
                     value.0.set(v.value() == "true");
                 }
             }
@@ -99,12 +95,31 @@ pub fn ToggleableToggle(name: String, value: (Signal<bool>, Signal<bool>)) -> El
         }
         input {
             r#type: "checkbox",
-            onchange: move |v| {
-                println!("{}", v.value());
-                value.1.set(v.value() == "true")
-            },
+            onchange: move |v| { value.1.set(v.value() == "true") },
             checked: "{value.1}",
             disabled: !value.0.cloned()
+        }
+    }
+}
+
+#[component]
+pub fn Dropdown(
+    id: Option<String>,
+    selected: String,
+    items: Vec<String>,
+    disabled: bool,
+    onchange: EventHandler<String>,
+) -> Element {
+    rsx! {
+        select {
+            id,
+            onchange: move |v| {
+                onchange.call(v.value());
+            },
+            disabled,
+            for item in items {
+                option { selected: item == selected, "{item}" }
+            }
         }
     }
 }

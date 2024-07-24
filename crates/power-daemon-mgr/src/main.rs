@@ -57,7 +57,7 @@ impl Log for StdoutLogger {
 #[tokio::main]
 async fn main() {
     log::set_logger(&LOGGER).expect("Could not set logger");
-    log::set_max_level(log::LevelFilter::Trace);
+    log::set_max_level(log::LevelFilter::Debug);
 
     let args = Args::parse();
     match args.mode {

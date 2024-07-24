@@ -1,13 +1,14 @@
-use std::fs;
+use std::{collections::HashMap, fs};
 
-use log::debug;
+use log::trace;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 use crate::helpers::{
     file_content_to_bool, file_content_to_list, file_content_to_string, file_content_to_u32,
 };
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct SystemInfo {
     pub cpu_info: CPUInfo,
     pub aspm_info: ASPMInfo,
@@ -15,7 +16,7 @@ pub struct SystemInfo {
 
 impl SystemInfo {
     pub fn obtain() -> SystemInfo {
-        debug!("Obtaining system info");
+        trace!("Obtaining system info");
 
         SystemInfo {
             cpu_info: CPUInfo::obtain(),
@@ -31,7 +32,7 @@ pub enum CPUFreqDriver {
     Other,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct CPUInfo {
     pub driver: CPUFreqDriver,
     pub mode: Option<String>,
@@ -39,8 +40,8 @@ pub struct CPUInfo {
     pub has_epp: bool,
     pub has_perf_pct_scaling: bool,
 
-    pub scaling_min_frequency: u32,
-    pub scaling_max_frequency: u32,
+    pub hybrid: bool,
+    pub cores: Vec<CoreInfo>,
 
     pub total_min_frequency: u32,
     pub total_max_frequency: u32,
@@ -51,10 +52,32 @@ pub struct CPUInfo {
     pub hwp_dynamic_boost: Option<bool>,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default)]
+pub struct CoreInfo {
+    // Some CPU's status cannot be changed, and this value would be None
+    pub online: Option<bool>,
+
+    pub physical_core_id: u32,
+    pub logical_cpu_id: u32,
+
+    pub current_frequency: u32,
+    pub base_frequency: u32,
+
+    pub min_frequency: u32,
+    pub max_frequency: u32,
+
+    pub scaling_min_frequency: u32,
+    pub scaling_max_frequency: u32,
+
+    pub is_performance_core: Option<bool>,
+
+    pub governor: String,
+    // None if unsupported
+    pub epp: Option<String>,
+}
+
 impl CPUInfo {
     pub fn obtain() -> CPUInfo {
-        debug!("Obtaining CPU info");
-
         let driver = if fs::metadata("/sys/devices/system/cpu/intel_pstate").is_ok() {
             CPUFreqDriver::Intel
         } else if fs::metadata("/sys/devices/system/cpu/amd_pstate").is_ok() {
@@ -71,7 +94,7 @@ impl CPUInfo {
             ""
         };
 
-        CPUInfo {
+        let mut ret = CPUInfo {
             driver: driver.clone(),
 
             mode: if driver == CPUFreqDriver::Other {
@@ -87,25 +110,17 @@ impl CPUInfo {
                 "/sys/devices/system/cpu/cpu0/cpufreq/energy_performance_available_preferences",
             )
             .is_ok(),
-            // This feature is exclusive to intel, but there's no need to check whether we use intel because if we do not then the file won't exist anyways
+            // This feature is exclusive to intel
             has_perf_pct_scaling: fs::metadata(&format!(
                 "/sys/devices/system/cpu/intel_pstate/min_perf_pct"
             ))
             .is_ok(),
 
-            scaling_min_frequency: file_content_to_u32(
-                "/sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq",
-            ),
-            scaling_max_frequency: file_content_to_u32(
-                "/sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq",
-            ),
+            hybrid: false,
+            cores: Vec::default(),
 
-            total_min_frequency: file_content_to_u32(
-                "/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_min_freq",
-            ),
-            total_max_frequency: file_content_to_u32(
-                "/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq",
-            ),
+            total_min_frequency: 0,
+            total_max_frequency: 0,
 
             boost: match driver {
                 CPUFreqDriver::Intel => Some(!file_content_to_bool(
@@ -123,19 +138,158 @@ impl CPUInfo {
             } else {
                 None
             },
+        };
+
+        ret.obtain_core_info();
+
+        ret.total_max_frequency = ret.cores.iter().map(|c| c.max_frequency).max().unwrap();
+        ret.total_min_frequency = ret.cores.iter().map(|c| c.min_frequency).min().unwrap();
+
+        ret
+    }
+
+    fn obtain_core_info(&mut self) {
+        let mut base_frequency_variations: HashMap<u32, Vec<usize>> = HashMap::new();
+
+        let cpu_pattern = Regex::new(r"cpu\d+").unwrap();
+
+        let mut cores = Vec::new();
+
+        let mut count = 0;
+
+        let mut entries: Vec<_> = fs::read_dir("/sys/devices/system/cpu/")
+            .expect("Could not read sysfs directory")
+            .filter_map(Result::ok)
+            .collect();
+
+        entries.sort_by(|a, b| {
+            natord::compare(a.path().to_str().unwrap(), b.path().to_str().unwrap())
+        });
+
+        for entry in entries {
+            if !cpu_pattern.is_match(entry.file_name().as_os_str().to_str().unwrap()) {
+                continue;
+            }
+            let logical_cpu_id = count;
+            count += 1;
+
+            let online_path = entry.path().join("online");
+            let online = if fs::metadata(&online_path).is_ok() {
+                Some(file_content_to_bool(online_path))
+            } else {
+                None
+            };
+
+            // If online is missing the cpu cannot be taken offline so we should treat it as online
+            if online.unwrap_or(true) {
+                let physical_core_id = file_content_to_u32(entry.path().join("topology/core_id"));
+
+                let cpufreq_path = entry.path().join("cpufreq/");
+
+                let base_frequency =
+                    file_content_to_u32(cpufreq_path.join("base_frequency")) / 1000;
+                let current_frequency =
+                    file_content_to_u32(cpufreq_path.join("scaling_cur_freq")) / 1000;
+
+                let min_frequency =
+                    file_content_to_u32(cpufreq_path.join("cpuinfo_min_freq")) / 1000;
+                let max_frequency =
+                    file_content_to_u32(cpufreq_path.join("cpuinfo_max_freq")) / 1000;
+
+                let scaling_min_frequency =
+                    file_content_to_u32(cpufreq_path.join("scaling_min_freq")) / 1000;
+                let scaling_max_frequency =
+                    file_content_to_u32(cpufreq_path.join("scaling_max_freq")) / 1000;
+
+                let epp = if self.has_epp {
+                    Some(file_content_to_string(
+                        cpufreq_path.join("energy_performance_preference"),
+                    ))
+                } else {
+                    None
+                };
+
+                let governor = file_content_to_string(cpufreq_path.join("scaling_governor"));
+
+                if let Some(val) = base_frequency_variations.get_mut(&base_frequency) {
+                    val.push(cores.len());
+                } else {
+                    base_frequency_variations.insert(base_frequency, vec![cores.len()]);
+                }
+
+                cores.push(CoreInfo {
+                    online,
+
+                    physical_core_id,
+                    logical_cpu_id,
+
+                    base_frequency,
+                    current_frequency,
+
+                    min_frequency,
+                    max_frequency,
+
+                    scaling_min_frequency,
+                    scaling_max_frequency,
+
+                    epp,
+                    governor,
+
+                    // These would be set later
+                    is_performance_core: None,
+                })
+            } else {
+                cores.push(CoreInfo {
+                    online,
+                    logical_cpu_id,
+                    ..Default::default()
+                })
+            }
         }
+
+        let variations = base_frequency_variations.keys().count();
+
+        let hybrid = match variations {
+            1 => false,
+            2 => true,
+            _ => panic!("Unexpected CPU architecture. Has {variations} sets of possible base frequencies, program only supports single core type and hybrid architectures with 2 cpu types")
+        };
+
+        if hybrid {
+            let pcore_freq = base_frequency_variations.keys().max().unwrap();
+            for cpu in cores.iter_mut() {
+                cpu.is_performance_core = Some(cpu.base_frequency == *pcore_freq);
+            }
+        }
+
+        cores.sort_by(|a, b| a.physical_core_id.partial_cmp(&b.physical_core_id).unwrap());
+
+        let mut previous_core_id = cores[0].physical_core_id;
+        cores[0].physical_core_id = 0;
+        let mut core_id = 0;
+        for core in cores.iter_mut() {
+            let iter_core_id = core.physical_core_id;
+            if iter_core_id == previous_core_id {
+                core.physical_core_id = core_id;
+            } else {
+                core_id += 1;
+                core.physical_core_id = core_id;
+            }
+            previous_core_id = iter_core_id;
+        }
+
+        self.hybrid = hybrid;
+        self.cores = cores;
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct ASPMInfo {
     pub supported_modes: Option<Vec<String>>,
 }
 
 impl ASPMInfo {
     pub fn obtain() -> ASPMInfo {
-        debug!("Obtaining ASPM info");
-
         ASPMInfo {
             supported_modes: if fs::metadata("/sys/module/pcie_aspm/parameters/policy").is_err() {
                 None

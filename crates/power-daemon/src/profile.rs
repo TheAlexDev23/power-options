@@ -3,7 +3,7 @@ use std::{
     io::Read,
 };
 
-use log::{debug, error};
+use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
 
 use crate::helpers::{run_command, run_command_with_output, WhiteBlackList};
@@ -15,7 +15,7 @@ pub fn try_find_profile_index_by_name(vec: &Vec<Profile>, name: &str) -> Option<
     vec.iter().position(|p| p.profile_name == name)
 }
 
-#[derive(Serialize, Deserialize, Default, Clone, Debug)]
+#[derive(Serialize, Deserialize, Default, Clone, Debug, PartialEq)]
 pub struct ProfilesInfo {
     pub active_profile: usize,
     pub profiles: Vec<Profile>,
@@ -46,7 +46,7 @@ pub struct Profile {
 
 impl Profile {
     pub fn apply_all(&self) {
-        debug!("Applying profile: {}", self.profile_name);
+        info!("Applying profile: {}", self.profile_name);
 
         self.cpu_settings.apply();
         self.cpu_core_settings.apply();
@@ -87,7 +87,7 @@ pub struct CPUSettings {
 
 impl CPUSettings {
     pub fn apply(&self) {
-        debug!("Applying CPU settings");
+        info!("Applying CPU settings");
 
         if let Some(ref mode) = self.mode {
             if fs::metadata("/sys/devices/system/cpu/intel_pstate").is_ok() {
@@ -105,17 +105,30 @@ impl CPUSettings {
             }
         }
 
-        if let Some(ref epp) = self.energy_performance_preference {
-            run_command(&format!(
-                "echo {} > /sys/devices/system/cpu/cpu*/cpufreq/energy_performance_preference",
-                epp
-            ));
+        // Governor and hwp_dynaamic_boost needs to run before epp options because those determine if epp is changable
+        if let Some(hwp_dynamic_boost) = self.hwp_dyn_boost {
+            let value = if hwp_dynamic_boost { "1" } else { "0" };
+            if fs::metadata("/sys/devices/system/cpu/intel_pstate").is_ok() {
+                run_command(&format!(
+                    "echo {} > /sys/devices/system/cpu/intel_pstate/hwp_dynamic_boost",
+                    value
+                ))
+            } else {
+                error!("HWP dynamic boost is currently only supported for intel CPUs with intel_pstate");
+            }
         }
 
         if let Some(ref governor) = self.governor {
             run_command(&format!(
                 "echo {} > /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor",
                 governor
+            ));
+        }
+
+        if let Some(ref epp) = self.energy_performance_preference {
+            run_command(&format!(
+                "echo {} > /sys/devices/system/cpu/cpu*/cpufreq/energy_performance_preference",
+                epp
             ));
         }
 
@@ -170,18 +183,6 @@ impl CPUSettings {
                 error!("Min/Max scaling perf percentage is currently only supported for intel CPUs with intel_pstate");
             }
         }
-
-        if let Some(hwp_dynamic_boost) = self.hwp_dyn_boost {
-            let value = if hwp_dynamic_boost { "1" } else { "0" };
-            if fs::metadata("/sys/devices/system/cpu/intel_pstate").is_ok() {
-                run_command(&format!(
-                    "echo {} > /sys/devices/system/cpu/intel_pstate/hwp_dynamic_boost",
-                    value
-                ))
-            } else {
-                error!("HWP dynamic boost is currently only supported for intel CPUs with intel_pstate");
-            }
-        }
     }
 }
 
@@ -190,25 +191,41 @@ pub struct CPUCoreSettings {
     pub cores: Option<Vec<CoreSetting>>,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Default)]
 pub struct CoreSetting {
     pub cpu_id: u32,
+    pub online: Option<bool>,
     pub max_frequency: Option<u32>,
     pub min_frequency: Option<u32>,
     pub governor: Option<String>,
-    pub energy_performance_preference: Option<String>,
+    pub epp: Option<String>,
 }
 
 impl CPUCoreSettings {
     pub fn apply(&self) {
-        debug!("Applying CPU core settings");
+        info!("Applying CPU core settings");
 
         if self.cores.is_none() {
             return;
         }
 
+        // In the UI, when disabling a core and then resetting the core override self.online would be set to None
+        // But the user likely would have meant to return cpu back to the default values in the profile.
+        // Given the way per-core settings work (first apply settings to all cores then individual overrides),
+        // it's logical to also remove all the core-disabling overrides first and then maybe disable individual cores
+        // Could this be fixed in the UI? Yes. Would it be better architecture-wise? Yes. But it's way easier to just to this
+        run_command("echo 1 > /sys/devices/system/cpu/cpu*/online");
+
         for core in self.cores.as_ref().unwrap().iter() {
-            if let Some(ref epp) = core.energy_performance_preference {
+            if let Some(online) = core.online {
+                run_command(&format!(
+                    "echo {} > /sys/devices/system/cpu/cpu{}/online",
+                    if online { "1" } else { "0" },
+                    core.cpu_id,
+                ));
+            }
+
+            if let Some(ref epp) = core.epp {
                 run_command(&format!(
                     "echo {} > /sys/devices/system/cpu/cpu{}/cpufreq/energy_performance_preference",
                     epp, core.cpu_id,
@@ -247,7 +264,7 @@ pub struct ScreenSettings {
 
 impl ScreenSettings {
     pub fn apply(&self) {
-        debug!("Applying screen settings");
+        info!("Applying screen settings");
 
         if let Some(ref resolution) = self.resolution {
             run_command(&format!("xrandr --mode {}", resolution));
@@ -270,7 +287,7 @@ pub struct RadioSettings {
 
 impl RadioSettings {
     pub fn apply(&self) {
-        debug!("Applying radio settings");
+        info!("Applying radio settings");
 
         if let Some(wifi) = self.block_wifi {
             run_command(&format!(
@@ -315,7 +332,7 @@ pub struct NetworkSettings {
 
 impl NetworkSettings {
     pub fn apply(&self) {
-        debug!("Applying network settings");
+        info!("Applying network settings");
 
         if self.disable_ethernet {
             Self::disable_all_ethernet_cards()
@@ -402,7 +419,7 @@ pub struct ASPMSettings {
 
 impl ASPMSettings {
     pub fn apply(&self) {
-        debug!("Applying ASPM settings");
+        info!("Applying ASPM settings");
 
         if let Some(ref mode) = self.mode {
             run_command(&format!(
@@ -423,7 +440,7 @@ pub struct PCISettings {
 
 impl PCISettings {
     pub fn apply(&self) {
-        debug!("Applying PCI settings");
+        info!("Applying PCI settings");
 
         let entries = fs::read_dir("/sys/bus/pci/devices").expect("Could not read sysfs directory");
 
@@ -463,7 +480,7 @@ pub struct USBSettings {
 
 impl USBSettings {
     pub fn apply(&self) {
-        debug!("Applying USB settings");
+        info!("Applying USB settings");
 
         let entries = fs::read_dir("/sys/bus/usb/devices").expect("Could not read sysfs directory");
 
@@ -512,7 +529,7 @@ pub struct SATASettings {
 
 impl SATASettings {
     pub fn apply(&self) {
-        debug!("Applying SATA settings");
+        info!("Applying SATA settings");
 
         if self.active_link_pm_policy.is_none() {
             return;
@@ -556,7 +573,7 @@ pub struct KernelSettings {
 
 impl KernelSettings {
     pub fn apply(&self) {
-        debug!("Applying Kernel settings");
+        info!("Applying Kernel settings");
 
         if let Some(disable_wd) = self.disable_nmi_watchdog {
             run_command(&format!(
