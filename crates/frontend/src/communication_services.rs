@@ -6,6 +6,7 @@ use power_daemon::communication::client::ControlClient;
 use power_daemon::systeminfo::SystemInfo;
 use power_daemon::Config;
 use power_daemon::ProfilesInfo;
+use power_daemon::ReducedUpdate;
 use power_daemon::{communication::client::SystemInfoClient, Profile};
 
 use crate::helpers::{wait_for_diff_msg, wait_for_msg};
@@ -90,6 +91,9 @@ pub enum ControlAction {
     UpdateConfig(Config),
     UpdateProfile(u32, Profile),
 
+    SetReducedUpdate(ReducedUpdate),
+    ResetReducedUpdate,
+
     SetProfileOverride(String),
     RemoveProfileOverride,
 }
@@ -128,6 +132,14 @@ pub async fn control_service(
                     .update_profile(idx, updated)
                     .await
                     .expect("Could not update profile"),
+                ControlAction::SetReducedUpdate(reduced_update) => control_client
+                    .set_reduced_update(reduced_update)
+                    .await
+                    .expect("Could not set reduced update"),
+                ControlAction::ResetReducedUpdate => control_client
+                    .reset_reduced_update()
+                    .await
+                    .expect("Could not reset reduced update"),
                 ControlAction::SetProfileOverride(profile_name) => control_client
                     .set_profile_override(profile_name)
                     .await

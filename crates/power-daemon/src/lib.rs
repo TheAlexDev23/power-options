@@ -9,6 +9,7 @@ mod helpers;
 
 pub use config::*;
 pub use profile::*;
+use serde::{Deserialize, Serialize};
 pub use systeminfo::*;
 
 use std::{
@@ -19,10 +20,25 @@ use std::{
 
 use log::{debug, trace};
 
+#[derive(Clone, Copy, Deserialize, Serialize, PartialEq)]
+pub enum ReducedUpdate {
+    CPU,
+    CPUCores,
+    Screen,
+    Radio,
+    Network,
+    ASPM,
+    PCI,
+    USB,
+    SATA,
+    Kernel,
+}
+
 pub struct Instance {
     profiles_path: String,
     config: Config,
     profiles_info: ProfilesInfo,
+    reduced_update: Option<ReducedUpdate>,
     temporary_override: Option<String>,
 }
 
@@ -36,6 +52,7 @@ impl Instance {
                 profiles,
                 ..Default::default()
             },
+            reduced_update: None,
             temporary_override: None,
         }
     }
@@ -56,6 +73,13 @@ impl Instance {
         self.temporary_override = None;
     }
 
+    pub fn set_reduced_update(&mut self, reduced_update: ReducedUpdate) {
+        self.reduced_update = Some(reduced_update);
+    }
+    pub fn reset_reduced_update(&mut self) {
+        self.reduced_update = None;
+    }
+
     pub fn update(&mut self) {
         let profiles = &self.profiles_info.profiles;
         let active_profile = if let Some(ref temporary_override) = self.temporary_override {
@@ -74,7 +98,13 @@ impl Instance {
 
         self.profiles_info.active_profile = active_profile;
 
-        self.profiles_info.get_active_profile().apply_all();
+        if let Some(reduced_update) = self.reduced_update {
+            self.profiles_info
+                .get_active_profile()
+                .apply_reduced(reduced_update);
+        } else {
+            self.profiles_info.get_active_profile().apply_all();
+        }
     }
 
     pub fn update_config(&mut self, config: Config) {

@@ -1,4 +1,4 @@
-use log::{debug, error, trace};
+use log::{debug, error};
 
 use tokio::sync::Mutex;
 use zbus::{conn::Builder, interface, Connection, Error};
@@ -71,6 +71,16 @@ impl ControlServer {
                 error!("Could not parse new requested config: {error}")
             }
         }
+    }
+
+    async fn set_reduced_update(&mut self, reduced_update: String) {
+        match serde_json::from_str(&reduced_update) {
+            Ok(reduced_update) => self.instance.get_mut().set_reduced_update(reduced_update),
+            Err(error) => error!("Could not set reduced update: {error}"),
+        }
+    }
+    async fn reset_reduced_update(&mut self) {
+        self.instance.get_mut().reset_reduced_update();
     }
 
     async fn update_profile(&mut self, idx: u32, updated: String) {

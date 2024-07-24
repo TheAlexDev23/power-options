@@ -1,6 +1,6 @@
 use crate::{
     systeminfo::{ASPMInfo, CPUInfo, SystemInfo},
-    Config, Profile, ProfilesInfo,
+    Config, Profile, ProfilesInfo, ReducedUpdate,
 };
 use zbus::proxy;
 
@@ -58,6 +58,9 @@ trait ControlDBus {
     async fn update_config(&self, updated: String) -> zbus::Result<()>;
     async fn update_profile(&self, idx: u32, updated: String) -> zbus::Result<()>;
 
+    async fn set_reduced_update(&self, reduced_update: String) -> zbus::Result<()>;
+    async fn reset_reduced_update(&self) -> zbus::Result<()>;
+
     async fn set_profile_override(&self, profile_name: String) -> zbus::Result<()>;
     async fn remove_profile_override(&self) -> zbus::Result<()>;
 }
@@ -94,6 +97,18 @@ impl ControlClient {
                 serde_json::to_string(&updated).expect("Could not serialize config"),
             )
             .await
+    }
+
+    pub async fn set_reduced_update(&self, reduced_update: ReducedUpdate) -> zbus::Result<()> {
+        self.get_proxy()
+            .await?
+            .set_reduced_update(
+                serde_json::to_string(&reduced_update).expect("Could not serialize reduced update"),
+            )
+            .await
+    }
+    pub async fn reset_reduced_update(&self) -> zbus::Result<()> {
+        self.get_proxy().await?.reset_reduced_update().await
     }
 
     pub async fn set_profile_override(&self, profile_name: String) -> zbus::Result<()> {

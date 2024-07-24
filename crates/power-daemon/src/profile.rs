@@ -3,10 +3,13 @@ use std::{
     io::Read,
 };
 
-use log::{debug, error, info};
+use log::{error, info};
 use serde::{Deserialize, Serialize};
 
-use crate::helpers::{run_command, run_command_with_output, WhiteBlackList};
+use crate::{
+    helpers::{run_command, run_command_with_output, WhiteBlackList},
+    ReducedUpdate,
+};
 
 pub fn find_profile_index_by_name(vec: &Vec<Profile>, name: &str) -> usize {
     vec.iter().position(|p| p.profile_name == name).unwrap()
@@ -58,6 +61,22 @@ impl Profile {
         self.usb_settings.apply();
         self.sata_settings.apply();
         self.kernel_settings.apply();
+    }
+
+    pub fn apply_reduced(&self, reduced_update: ReducedUpdate) {
+        info!("Applying reduced amount of settings");
+        match reduced_update {
+            ReducedUpdate::CPU => self.cpu_settings.apply(),
+            ReducedUpdate::CPUCores => self.cpu_core_settings.apply(),
+            ReducedUpdate::Screen => self.screen_settings.apply(),
+            ReducedUpdate::Radio => self.radio_settings.apply(),
+            ReducedUpdate::Network => self.network_settings.apply(),
+            ReducedUpdate::ASPM => self.aspm_settings.apply(),
+            ReducedUpdate::PCI => self.pci_settings.apply(),
+            ReducedUpdate::USB => self.usb_settings.apply(),
+            ReducedUpdate::SATA => self.sata_settings.apply(),
+            ReducedUpdate::Kernel => self.kernel_settings.apply(),
+        }
     }
 }
 

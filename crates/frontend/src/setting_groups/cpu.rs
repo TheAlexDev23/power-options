@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use dioxus::prelude::*;
-use power_daemon::{CPUSettings, CoreSetting, Profile, ProfilesInfo, SystemInfo};
+use power_daemon::{CPUSettings, CoreSetting, Profile, ProfilesInfo, ReducedUpdate, SystemInfo};
 
 use crate::communication_services::{ControlAction, SystemInfoSyncType};
 
@@ -203,6 +203,7 @@ fn CPUSettingsForm(
             },
         };
 
+        control_routine.send(ControlAction::SetReducedUpdate(ReducedUpdate::CPU));
         control_routine.send(ControlAction::UpdateProfile(
             active_profile_idx as u32,
             active_profile,
@@ -461,7 +462,7 @@ fn CoreSettings(
                                                 profile_id,
                                                 logical_cpu_id,
                                                 move |core_settings| {
-                                                    core_settings.governor = Some(v.clone());
+                                                    core_settings.epp = Some(v.clone());
                                                 },
                                                 control_routine,
                                             );
@@ -524,6 +525,7 @@ fn update_core_settings<F>(
 
     update(core_setting);
 
+    control_routine.send(ControlAction::SetReducedUpdate(ReducedUpdate::CPUCores));
     control_routine.send(ControlAction::UpdateProfile(profile_id, profile.clone()));
     control_routine.send(ControlAction::GetProfilesInfo);
 }
@@ -537,6 +539,7 @@ fn reset_core_settings(
     if let Some(ref mut cores) = profile.cpu_core_settings.cores {
         if let Some(pos) = cores.iter().position(|c| c.cpu_id == cpu_id) {
             cores.remove(pos);
+            control_routine.send(ControlAction::SetReducedUpdate(ReducedUpdate::CPUCores));
             control_routine.send(ControlAction::UpdateProfile(profile_id, profile.clone()));
             control_routine.send(ControlAction::GetProfilesInfo);
         }
