@@ -167,12 +167,12 @@ fn CPUSettingsForm(
                 None
             },
             min_frequency: if form.min_freq.0.cloned() {
-                Some(form.min_freq.1.cloned() as u32)
+                Some(form.min_freq.1.cloned() as u32 * 1000)
             } else {
                 None
             },
             max_frequency: if form.max_freq.0.cloned() {
-                Some(form.max_freq.1.cloned() as u32)
+                Some(form.max_freq.1.cloned() as u32 * 1000)
             } else {
                 None
             },
