@@ -24,6 +24,7 @@ use log::{debug, trace};
 pub enum ReducedUpdate {
     CPU,
     CPUCores,
+    SingleCPUCore(u32),
     Screen,
     Radio,
     Network,

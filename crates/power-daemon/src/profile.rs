@@ -68,6 +68,9 @@ impl Profile {
         match reduced_update {
             ReducedUpdate::CPU => self.cpu_settings.apply(),
             ReducedUpdate::CPUCores => self.cpu_core_settings.apply(),
+            ReducedUpdate::SingleCPUCore(idx) => {
+                self.cpu_core_settings.cores.as_ref().unwrap()[idx as usize].apply()
+            }
             ReducedUpdate::Screen => self.screen_settings.apply(),
             ReducedUpdate::Radio => self.radio_settings.apply(),
             ReducedUpdate::Network => self.network_settings.apply(),
@@ -236,40 +239,46 @@ impl CPUCoreSettings {
         run_command("echo 1 > /sys/devices/system/cpu/cpu*/online");
 
         for core in self.cores.as_ref().unwrap().iter() {
-            if let Some(online) = core.online {
-                run_command(&format!(
-                    "echo {} > /sys/devices/system/cpu/cpu{}/online",
-                    if online { "1" } else { "0" },
-                    core.cpu_id,
-                ));
-            }
+            core.apply();
+        }
+    }
+}
 
-            if let Some(ref epp) = core.epp {
-                run_command(&format!(
-                    "echo {} > /sys/devices/system/cpu/cpu{}/cpufreq/energy_performance_preference",
-                    epp, core.cpu_id,
-                ));
-            }
+impl CoreSetting {
+    pub fn apply(&self) {
+        if let Some(online) = self.online {
+            run_command(&format!(
+                "echo {} > /sys/devices/system/cpu/cpu{}/online",
+                if online { "1" } else { "0" },
+                self.cpu_id,
+            ));
+        }
 
-            if let Some(ref governor) = core.governor {
-                run_command(&format!(
-                    "echo {} > /sys/devices/system/cpu/cpu{}/cpufreq/scaling_governor",
-                    governor, core.cpu_id,
-                ));
-            }
+        if let Some(ref epp) = self.epp {
+            run_command(&format!(
+                "echo {} > /sys/devices/system/cpu/cpu{}/cpufreq/energy_performance_preference",
+                epp, self.cpu_id,
+            ));
+        }
 
-            if let Some(min_frequency) = core.min_frequency {
-                run_command(&format!(
-                    "echo {} > /sys/devices/system/cpu/cpu{}/cpufreq/scaling_min_freq",
-                    min_frequency, core.cpu_id,
-                ));
-            }
-            if let Some(max_frequency) = core.max_frequency {
-                run_command(&format!(
-                    "echo {} > /sys/devices/system/cpu/cpu{}/cpufreq/scaling_max_freq",
-                    max_frequency, core.cpu_id
-                ));
-            }
+        if let Some(ref governor) = self.governor {
+            run_command(&format!(
+                "echo {} > /sys/devices/system/cpu/cpu{}/cpufreq/scaling_governor",
+                governor, self.cpu_id,
+            ));
+        }
+
+        if let Some(min_frequency) = self.min_frequency {
+            run_command(&format!(
+                "echo {} > /sys/devices/system/cpu/cpu{}/cpufreq/scaling_min_freq",
+                min_frequency, self.cpu_id,
+            ));
+        }
+        if let Some(max_frequency) = self.max_frequency {
+            run_command(&format!(
+                "echo {} > /sys/devices/system/cpu/cpu{}/cpufreq/scaling_max_freq",
+                max_frequency, self.cpu_id
+            ));
         }
     }
 }

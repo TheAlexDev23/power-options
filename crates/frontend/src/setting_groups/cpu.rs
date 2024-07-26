@@ -502,28 +502,30 @@ fn update_core_settings<F>(
 ) where
     F: FnMut(&mut CoreSetting),
 {
-    let core_setting = if let Some(ref mut cores) = profile.cpu_core_settings.cores {
-        if cores.iter().any(|c| c.cpu_id == cpu_id) {
-            // Yeah yeah two pointless searches instead of one, but otherwise the borrow checker complains
-            cores.iter_mut().find(|c| c.cpu_id == cpu_id).unwrap()
+    let (core_setting, idx) = if let Some(ref mut cores) = profile.cpu_core_settings.cores {
+        if let Some(idx) = cores.iter().position(|c| c.cpu_id == cpu_id) {
+            (&mut cores[idx], idx)
         } else {
             cores.push(CoreSetting {
                 cpu_id,
                 ..Default::default()
             });
-            cores.last_mut().unwrap()
+            let idx = cores.len() - 1;
+            (cores.last_mut().unwrap(), idx)
         }
     } else {
         profile.cpu_core_settings.cores = Some(vec![CoreSetting {
             cpu_id,
             ..Default::default()
         }]);
-        &mut profile.cpu_core_settings.cores.as_mut().unwrap()[0]
+        (&mut profile.cpu_core_settings.cores.as_mut().unwrap()[0], 0)
     };
 
     update(core_setting);
 
-    control_routine.send(ControlAction::SetReducedUpdate(ReducedUpdate::CPUCores));
+    control_routine.send(ControlAction::SetReducedUpdate(
+        ReducedUpdate::SingleCPUCore(idx as u32),
+    ));
     control_routine.send(ControlAction::UpdateProfile(profile_id, profile.clone()));
     control_routine.send(ControlAction::GetProfilesInfo);
 }
