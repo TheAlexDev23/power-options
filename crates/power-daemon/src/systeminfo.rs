@@ -4,11 +4,8 @@ use log::trace;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    helpers::{
-        file_content_to_bool, file_content_to_list, file_content_to_string, file_content_to_u32,
-    },
-    CPUCoreSettings,
+use crate::helpers::{
+    file_content_to_bool, file_content_to_list, file_content_to_string, file_content_to_u32,
 };
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -173,6 +170,9 @@ impl CPUInfo {
             core.max_frequency = core_initial.max_frequency;
             core.is_performance_core = core_initial.is_performance_core;
         }
+
+        self.cores
+            .sort_by(|a, b| a.physical_core_id.partial_cmp(&b.physical_core_id).unwrap());
     }
 
     fn obtain_core_info(&mut self) {

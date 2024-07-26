@@ -212,7 +212,7 @@ fn CPUSettingsForm(
 
     use_effect(move || {
         // If the mode overwriting is disabled we set it to reflect the system current opmode
-        // The reasoning is: you do not set an explicit override so the opmode is not guaranteed, therefore we will assume the value is what the system is currently at
+        // The reasoning is: the user does not set an explicit override so the opmode is not guaranteed, therefore we will assume the value is what the system is currently at
         // And even though the current value of the system does not reflect the users selection, it still won't be set by the daemon as the override is disabled
         if !*form.mode.0.read() {
             if let Some(ref mode) = cpu_info.mode {
