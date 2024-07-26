@@ -326,7 +326,10 @@ fn CoreSettings(
     profiles_info: ProfilesInfo,
     control_routine: Coroutine<ControlAction>,
 ) -> Element {
-    let cpu_info = system_info.cpu_info.clone();
+    let mut cpu_info = system_info.cpu_info.clone();
+    let cpu_info_intial = use_hook(|| cpu_info.clone());
+    cpu_info.update_core_info_with_initial(&cpu_info_intial);
+
     let cpu_core_settings = &profiles_info.get_active_profile().cpu_core_settings;
 
     let epps = get_epps();
@@ -406,25 +409,28 @@ fn CoreSettings(
                         }
                     }
 
-                    if core.online.unwrap_or(true) {
-
-                        if cpu_info.hybrid {
-                            td {
-                                if core.is_performance_core.unwrap() {
-                                    "P ({core.physical_core_id}-{logical_cpu_id})"
-                                } else {
-                                    "E ({core.physical_core_id}-{logical_cpu_id})"
-                                }
+                    if cpu_info.hybrid {
+                        td {
+                            if core.is_performance_core.unwrap() {
+                                "P ({core.physical_core_id}-{logical_cpu_id})"
+                            } else {
+                                "E ({core.physical_core_id}-{logical_cpu_id})"
                             }
-                        } else {
-                            td { "{core.physical_core_id}" }
                         }
+                    } else {
+                        td { "{core.physical_core_id}" }
+                    }
 
-                        td { "{core.base_frequency}" }
+                    td { "{core.base_frequency}" }
+                    if core.online.unwrap_or(true) {
                         td { "{core.current_frequency}" }
+                    } else {
+                        td { "" }
+                    }
 
-                        td { "{core.min_frequency}-{core.max_frequency}" }
+                    td { "{core.min_frequency}-{core.max_frequency}" }
 
+                    if core.online.unwrap_or(true) {
                         td {
                             Dropdown {
                                 id: "governor-dd-cpu{logical_cpu_id}",
@@ -472,17 +478,9 @@ fn CoreSettings(
                             }
                         }
                     } else {
-                        td { "{logical_cpu_id}" }
-
-                        td { "-" }
-                        td { "-" }
-
-                        td { "-" }
-
-                        td { "-" }
-
+                        td { "" }
                         if cpu_info.has_epp {
-                            td { "-" }
+                            td { "" }
                         }
                     }
                 }

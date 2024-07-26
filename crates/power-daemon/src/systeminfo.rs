@@ -4,8 +4,11 @@ use log::trace;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
-use crate::helpers::{
-    file_content_to_bool, file_content_to_list, file_content_to_string, file_content_to_u32,
+use crate::{
+    helpers::{
+        file_content_to_bool, file_content_to_list, file_content_to_string, file_content_to_u32,
+    },
+    CPUCoreSettings,
 };
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -146,6 +149,30 @@ impl CPUInfo {
         ret.total_min_frequency = ret.cores.iter().map(|c| c.min_frequency).min().unwrap();
 
         ret
+    }
+
+    pub fn update_core_info_with_initial(&mut self, initial: &CPUInfo) {
+        for core in &mut self.cores {
+            if core.online.unwrap_or(true) {
+                continue;
+            }
+
+            let core_initial = initial
+                .cores
+                .iter()
+                .find(|c| c.logical_cpu_id == core.logical_cpu_id)
+                .unwrap();
+
+            if !core_initial.online.unwrap_or(true) {
+                continue;
+            }
+
+            core.physical_core_id = core_initial.physical_core_id;
+            core.base_frequency = core_initial.base_frequency;
+            core.min_frequency = core_initial.min_frequency;
+            core.max_frequency = core_initial.max_frequency;
+            core.is_performance_core = core_initial.is_performance_core;
+        }
     }
 
     fn obtain_core_info(&mut self) {
