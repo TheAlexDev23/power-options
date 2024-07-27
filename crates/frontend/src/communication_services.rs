@@ -98,8 +98,10 @@ pub enum ControlAction {
     RemoveProfileOverride,
 }
 
+pub type ControlRoutine = Coroutine<(ControlAction, Option<Signal<bool>>)>;
+
 pub async fn control_service(
-    mut rx: UnboundedReceiver<ControlAction>,
+    mut rx: UnboundedReceiver<(ControlAction, Option<Signal<bool>>)>,
     mut config: Signal<Option<Config>>,
     mut profiles_info: Signal<Option<ProfilesInfo>>,
 ) {
@@ -108,7 +110,11 @@ pub async fn control_service(
         .expect("Could not initialize control client");
 
     loop {
-        if let Ok(Some(msg)) = rx.try_next() {
+        if let Ok(Some(sent_msg)) = rx.try_next() {
+            let msg = sent_msg.0;
+            if let Some(mut signal) = sent_msg.1 {
+                signal.set(true);
+            }
             match msg {
                 ControlAction::GetConfig => {
                     config.set(Some(
@@ -148,6 +154,10 @@ pub async fn control_service(
                     .remove_profile_override()
                     .await
                     .expect("Could not remove profile override"),
+            }
+
+            if let Some(mut signal) = sent_msg.1 {
+                signal.set(false);
             }
         }
 

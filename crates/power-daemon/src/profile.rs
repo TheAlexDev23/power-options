@@ -69,7 +69,9 @@ impl Profile {
             ReducedUpdate::CPU => self.cpu_settings.apply(),
             ReducedUpdate::CPUCores => self.cpu_core_settings.apply(),
             ReducedUpdate::SingleCPUCore(idx) => {
-                self.cpu_core_settings.cores.as_ref().unwrap()[idx as usize].apply()
+                if let Some(ref cores) = self.cpu_core_settings.cores {
+                    cores[idx as usize].apply()
+                }
             }
             ReducedUpdate::Screen => self.screen_settings.apply(),
             ReducedUpdate::Radio => self.radio_settings.apply(),

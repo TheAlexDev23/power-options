@@ -7,7 +7,7 @@ mod setting_groups;
 use std::time::Duration;
 
 use communication_services::{
-    control_service, system_info_service, ControlAction, SystemInfoSyncType,
+    control_service, system_info_service, ControlAction, ControlRoutine, SystemInfoSyncType,
 };
 use cpu::CPUGroupProps;
 use dioxus::{
@@ -44,12 +44,14 @@ fn App() -> Element {
     let config = use_signal(|| Option::None);
     let profiles_info = use_signal(|| Option::None);
     let control_routine = use_coroutine(move |rx| control_service(rx, config, profiles_info));
-    control_routine.send(ControlAction::GetProfilesInfo);
+    control_routine.send((ControlAction::GetProfilesInfo, None));
 
     let current_settings_tab = use_signal(|| 0);
     rsx! {
         link { rel: "stylesheet", href: "main.css" }
         script { src: "helpers.js" }
+
+        div { class: "spinner" }
 
         PowerProfilesNav { profiles_info, control_routine }
         SettingGroupsNav { current_tab: current_settings_tab }
@@ -66,8 +68,11 @@ fn App() -> Element {
 #[component]
 fn PowerProfilesNav(
     profiles_info: Signal<Option<ProfilesInfo>>,
-    control_routine: Coroutine<ControlAction>,
+    control_routine: ControlRoutine,
 ) -> Element {
+    let waiting = use_signal(|| false);
+    let mut waiting_future_idx = use_signal(|| 0);
+
     if profiles_info.read().is_some() {
         let mut buttons = Vec::new();
         for (idx, profile) in profiles_info
@@ -80,9 +85,12 @@ fn PowerProfilesNav(
         {
             let profile_name = profile.profile_name.clone();
             buttons.push((idx, profile_name.clone(), move |_| {
-                control_routine.send(ControlAction::SetProfileOverride(profile_name.clone()));
-                // The active profile index should change, so we need to sync profilesinfo to rerender the required components
-                control_routine.send(ControlAction::GetProfilesInfo);
+                waiting_future_idx.set(idx);
+                control_routine.send((
+                    ControlAction::SetProfileOverride(profile_name.clone()),
+                    Some(waiting),
+                ));
+                control_routine.send((ControlAction::GetProfilesInfo, Some(waiting)));
             }))
         }
 
@@ -91,14 +99,18 @@ fn PowerProfilesNav(
                 ul {
                     for button in buttons {
                         li {
-                            button {
-                                onclick: button.2,
-                                class: if button.0 == profiles_info.read().as_ref().unwrap().active_profile {
-                                    "active"
-                                } else {
-                                    ""
-                                },
-                                "{button.1}"
+                            if *waiting.read() && button.0 == *waiting_future_idx.read() {
+                                div { class: "spinner" }
+                            } else {
+                                button {
+                                    onclick: button.2,
+                                    class: if button.0 == profiles_info.read().as_ref().unwrap().active_profile {
+                                        "active"
+                                    } else {
+                                        ""
+                                    },
+                                    "{button.1}"
+                                }
                             }
                         }
                     }
@@ -145,7 +157,7 @@ fn SettingGroup(
     current_tab: Signal<u8>,
     system_info: Signal<Option<SystemInfo>>,
     profiles_info: Signal<Option<ProfilesInfo>>,
-    control_routine: Coroutine<ControlAction>,
+    control_routine: ControlRoutine,
     system_info_routine: Coroutine<(Duration, SystemInfoSyncType)>,
 ) -> Element {
     rsx! {

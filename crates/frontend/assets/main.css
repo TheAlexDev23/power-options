@@ -121,6 +121,25 @@ th {
     padding: 5px;
 }
 
+.spinner {
+    border: 5px solid #33383a;
+    border-top: 5px solid #70685c;
+    border-radius: 50%;
+    width: 12px;
+    height: 12px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
 
 .hidden {
     display: none !important;
@@ -248,15 +267,20 @@ th {
     align-items: center;
 }
 
-.confirm-buttons * {
+.confirm-buttons input,
+.confirm-buttons button {
     margin: 0;
     width: 200px;
     height: 35px;
     font-size: 15px;
 }
 
-.confirm-buttons *:hover {
-    cursor: pointer;
+.confirm-buttons [type="submit"]:not([disabled]) {
+    background-color: #0860F2;
+}
+
+.confirm-buttons button .spinner {
+    position: absolute;
 }
 
 #cpu-form {

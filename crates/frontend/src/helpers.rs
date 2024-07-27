@@ -108,13 +108,13 @@ pub fn Dropdown(
     selected: String,
     items: Vec<String>,
     disabled: bool,
-    onchange: EventHandler<String>,
+    oninput: EventHandler<String>,
 ) -> Element {
     rsx! {
         select {
             id,
-            onchange: move |v| {
-                onchange.call(v.value());
+            oninput: move |v| {
+                oninput.call(v.value());
             },
             disabled,
             for item in items {

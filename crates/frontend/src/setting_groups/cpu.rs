@@ -1,9 +1,10 @@
+use std::collections::HashMap;
 use std::time::Duration;
 
 use dioxus::prelude::*;
 use power_daemon::{CPUSettings, CoreSetting, Profile, ProfilesInfo, ReducedUpdate, SystemInfo};
 
-use crate::communication_services::{ControlAction, SystemInfoSyncType};
+use crate::communication_services::{ControlAction, ControlRoutine, SystemInfoSyncType};
 
 use crate::helpers::{Dropdown, ToggleableDropdown, ToggleableNumericField, ToggleableToggle};
 
@@ -88,7 +89,7 @@ impl CPUForm {
 pub fn CPUGroup(
     system_info: Signal<Option<SystemInfo>>,
     profiles_info: Signal<Option<ProfilesInfo>>,
-    control_routine: Coroutine<ControlAction>,
+    control_routine: ControlRoutine,
     system_info_routine: Coroutine<(Duration, SystemInfoSyncType)>,
 ) -> Element {
     system_info_routine.send((Duration::from_secs_f32(0.5), SystemInfoSyncType::CPU));
@@ -122,13 +123,14 @@ pub fn CPUGroup(
 fn CPUSettingsForm(
     system_info: SystemInfo,
     profiles_info: ProfilesInfo,
-    control_routine: Coroutine<ControlAction>,
+    control_routine: ControlRoutine,
 ) -> Element {
     let cpu_settings = profiles_info.get_active_profile().cpu_settings.clone();
 
     let cpu_info = system_info.clone().cpu_info;
 
     let mut changed = use_signal(|| false);
+    let awaiting_completion = use_signal(|| false);
 
     let mode_supported = cpu_info.mode.is_some();
     let epp_supported = cpu_info.has_epp;
@@ -203,10 +205,14 @@ fn CPUSettingsForm(
             },
         };
 
-        control_routine.send(ControlAction::SetReducedUpdate(ReducedUpdate::CPU));
-        control_routine.send(ControlAction::UpdateProfile(
-            active_profile_idx as u32,
-            active_profile,
+        control_routine.send((
+            ControlAction::SetReducedUpdate(ReducedUpdate::CPU),
+            Some(awaiting_completion),
+        ));
+        control_routine.send((ControlAction::ResetReducedUpdate, Some(awaiting_completion)));
+        control_routine.send((
+            ControlAction::UpdateProfile(active_profile_idx as u32, active_profile),
+            Some(awaiting_completion),
         ));
     };
 
@@ -302,10 +308,13 @@ fn CPUSettingsForm(
             }
 
             div { class: "confirm-buttons",
-                input {
+                button {
                     r#type: "submit",
-                    value: "Apply",
-                    disabled: !changed.cloned()
+                    disabled: !changed.cloned() || *awaiting_completion.read(),
+                    if *awaiting_completion.read() {
+                        div { class: "spinner" }
+                    }
+                    label { "Apply" }
                 }
                 input {
                     onclick: move |_| {
@@ -324,7 +333,7 @@ fn CPUSettingsForm(
 fn CoreSettings(
     system_info: SystemInfo,
     profiles_info: ProfilesInfo,
-    control_routine: Coroutine<ControlAction>,
+    control_routine: ControlRoutine,
 ) -> Element {
     let mut cpu_info = system_info.cpu_info.clone();
     let cpu_info_intial = use_hook(|| cpu_info.clone());
@@ -337,6 +346,11 @@ fn CoreSettings(
 
     let current_profile = profiles_info.get_active_profile().clone();
     let profile_id = profiles_info.active_profile as u32;
+
+    let mut cores_awaiting_update_signals = HashMap::new();
+    for core in &cpu_info.cores {
+        cores_awaiting_update_signals.insert(core.logical_cpu_id, use_signal(|| false));
+    }
 
     rsx! {
         table { id: "cpu-cores-table",
@@ -358,39 +372,40 @@ fn CoreSettings(
             }
 
             for (logical_cpu_id , core) in cpu_info.cores.into_iter().map(|c| (c.logical_cpu_id, c)) {
-                tr {
-                    class: if let Some(ref cores) = cpu_core_settings.cores {
-                        if cores.iter().any(|c| c.cpu_id == logical_cpu_id as u32) {
-                            "overriden"
-                        } else {
-                            ""
-                        }
-                    } else {
-                        ""
-                    },
-
+                tr { class: if let Some(ref cores) = cpu_core_settings.cores { if cores.iter().any(|c| c.cpu_id == logical_cpu_id) { "overriden" } },
                     td {
-                        button {
-                            onclick: {
-                                let mut current_profile = current_profile.clone();
-                                move |_| {
-                                    reset_core_settings(
-                                        &mut current_profile,
-                                        profile_id,
-                                        logical_cpu_id,
-                                        control_routine,
-                                    )
-                                }
-                            },
-                            "Reset"
+                        if *cores_awaiting_update_signals.get(&logical_cpu_id).unwrap().read() {
+                            div { class: "spinner" }
+                        } else {
+                            button {
+                                onclick: {
+                                    let mut current_profile = current_profile.clone();
+                                    let awaiting_signal = *cores_awaiting_update_signals
+                                        .get(&logical_cpu_id)
+                                        .unwrap();
+                                    move |_| {
+                                        reset_core_settings(
+                                            &mut current_profile,
+                                            profile_id,
+                                            logical_cpu_id,
+                                            control_routine,
+                                            awaiting_signal,
+                                        );
+                                    }
+                                },
+                                "Reset"
+                            }
                         }
                     }
 
                     td {
                         if core.online.is_some() {
                             input {
-                                onchange: {
+                                oninput: {
                                     let mut current_profile = current_profile.clone();
+                                    let awaiting_signal = *cores_awaiting_update_signals
+                                        .get(&logical_cpu_id)
+                                        .unwrap();
                                     move |v| {
                                         update_core_settings(
                                             &mut current_profile,
@@ -400,6 +415,7 @@ fn CoreSettings(
                                                 core_settings.online = Some(v.value() == "true");
                                             },
                                             control_routine,
+                                            awaiting_signal,
                                         );
                                     }
                                 },
@@ -437,8 +453,11 @@ fn CoreSettings(
                                 selected: "{core.governor}",
                                 items: governors.clone(),
                                 disabled: false,
-                                onchange: {
+                                oninput: {
                                     let mut current_profile = current_profile.clone();
+                                    let awaiting_signal = *cores_awaiting_update_signals
+                                        .get(&logical_cpu_id)
+                                        .unwrap();
                                     move |v: String| {
                                         update_core_settings(
                                             &mut current_profile,
@@ -448,6 +467,7 @@ fn CoreSettings(
                                                 core_settings.governor = Some(v.clone());
                                             },
                                             control_routine,
+                                            awaiting_signal,
                                         );
                                     }
                                 }
@@ -460,8 +480,11 @@ fn CoreSettings(
                                     selected: "{core.epp.clone().unwrap()}",
                                     items: epps.clone(),
                                     disabled: cpu_info.mode.as_ref().unwrap() != "active",
-                                    onchange: {
+                                    oninput: {
                                         let mut current_profile = current_profile.clone();
+                                        let awaiting_signal = *cores_awaiting_update_signals
+                                            .get(&logical_cpu_id)
+                                            .unwrap();
                                         move |v: String| {
                                             update_core_settings(
                                                 &mut current_profile,
@@ -471,6 +494,7 @@ fn CoreSettings(
                                                     core_settings.epp = Some(v.clone());
                                                 },
                                                 control_routine,
+                                                awaiting_signal,
                                             );
                                         }
                                     }
@@ -498,7 +522,8 @@ fn update_core_settings<F>(
     profile_id: u32,
     cpu_id: u32,
     mut update: F,
-    control_routine: Coroutine<ControlAction>,
+    control_routine: ControlRoutine,
+    awaiting_signal: Signal<bool>,
 ) where
     F: FnMut(&mut CoreSetting),
 {
@@ -523,25 +548,36 @@ fn update_core_settings<F>(
 
     update(core_setting);
 
-    control_routine.send(ControlAction::SetReducedUpdate(
-        ReducedUpdate::SingleCPUCore(idx as u32),
+    control_routine.send((
+        ControlAction::SetReducedUpdate(ReducedUpdate::SingleCPUCore(idx as u32)),
+        Some(awaiting_signal),
     ));
-    control_routine.send(ControlAction::UpdateProfile(profile_id, profile.clone()));
-    control_routine.send(ControlAction::GetProfilesInfo);
+    control_routine.send((
+        ControlAction::UpdateProfile(profile_id, profile.clone()),
+        Some(awaiting_signal),
+    ));
+    control_routine.send((ControlAction::GetProfilesInfo, Some(awaiting_signal)));
 }
 
 fn reset_core_settings(
     profile: &mut Profile,
     profile_id: u32,
     cpu_id: u32,
-    control_routine: Coroutine<ControlAction>,
+    control_routine: ControlRoutine,
+    awaiting_signal: Signal<bool>,
 ) {
     if let Some(ref mut cores) = profile.cpu_core_settings.cores {
         if let Some(pos) = cores.iter().position(|c| c.cpu_id == cpu_id) {
             cores.remove(pos);
-            control_routine.send(ControlAction::SetReducedUpdate(ReducedUpdate::CPUCores));
-            control_routine.send(ControlAction::UpdateProfile(profile_id, profile.clone()));
-            control_routine.send(ControlAction::GetProfilesInfo);
+            control_routine.send((
+                ControlAction::SetReducedUpdate(ReducedUpdate::CPUCores),
+                Some(awaiting_signal),
+            ));
+            control_routine.send((
+                ControlAction::UpdateProfile(profile_id, profile.clone()),
+                Some(awaiting_signal),
+            ));
+            control_routine.send((ControlAction::GetProfilesInfo, Some(awaiting_signal)));
         }
     };
 }
