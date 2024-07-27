@@ -376,25 +376,6 @@ fn CoreSettings(
                     td {
                         if *cores_awaiting_update_signals.get(&logical_cpu_id).unwrap().read() {
                             div { class: "spinner" }
-                        } else {
-                            button {
-                                onclick: {
-                                    let mut current_profile = current_profile.clone();
-                                    let awaiting_signal = *cores_awaiting_update_signals
-                                        .get(&logical_cpu_id)
-                                        .unwrap();
-                                    move |_| {
-                                        reset_core_settings(
-                                            &mut current_profile,
-                                            profile_id,
-                                            logical_cpu_id,
-                                            control_routine,
-                                            awaiting_signal,
-                                        );
-                                    }
-                                },
-                                "Reset"
-                            }
                         }
                     }
 
@@ -569,29 +550,6 @@ fn update_core_settings<F>(
         Some(awaiting_signal),
     ));
     control_routine.send((ControlAction::GetProfilesInfo, Some(awaiting_signal)));
-}
-
-fn reset_core_settings(
-    profile: &mut Profile,
-    profile_id: u32,
-    cpu_id: u32,
-    control_routine: ControlRoutine,
-    awaiting_signal: Signal<bool>,
-) {
-    if let Some(ref mut cores) = profile.cpu_core_settings.cores {
-        if let Some(pos) = cores.iter().position(|c| c.cpu_id == cpu_id) {
-            cores.remove(pos);
-            control_routine.send((
-                ControlAction::SetReducedUpdate(ReducedUpdate::CPUCores),
-                Some(awaiting_signal),
-            ));
-            control_routine.send((
-                ControlAction::UpdateProfile(profile_id, profile.clone()),
-                Some(awaiting_signal),
-            ));
-            control_routine.send((ControlAction::GetProfilesInfo, Some(awaiting_signal)));
-        }
-    };
 }
 
 fn get_epps() -> Vec<String> {

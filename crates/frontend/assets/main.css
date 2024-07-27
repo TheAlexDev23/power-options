@@ -306,15 +306,6 @@ th {
     background-color: #323232;
 }
 
-#cpu-cores-table tr button {
-    visibility: hidden;
-    background-color: #323232;
-}
-
-#cpu-cores-table tr.overriden button {
-    visibility: visible;
-}
-
 #cpu-cores-table tr:hover {
     background-color: #606060;
 }
