@@ -164,7 +164,6 @@ impl CPUInfo {
                 continue;
             }
 
-            core.physical_core_id = core_initial.physical_core_id;
             core.base_frequency = core_initial.base_frequency;
             core.min_frequency = core_initial.min_frequency;
             core.max_frequency = core_initial.max_frequency;
@@ -274,6 +273,8 @@ impl CPUInfo {
             }
         }
 
+        cores.sort_by(|a, b| a.logical_cpu_id.cmp(&b.logical_cpu_id));
+
         let variations = base_frequency_variations.keys().count();
 
         let hybrid = match variations {
@@ -288,8 +289,6 @@ impl CPUInfo {
                 cpu.is_performance_core = Some(cpu.base_frequency == *pcore_freq);
             }
         }
-
-        cores.sort_by(|a, b| a.physical_core_id.partial_cmp(&b.physical_core_id).unwrap());
 
         let mut previous_core_id = cores[0].physical_core_id;
         cores[0].physical_core_id = 0;

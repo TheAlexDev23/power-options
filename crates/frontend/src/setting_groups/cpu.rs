@@ -425,31 +425,30 @@ fn CoreSettings(
                         }
                     }
 
-                    if cpu_info.hybrid {
-                        td {
-                            if core.is_performance_core.unwrap() {
-                                "P ({core.physical_core_id}-{logical_cpu_id})"
-                            } else {
-                                "E ({core.physical_core_id}-{logical_cpu_id})"
+                    if core.online.unwrap_or(true) {
+                        if cpu_info.hybrid {
+                            td {
+                                if core.is_performance_core.unwrap() {
+                                    "P ({core.physical_core_id} - {logical_cpu_id})"
+                                } else {
+                                    "E ({core.physical_core_id} - {logical_cpu_id})"
+                                }
                             }
+                        } else {
+                            td { "{logical_cpu_id}" }
                         }
-                    } else {
-                        td { "{core.physical_core_id}" }
-                    }
 
-                    td { "{core.base_frequency}" }
-                    if core.online.unwrap_or(true) {
-                        td { "{core.current_frequency}" }
-                    } else {
-                        td { "" }
-                    }
+                        td { "{core.base_frequency}" }
+                        if core.online.unwrap_or(true) {
+                            td { "{core.current_frequency}" }
+                        } else {
+                            td { "" }
+                        }
 
-                    td { "{core.min_frequency}-{core.max_frequency}" }
+                        td { "{core.min_frequency}-{core.max_frequency}" }
 
-                    if core.online.unwrap_or(true) {
                         td {
                             Dropdown {
-                                id: "governor-dd-cpu{logical_cpu_id}",
                                 selected: "{core.governor}",
                                 items: governors.clone(),
                                 disabled: false,
@@ -476,7 +475,6 @@ fn CoreSettings(
                         if cpu_info.has_epp {
                             td {
                                 Dropdown {
-                                    id: "epp-dd-cpu{logical_cpu_id}",
                                     selected: "{core.epp.clone().unwrap()}",
                                     items: epps.clone(),
                                     disabled: cpu_info.mode.as_ref().unwrap() != "active",
@@ -502,6 +500,20 @@ fn CoreSettings(
                             }
                         }
                     } else {
+                        if cpu_info.hybrid {
+                            td {
+                                if core.is_performance_core.unwrap() {
+                                    "P (n.a - {logical_cpu_id})"
+                                } else {
+                                    "E (n.a - {logical_cpu_id})"
+                                }
+                            }
+                        } else {
+                            td { "{logical_cpu_id}" }
+                        }
+                        td { "" }
+                        td { "" }
+                        td { "" }
                         td { "" }
                         if cpu_info.has_epp {
                             td { "" }
