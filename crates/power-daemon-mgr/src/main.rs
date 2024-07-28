@@ -1,6 +1,7 @@
 use std::{
     fs::{self, File},
     io::Write,
+    path::PathBuf,
 };
 
 use clap::{Parser, Subcommand};
@@ -14,7 +15,6 @@ use power_daemon::{Config, Instance, SystemInfo};
 
 use power_daemon::communication::server::CommunicationServer;
 
-/// Simple program to greet a person
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
@@ -24,8 +24,17 @@ struct Args {
 
 #[derive(Debug, Clone, Subcommand)]
 enum OpMode {
+    GenerateFiles {
+        #[arg(long)]
+        path: PathBuf,
+        /// Path of the executable for this program
+        #[arg(long)]
+        program_path: PathBuf,
+    },
     Daemon,
-    Refresh,
+    RefreshFull,
+    RefreshUSB,
+    RefreshPCI,
 }
 
 static LOGGER: StdoutLogger = StdoutLogger;
@@ -62,7 +71,10 @@ async fn main() {
     let args = Args::parse();
     match args.mode {
         OpMode::Daemon => daemon().await,
-        OpMode::Refresh => todo!(),
+        OpMode::GenerateFiles { path, program_path } => generate_files(path, program_path),
+        OpMode::RefreshFull => todo!(),
+        OpMode::RefreshUSB => todo!(),
+        OpMode::RefreshPCI => todo!(),
     }
 }
 
@@ -78,16 +90,11 @@ async fn daemon() {
         return;
     }
 
-    if fs::metadata("/etc/power-daemon").is_err() {
-        fs::create_dir_all("/etc/power-daemon").expect("Could not create config directory");
-    }
-
-    create_config_file_if_necessary();
-    create_profile_files_if_necessary();
     let config = power_daemon::parse_config(CONFIG_FILE);
-
     let mut handle = Instance::new(config, PROFILES_DIRECTORY);
+
     handle.update();
+
     let _com_server = CommunicationServer::new(handle)
         .await
         .expect("Could not initialize communications server");
@@ -97,55 +104,108 @@ async fn daemon() {
     }
 }
 
-fn create_config_file_if_necessary() {
-    if fs::metadata(CONFIG_FILE).is_err() {
-        debug!("Creating default config");
-
-        let mut config = File::create(CONFIG_FILE).expect("Could not create config file");
-        let content = &toml::to_string_pretty(&Config::create_default()).unwrap();
-
-        trace!("{}", content);
-
-        config
-            .write(content.as_bytes())
-            .expect("Could not write to config");
-    }
+fn generate_files(path: PathBuf, program_path: PathBuf) {
+    generate_config(&path);
+    generate_profiles(&path);
+    generate_udev_file(&path, &program_path);
+    generate_dbus_file(&path);
 }
 
-fn create_profile_files_if_necessary() {
-    if fs::metadata(PROFILES_DIRECTORY).is_err() {
-        debug!("Creating default profiles");
+fn generate_config(path: &PathBuf) {
+    debug!("Creating default config");
 
-        fs::create_dir_all(PROFILES_DIRECTORY).expect("Could not create profiles directory");
+    let dir = path.join("etc/power-options/");
 
-        let system_info: SystemInfo = SystemInfo::obtain();
+    fs::create_dir_all(&dir).expect("Could not create directory");
 
-        trace!("{:#?}", system_info);
+    let content = &toml::to_string_pretty(&Config::create_default()).unwrap();
 
-        power_daemon::profiles_generator::create_profile_file(
-            PROFILES_DIRECTORY,
-            DefaultProfileType::Superpowersave,
-            &system_info,
-        );
-        power_daemon::profiles_generator::create_profile_file(
-            PROFILES_DIRECTORY,
-            DefaultProfileType::Powersave,
-            &system_info,
-        );
-        power_daemon::profiles_generator::create_profile_file(
-            PROFILES_DIRECTORY,
-            DefaultProfileType::Balanced,
-            &system_info,
-        );
-        power_daemon::profiles_generator::create_profile_file(
-            PROFILES_DIRECTORY,
-            DefaultProfileType::Performance,
-            &system_info,
-        );
-        power_daemon::profiles_generator::create_profile_file(
-            PROFILES_DIRECTORY,
-            DefaultProfileType::Ultraperformance,
-            &system_info,
-        );
-    }
+    trace!("{}", content);
+
+    fs::write(dir.join("config.toml"), content).expect("Could not write to file");
+}
+
+fn generate_profiles(path: &PathBuf) {
+    debug!("Creating default profiles");
+
+    let dir = path.join("etc/power-options/profiles/");
+
+    fs::create_dir_all(&dir).expect("Could not create directory");
+
+    let system_info: SystemInfo = SystemInfo::obtain();
+
+    trace!("sysinfo: {:#?}", system_info);
+
+    power_daemon::profiles_generator::create_profile_file(
+        &dir,
+        DefaultProfileType::Superpowersave,
+        &system_info,
+    );
+    power_daemon::profiles_generator::create_profile_file(
+        &dir,
+        DefaultProfileType::Powersave,
+        &system_info,
+    );
+    power_daemon::profiles_generator::create_profile_file(
+        &dir,
+        DefaultProfileType::Balanced,
+        &system_info,
+    );
+    power_daemon::profiles_generator::create_profile_file(
+        &dir,
+        DefaultProfileType::Performance,
+        &system_info,
+    );
+    power_daemon::profiles_generator::create_profile_file(
+        &dir,
+        DefaultProfileType::Ultraperformance,
+        &system_info,
+    );
+}
+
+fn generate_udev_file(path: &PathBuf, program_path: &PathBuf) {
+    debug!("Generating udev file");
+    let dir = path.join("usr/lib/udev/rules.d/");
+    fs::create_dir_all(&dir).expect("Could not create directory");
+
+    let program_path = program_path.display();
+
+    let content = format!(
+        r#"
+# power-daemon - udev rules
+
+ACTION=="change", SUBSYSTEM=="power_supply", KERNEL!="hidpp_battery*", RUN+="{program_path} refresh-full"
+
+ACTION=="add", SUBSYSTEM=="usb", DRIVER=="usb", ENV{{DEVTYPE}}=="usb_device", RUN+="{program_path} refresh-usb"
+
+ACTION=="add", SUBSYSTEM=="pci", ENV{{DEVTYPE}}=="pci_device", RUN+="{program_path} refresh-pci"
+"#
+    );
+
+    fs::write(&dir.join("85-power-daemon.rules"), &content).expect("Could not write to file");
+}
+
+fn generate_dbus_file(path: &PathBuf) {
+    let dir = path.join("usr/share/dbus-1/system.d/");
+    fs::create_dir_all(&dir).expect("Could not create directory");
+
+    let content = r#"
+<!-- This configuration file specifies the required security policies for the power-options daemon's communication d-bus channel to work. -->
+
+<!DOCTYPE busconfig PUBLIC "-//freedesktop//DTD D-BUS Bus Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd">
+<busconfig>
+  <policy user="root">
+    <allow own="io.github.thealexdev23.power_daemon"/>
+    <allow send_destination="io.github.thealexdev23.power_daemon"/>
+    <allow send_interface="io.github.thealexdev23.power_daemon.system_info"/>
+  </policy>
+
+  <policy context="default">
+    <allow send_destination="io.github.thealexdev23.power_daemon"/>
+  </policy>
+</busconfig>
+"#;
+
+    fs::write(dir.join("power-daemon.conf"), content).expect("Could not write to file");
 }

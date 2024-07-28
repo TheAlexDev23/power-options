@@ -1,4 +1,9 @@
-use std::{fs::File, io::Write, path::PathBuf, str::FromStr};
+use std::{
+    fs::File,
+    io::Write,
+    path::{Path, PathBuf},
+    str::FromStr,
+};
 
 use log::{debug, trace};
 
@@ -42,8 +47,8 @@ impl DefaultProfileType {
     }
 }
 
-pub fn create_profile_file(
-    directory_path: &str,
+pub fn create_profile_file<P: AsRef<Path>>(
+    directory_path: P,
     profile_type: DefaultProfileType,
     system_info: &SystemInfo,
 ) {
@@ -53,9 +58,7 @@ pub fn create_profile_file(
 
     let profile = create_default(&name, profile_type, system_info);
 
-    let path = PathBuf::from_str(directory_path)
-        .unwrap()
-        .join(format!("{name}.toml"));
+    let path = PathBuf::from(directory_path.as_ref()).join(format!("{name}.toml"));
 
     let mut file = File::create(path).expect("Could not create profile file");
 
