@@ -236,16 +236,16 @@ impl CPUCoreSettings {
     pub fn apply(&self) {
         info!("Applying CPU core settings");
 
-        if self.cores.is_none() {
-            return;
-        }
-
         // In the UI, when disabling a core and then resetting the core override self.online would be set to None
         // But the user likely would have meant to return cpu back to the default values in the profile.
         // Given the way per-core settings work (first apply settings to all cores then individual overrides),
         // it's logical to also remove all the core-disabling overrides first and then maybe disable individual cores
         // Could this be fixed in the UI? Yes. Would it be better architecture-wise? Yes. But it's way easier to just to this
         run_command("echo 1 > /sys/devices/system/cpu/cpu*/online");
+
+        if self.cores.is_none() {
+            return;
+        }
 
         for core in self.cores.as_ref().unwrap().iter() {
             core.apply();

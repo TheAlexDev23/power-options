@@ -148,30 +148,32 @@ impl CPUInfo {
         ret
     }
 
-    pub fn update_core_info_with_initial(&mut self, initial: &CPUInfo) {
-        for core in &mut self.cores {
-            if core.online.unwrap_or(true) {
-                continue;
-            }
+    pub fn sync_core_info(&mut self, secondary: &mut CPUInfo) {
+        // A cpu won't stop being hybrid so if there's a mismatch it just means that a version could not capture the fact that the cpu is hybrid
+        if secondary.hybrid != self.hybrid {
+            secondary.hybrid = true;
+            self.hybrid = true;
+        }
 
-            let core_initial = initial
+        for core in &mut self.cores {
+            let core_secondary = secondary
                 .cores
-                .iter()
+                .iter_mut()
                 .find(|c| c.logical_cpu_id == core.logical_cpu_id)
                 .unwrap();
 
-            if !core_initial.online.unwrap_or(true) {
-                continue;
+            if self.hybrid {
+                if core.is_performance_core.is_none()
+                    && core_secondary.is_performance_core.is_some()
+                {
+                    core.is_performance_core = core_secondary.is_performance_core;
+                } else if core.is_performance_core.is_some()
+                    && core_secondary.is_performance_core.is_none()
+                {
+                    core_secondary.is_performance_core = core.is_performance_core;
+                }
             }
-
-            core.base_frequency = core_initial.base_frequency;
-            core.min_frequency = core_initial.min_frequency;
-            core.max_frequency = core_initial.max_frequency;
-            core.is_performance_core = core_initial.is_performance_core;
         }
-
-        self.cores
-            .sort_by(|a, b| a.physical_core_id.partial_cmp(&b.physical_core_id).unwrap());
     }
 
     fn obtain_core_info(&mut self) {
@@ -286,6 +288,10 @@ impl CPUInfo {
         if hybrid {
             let pcore_freq = base_frequency_variations.keys().max().unwrap();
             for cpu in cores.iter_mut() {
+                if !cpu.online.unwrap_or(true) {
+                    continue;
+                }
+
                 cpu.is_performance_core = Some(cpu.base_frequency == *pcore_freq);
             }
         }

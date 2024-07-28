@@ -86,6 +86,7 @@ fn PowerProfilesNav(
             let profile_name = profile.profile_name.clone();
             buttons.push((idx, profile_name.clone(), move |_| {
                 waiting_future_idx.set(idx);
+                control_routine.send((ControlAction::ResetReducedUpdate, Some(waiting)));
                 control_routine.send((
                     ControlAction::SetProfileOverride(profile_name.clone()),
                     Some(waiting),

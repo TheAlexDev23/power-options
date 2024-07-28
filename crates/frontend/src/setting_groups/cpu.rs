@@ -339,11 +339,14 @@ fn CoreSettings(
     control_routine: ControlRoutine,
 ) -> Element {
     let mut cpu_info = system_info.cpu_info.clone();
-    let cpu_info_intial = use_hook(|| cpu_info.clone());
-    cpu_info.update_core_info_with_initial(&cpu_info_intial);
+    let mut cpu_info_secondary = use_signal(|| cpu_info.clone());
+    let mut secondary = cpu_info_secondary.read().clone();
+    cpu_info.sync_core_info(&mut secondary);
+    if *cpu_info_secondary.read() != secondary {
+        cpu_info_secondary.set(secondary);
+    }
 
     let current_profile = profiles_info.get_active_profile().clone();
-    let cpu_core_settings = current_profile.cpu_core_settings.clone();
 
     let epps = get_epps();
     let governors = get_governors(&cpu_info.mode.clone().unwrap_or(String::from("passive")));
@@ -490,7 +493,7 @@ fn CoreSettings(
                     }
 
                     if core.online.unwrap_or(true) {
-                        if cpu_info.hybrid {
+                        if cpu_info.hybrid && core.is_performance_core.is_some() {
                             td {
                                 if core.is_performance_core.unwrap() {
                                     "P ({core.physical_core_id} - {logical_cpu_id})"
@@ -546,7 +549,7 @@ fn CoreSettings(
                                 Dropdown {
                                     selected: "{core.epp.clone().unwrap()}",
                                     items: epps.clone(),
-                                    disabled: cpu_info.mode.as_ref().unwrap() != "active",
+                                    disabled: core.governor == "performance",
                                     oninput: {
                                         let mut current_profile = current_profile.clone();
                                         let awaiting_signal = *cores_awaiting_update_signals
@@ -574,7 +577,7 @@ fn CoreSettings(
                             }
                         }
                     } else {
-                        if cpu_info.hybrid {
+                        if cpu_info.hybrid && core.is_performance_core.is_some() {
                             td {
                                 if core.is_performance_core.unwrap() {
                                     "P (n.a - {logical_cpu_id})"

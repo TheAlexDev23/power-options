@@ -137,6 +137,17 @@ th {
     padding: 5px;
 }
 
+td:hover,
+button:hover,
+button:hover *,
+input[type="checkbox"]:hover,
+input[type="submit"]:hover,
+input[type="reset"]:hover,
+input[type="button"]:hover,
+select:hover {
+    cursor: pointer;
+}
+
 .spinner {
     border: 5px solid #33383a;
     border-top: 5px solid #70685c;
