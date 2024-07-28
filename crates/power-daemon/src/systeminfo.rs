@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fs};
 
-use log::trace;
+use log::{error, trace};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
@@ -282,7 +282,10 @@ impl CPUInfo {
         let hybrid = match variations {
             1 => false,
             2 => true,
-            _ => panic!("Unexpected CPU architecture. Has {variations} sets of possible base frequencies, program only supports single core type and hybrid architectures with 2 cpu types")
+            _ => {
+                error!("Unexpected CPU architecture. This program identifies hybrid cores by their base frequency and your CPU contains more than 2 possible base frequencies. Assuming CPU is not hybrid...");
+                false
+            }
         };
 
         if hybrid {
