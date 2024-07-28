@@ -2,7 +2,6 @@ use std::{
     fs::File,
     io::Write,
     path::{Path, PathBuf},
-    str::FromStr,
 };
 
 use log::{debug, trace};

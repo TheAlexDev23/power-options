@@ -55,6 +55,8 @@ trait ControlDBus {
     async fn get_config(&self) -> zbus::Result<String>;
     async fn get_profiles_info(&self) -> zbus::Result<String>;
 
+    async fn update(&self) -> zbus::Result<()>;
+
     async fn update_config(&self, updated: String) -> zbus::Result<()>;
     async fn update_profile(&self, idx: u32, updated: String) -> zbus::Result<()>;
 
@@ -81,6 +83,10 @@ impl ControlClient {
     }
     pub async fn get_profiles_info(&self) -> zbus::Result<ProfilesInfo> {
         Ok(serde_json::from_str(&self.get_proxy().await?.get_profiles_info().await?).unwrap())
+    }
+
+    pub async fn update(&self) -> zbus::Result<()> {
+        self.get_proxy().await?.update().await
     }
 
     pub async fn update_config(&self, config: Config) -> zbus::Result<()> {

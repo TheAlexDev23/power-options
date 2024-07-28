@@ -62,10 +62,27 @@ impl ControlServer {
         serde_json::to_string(&self.instance.lock().await.profiles_info).unwrap()
     }
 
+    async fn update(&mut self) {
+        self.instance.get_mut().update();
+    }
+
     async fn update_config(&mut self, updated: String) {
         match serde_json::from_str(&updated) {
             Ok(conf) => {
                 self.instance.get_mut().update_config(conf);
+            }
+            Err(error) => {
+                error!("Could not parse new requested config: {error}")
+            }
+        }
+    }
+
+    async fn update_profile(&mut self, idx: u32, updated: String) {
+        match serde_json::from_str(&updated) {
+            Ok(profile) => {
+                self.instance
+                    .get_mut()
+                    .update_profile(idx as usize, profile);
             }
             Err(error) => {
                 error!("Could not parse new requested config: {error}")
@@ -81,19 +98,6 @@ impl ControlServer {
     }
     async fn reset_reduced_update(&mut self) {
         self.instance.get_mut().reset_reduced_update();
-    }
-
-    async fn update_profile(&mut self, idx: u32, updated: String) {
-        match serde_json::from_str(&updated) {
-            Ok(profile) => {
-                self.instance
-                    .get_mut()
-                    .update_profile(idx as usize, profile);
-            }
-            Err(error) => {
-                error!("Could not parse new requested config: {error}")
-            }
-        }
     }
 
     async fn set_profile_override(&mut self, profile_name: String) {

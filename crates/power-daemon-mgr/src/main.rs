@@ -1,15 +1,13 @@
-use std::{
-    fs::{self, File},
-    io::Write,
-    path::PathBuf,
-};
+use std::{fs, path::PathBuf};
 
 use clap::{Parser, Subcommand};
 use colored::Colorize;
-use log::{debug, error, trace, Level, Log, Metadata, Record};
+use log::{debug, error, Level, Log, Metadata, Record};
 use nix::unistd::Uid;
 
-use power_daemon::profiles_generator::DefaultProfileType;
+use power_daemon::{
+    communication::client::ControlClient, profiles_generator::DefaultProfileType, ReducedUpdate,
+};
 
 use power_daemon::{Config, Instance, SystemInfo};
 
@@ -72,9 +70,12 @@ async fn main() {
     match args.mode {
         OpMode::Daemon => daemon().await,
         OpMode::GenerateFiles { path, program_path } => generate_files(path, program_path),
-        OpMode::RefreshFull => todo!(),
-        OpMode::RefreshUSB => todo!(),
-        OpMode::RefreshPCI => todo!(),
+        OpMode::RefreshFull => refresh_full().await,
+        OpMode::RefreshUSB => refresh_reduced(ReducedUpdate::USB).await,
+        OpMode::RefreshPCI => {
+            refresh_reduced(ReducedUpdate::PCI).await;
+            refresh_reduced(ReducedUpdate::ASPM).await;
+        }
     }
 }
 
@@ -109,6 +110,35 @@ fn generate_files(path: PathBuf, program_path: PathBuf) {
     generate_profiles(&path);
     generate_udev_file(&path, &program_path);
     generate_dbus_file(&path);
+    genereate_systemd_file(&path, &program_path);
+}
+
+async fn refresh_full() {
+    let client = ControlClient::new()
+        .await
+        .expect("Could not intialize control client");
+    client
+        .reset_reduced_update()
+        .await
+        .expect("Could not reset reduced update");
+    client
+        .update()
+        .await
+        .expect("Could not reset reducedu update");
+}
+
+async fn refresh_reduced(reduced_update: ReducedUpdate) {
+    let client = ControlClient::new()
+        .await
+        .expect("Could not intialize control client");
+    client
+        .set_reduced_update(reduced_update)
+        .await
+        .expect("Could not set reduced update");
+    client
+        .update()
+        .await
+        .expect("Could not reset reducedu update");
 }
 
 fn generate_config(path: &PathBuf) {
@@ -119,8 +149,6 @@ fn generate_config(path: &PathBuf) {
     fs::create_dir_all(&dir).expect("Could not create directory");
 
     let content = &toml::to_string_pretty(&Config::create_default()).unwrap();
-
-    trace!("{}", content);
 
     fs::write(dir.join("config.toml"), content).expect("Could not write to file");
 }
@@ -133,8 +161,6 @@ fn generate_profiles(path: &PathBuf) {
     fs::create_dir_all(&dir).expect("Could not create directory");
 
     let system_info: SystemInfo = SystemInfo::obtain();
-
-    trace!("sysinfo: {:#?}", system_info);
 
     power_daemon::profiles_generator::create_profile_file(
         &dir,
@@ -208,4 +234,29 @@ fn generate_dbus_file(path: &PathBuf) {
 "#;
 
     fs::write(dir.join("power-daemon.conf"), content).expect("Could not write to file");
+}
+
+fn genereate_systemd_file(path: &PathBuf, program_path: &PathBuf) {
+    let dir = path.join("lib/systemd/system/");
+    fs::create_dir_all(&dir).expect("Could not create directory");
+
+    let program_path = program_path.display();
+
+    let content = format!(
+        r#"
+# power-options - systemd service
+
+[Unit]
+Description=power-options daemon
+After=multi-user.target NetworkManager.service
+Before=shutdown.target
+
+[Service]
+ExecStart={program_path} daemon
+
+[Install]
+WantedBy=multi-user.target"#
+    );
+
+    fs::write(dir.join("power-options.service"), content).expect("Could not write to file");
 }

@@ -7,7 +7,7 @@ edition = "2021"
 clap = { version = "4.5.9", features = ["derive"] }
 log = "0.4.22"
 nix = { version = "0.29.0", features = ["user"] }
-power-daemon = { path = "../power-daemon", features = ["server"] }
+power-daemon = { path = "../power-daemon", features = ["server", "client"] }
 proctitle = "0.1.1"
 toml = "0.8.15"
 colored = "2.1.0"
