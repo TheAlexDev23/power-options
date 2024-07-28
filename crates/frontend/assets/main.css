@@ -2,6 +2,17 @@ html {
     overflow: hidden;
 }
 
+html,
+body,
+* {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+
 body {
     background-color: #242424;
     margin: 0;
@@ -67,6 +78,11 @@ form input[type="submit"] {
 
 form input[type="submit"]:disabled {
     background-color: #525252;
+}
+
+input[type="text"],
+textarea {
+    user-select: text;
 }
 
 * {
@@ -142,7 +158,7 @@ th {
 
 
 .hidden {
-    display: none !important;
+    visibility: hidden;
 }
 
 .profiles {
@@ -302,10 +318,18 @@ th {
     padding: 5px;
 }
 
-#cpu-cores-table tr.overriden {
-    background-color: #323232;
-}
-
 #cpu-cores-table tr:hover {
     background-color: #606060;
+}
+
+#cpu-cores-table tr.selected {
+    background-color: #0860F2;
+}
+
+#cpu-cores-table tr:hover.selected {
+    background-color: #0862f2b4;
+}
+
+#cpu-cores-table tr.selected-secondary {
+    background-color: #373737;
 }

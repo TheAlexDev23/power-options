@@ -63,14 +63,21 @@ impl Profile {
         self.kernel_settings.apply();
     }
 
-    pub fn apply_reduced(&self, reduced_update: ReducedUpdate) {
+    pub fn apply_reduced(&self, reduced_update: &ReducedUpdate) {
         info!("Applying reduced amount of settings");
         match reduced_update {
             ReducedUpdate::CPU => self.cpu_settings.apply(),
             ReducedUpdate::CPUCores => self.cpu_core_settings.apply(),
             ReducedUpdate::SingleCPUCore(idx) => {
                 if let Some(ref cores) = self.cpu_core_settings.cores {
-                    cores[idx as usize].apply()
+                    cores[*idx as usize].apply()
+                }
+            }
+            ReducedUpdate::MultipleCPUCores(tochange) => {
+                if let Some(ref cores) = self.cpu_core_settings.cores {
+                    for idx in tochange.iter() {
+                        cores[*idx as usize].apply()
+                    }
                 }
             }
             ReducedUpdate::Screen => self.screen_settings.apply(),

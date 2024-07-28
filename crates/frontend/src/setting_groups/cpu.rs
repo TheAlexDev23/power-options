@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
+use dioxus::desktop::tao::event::Event;
+use dioxus::desktop::tao::keyboard::ModifiersState;
+use dioxus::desktop::{use_wry_event_handler, WindowEvent};
 use dioxus::prelude::*;
 use power_daemon::{CPUSettings, CoreSetting, Profile, ProfilesInfo, ReducedUpdate, SystemInfo};
 
@@ -339,18 +342,44 @@ fn CoreSettings(
     let cpu_info_intial = use_hook(|| cpu_info.clone());
     cpu_info.update_core_info_with_initial(&cpu_info_intial);
 
-    let cpu_core_settings = &profiles_info.get_active_profile().cpu_core_settings;
+    let current_profile = profiles_info.get_active_profile().clone();
+    let cpu_core_settings = current_profile.cpu_core_settings.clone();
 
     let epps = get_epps();
     let governors = get_governors(&cpu_info.mode.clone().unwrap_or(String::from("passive")));
 
-    let current_profile = profiles_info.get_active_profile().clone();
     let profile_id = profiles_info.active_profile as u32;
 
     let mut cores_awaiting_update_signals = HashMap::new();
     for core in &cpu_info.cores {
         cores_awaiting_update_signals.insert(core.logical_cpu_id, use_signal(|| false));
     }
+
+    let mut ctrl_pressed = use_signal(|| false);
+    let mut shift_pressed = use_signal(|| false);
+
+    use_wry_event_handler(move |event, _| {
+        if let Event::WindowEvent {
+            event: WindowEvent::ModifiersChanged(state),
+            ..
+        } = event
+        {
+            if state.contains(ModifiersState::CONTROL) {
+                ctrl_pressed.set(true);
+            }
+            if state.contains(ModifiersState::SHIFT) {
+                shift_pressed.set(true);
+            }
+
+            if state.is_empty() {
+                ctrl_pressed.set(false);
+                shift_pressed.set(false);
+            }
+        }
+    });
+
+    let mut selected: Signal<Vec<u32>> = use_signal(|| Vec::new());
+    let mut shift_selection_pinpoint = use_signal(|| None);
 
     rsx! {
         table { id: "cpu-cores-table",
@@ -372,9 +401,58 @@ fn CoreSettings(
             }
 
             for (logical_cpu_id , core) in cpu_info.cores.into_iter().map(|c| (c.logical_cpu_id, c)) {
-                tr { class: if let Some(ref cores) = cpu_core_settings.cores { if cores.iter().any(|c| c.cpu_id == logical_cpu_id) { "overriden" } },
+                tr {
+                    class: if selected.read().iter().any(|s| *s == logical_cpu_id) { "selected" },
+
+                    onclick: move |_| {
+                        let ctrl = *ctrl_pressed.read();
+                        let shift = *shift_pressed.read();
+                        if !ctrl && !shift {
+                            selected.set(vec![logical_cpu_id]);
+                            shift_selection_pinpoint.set(Some(logical_cpu_id));
+                        } else if ctrl && !shift {
+                            let len = selected.read().len();
+                            selected.retain(|s| *s != logical_cpu_id);
+                            if len == selected.read().len() {
+                                selected.push(logical_cpu_id);
+                            }
+                            shift_selection_pinpoint.set(Some(logical_cpu_id));
+                        } else if shift && !ctrl {
+                            if shift_selection_pinpoint.read().is_some() {
+                                let a = shift_selection_pinpoint.read().unwrap();
+                                let b = logical_cpu_id;
+                                selected.set((a.min(b)..=b.max(a)).collect());
+                            } else {
+                                shift_selection_pinpoint.set(Some(logical_cpu_id));
+                                selected.set(vec![logical_cpu_id]);
+                            }
+                        } else if shift && ctrl {
+                            if selected.is_empty() {
+                                selected.set(vec![logical_cpu_id]);
+                            } else {
+                                let range = (selected
+                                    .read()
+                                    .iter()
+                                    .min()
+                                    .unwrap()
+                                    .clone()
+                                    .min(
+                                        logical_cpu_id,
+                                    )..=selected
+                                    .read()
+                                    .iter()
+                                    .max()
+                                    .unwrap()
+                                    .clone()
+                                    .max(logical_cpu_id))
+                                    .collect();
+                                selected.set(range);
+                            }
+                        }
+                    },
+
                     td {
-                        if *cores_awaiting_update_signals.get(&logical_cpu_id).unwrap().read() {
+                        div { class: if !*cores_awaiting_update_signals.get(&logical_cpu_id).unwrap().read() { "hidden" },
                             div { class: "spinner" }
                         }
                     }
@@ -382,6 +460,11 @@ fn CoreSettings(
                     td {
                         if core.online.is_some() {
                             input {
+                                onclick: move |e| {
+                                    if selected.read().iter().any(|c| *c == logical_cpu_id) {
+                                        e.stop_propagation();
+                                    }
+                                },
                                 oninput: {
                                     let mut current_profile = current_profile.clone();
                                     let awaiting_signal = *cores_awaiting_update_signals
@@ -391,7 +474,7 @@ fn CoreSettings(
                                         update_core_settings(
                                             &mut current_profile,
                                             profile_id,
-                                            logical_cpu_id,
+                                            &selected.read(),
                                             move |core_settings| {
                                                 core_settings.online = Some(v.value() == "true");
                                             },
@@ -442,13 +525,18 @@ fn CoreSettings(
                                         update_core_settings(
                                             &mut current_profile,
                                             profile_id,
-                                            logical_cpu_id,
+                                            &selected.read(),
                                             move |core_settings| {
                                                 core_settings.governor = Some(v.clone());
                                             },
                                             control_routine,
                                             awaiting_signal,
                                         );
+                                    }
+                                },
+                                onclick: move |e: MouseEvent| {
+                                    if selected.read().iter().any(|c| *c == logical_cpu_id) {
+                                        e.stop_propagation();
                                     }
                                 }
                             }
@@ -468,13 +556,18 @@ fn CoreSettings(
                                             update_core_settings(
                                                 &mut current_profile,
                                                 profile_id,
-                                                logical_cpu_id,
+                                                &selected.read(),
                                                 move |core_settings| {
                                                     core_settings.epp = Some(v.clone());
                                                 },
                                                 control_routine,
                                                 awaiting_signal,
                                             );
+                                        }
+                                    },
+                                    onclick: move |e: MouseEvent| {
+                                        if selected.read().iter().any(|c| *c == logical_cpu_id) {
+                                            e.stop_propagation();
                                         }
                                     }
                                 }
@@ -513,36 +606,41 @@ fn CoreSettings(
 fn update_core_settings<F>(
     profile: &mut Profile,
     profile_id: u32,
-    cpu_id: u32,
+    cpu_ids: &[u32],
     mut update: F,
     control_routine: ControlRoutine,
     awaiting_signal: Signal<bool>,
 ) where
     F: FnMut(&mut CoreSetting),
 {
-    let (core_setting, idx) = if let Some(ref mut cores) = profile.cpu_core_settings.cores {
-        if let Some(idx) = cores.iter().position(|c| c.cpu_id == cpu_id) {
-            (&mut cores[idx], idx)
+    let mut indices = Vec::new();
+    for cpu_id in cpu_ids {
+        let (core_setting, idx) = if let Some(ref mut cores) = profile.cpu_core_settings.cores {
+            if let Some(idx) = cores.iter().position(|c| c.cpu_id == *cpu_id) {
+                (&mut cores[idx], idx)
+            } else {
+                cores.push(CoreSetting {
+                    cpu_id: *cpu_id,
+                    ..Default::default()
+                });
+                let idx = cores.len() - 1;
+                (cores.last_mut().unwrap(), idx)
+            }
         } else {
-            cores.push(CoreSetting {
-                cpu_id,
+            profile.cpu_core_settings.cores = Some(vec![CoreSetting {
+                cpu_id: *cpu_id,
                 ..Default::default()
-            });
-            let idx = cores.len() - 1;
-            (cores.last_mut().unwrap(), idx)
-        }
-    } else {
-        profile.cpu_core_settings.cores = Some(vec![CoreSetting {
-            cpu_id,
-            ..Default::default()
-        }]);
-        (&mut profile.cpu_core_settings.cores.as_mut().unwrap()[0], 0)
-    };
+            }]);
+            (&mut profile.cpu_core_settings.cores.as_mut().unwrap()[0], 0)
+        };
 
-    update(core_setting);
+        indices.push(idx as u32);
+
+        update(core_setting);
+    }
 
     control_routine.send((
-        ControlAction::SetReducedUpdate(ReducedUpdate::SingleCPUCore(idx as u32)),
+        ControlAction::SetReducedUpdate(ReducedUpdate::MultipleCPUCores(indices)),
         Some(awaiting_signal),
     ));
     control_routine.send((

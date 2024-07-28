@@ -109,12 +109,18 @@ pub fn Dropdown(
     items: Vec<String>,
     disabled: bool,
     oninput: EventHandler<String>,
+    onclick: Option<EventHandler<MouseEvent>>,
 ) -> Element {
     rsx! {
         select {
             id,
             oninput: move |v| {
                 oninput.call(v.value());
+            },
+            onclick: move |e| {
+                if let Some(evt) = onclick {
+                    evt.call(e);
+                }
             },
             disabled,
             for item in items {

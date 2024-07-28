@@ -20,11 +20,12 @@ use std::{
 
 use log::{debug, trace};
 
-#[derive(Clone, Copy, Deserialize, Serialize, PartialEq)]
+#[derive(Clone, Deserialize, Serialize, PartialEq)]
 pub enum ReducedUpdate {
     CPU,
     CPUCores,
     SingleCPUCore(u32),
+    MultipleCPUCores(Vec<u32>),
     Screen,
     Radio,
     Network,
@@ -99,7 +100,7 @@ impl Instance {
 
         self.profiles_info.active_profile = active_profile;
 
-        if let Some(reduced_update) = self.reduced_update {
+        if let Some(ref reduced_update) = self.reduced_update {
             self.profiles_info
                 .get_active_profile()
                 .apply_reduced(reduced_update);
