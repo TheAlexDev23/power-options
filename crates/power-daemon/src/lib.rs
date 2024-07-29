@@ -20,7 +20,7 @@ use std::{
 
 use log::{debug, trace};
 
-#[derive(Clone, Deserialize, Serialize, PartialEq)]
+#[derive(Clone, Deserialize, Serialize, PartialEq, Debug)]
 pub enum ReducedUpdate {
     CPU,
     CPUCores,

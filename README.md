@@ -3,6 +3,7 @@ Linux application for efficient power management
 
 ## Dependencies
 - zsh
+- acpi
 - xrandr: resolution/refresh rate control
 - brightnessctl: brightness control
 - ifconfig: ethernet blocking

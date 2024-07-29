@@ -3,7 +3,7 @@ use std::{
     io::Read,
 };
 
-use log::{error, info};
+use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -64,7 +64,8 @@ impl Profile {
     }
 
     pub fn apply_reduced(&self, reduced_update: &ReducedUpdate) {
-        info!("Applying reduced amount of settings");
+        debug!("Applying reduced amount of settings: {reduced_update:?}");
+
         match reduced_update {
             ReducedUpdate::CPU => self.cpu_settings.apply(),
             ReducedUpdate::CPUCores => self.cpu_core_settings.apply(),
@@ -301,7 +302,7 @@ pub struct ScreenSettings {
 
 impl ScreenSettings {
     pub fn apply(&self) {
-        info!("Applying screen settings");
+        info!("Applying Screen settings");
 
         if let Some(ref resolution) = self.resolution {
             run_command(&format!("xrandr --mode {}", resolution));
@@ -324,7 +325,7 @@ pub struct RadioSettings {
 
 impl RadioSettings {
     pub fn apply(&self) {
-        info!("Applying radio settings");
+        info!("Applying Radio settings");
 
         if let Some(wifi) = self.block_wifi {
             run_command(&format!(
@@ -369,7 +370,7 @@ pub struct NetworkSettings {
 
 impl NetworkSettings {
     pub fn apply(&self) {
-        info!("Applying network settings");
+        info!("Applying Network settings");
 
         if self.disable_ethernet {
             Self::disable_all_ethernet_cards()

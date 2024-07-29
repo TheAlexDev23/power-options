@@ -2,7 +2,7 @@ use std::{fs, path::PathBuf};
 
 use clap::{Parser, Subcommand};
 use colored::Colorize;
-use log::{debug, error, Level, Log, Metadata, Record};
+use log::{debug, error, trace, Level, Log, Metadata, Record};
 use nix::unistd::Uid;
 
 use power_daemon::{
@@ -109,6 +109,7 @@ fn generate_files(path: PathBuf, program_path: PathBuf) {
     generate_config(&path);
     generate_profiles(&path);
     generate_udev_file(&path, &program_path);
+    generate_acpi_file(&path, &program_path);
     generate_dbus_file(&path);
     genereate_systemd_file(&path, &program_path);
 }
@@ -191,6 +192,7 @@ fn generate_profiles(path: &PathBuf) {
 
 fn generate_udev_file(path: &PathBuf, program_path: &PathBuf) {
     debug!("Generating udev file");
+
     let dir = path.join("usr/lib/udev/rules.d/");
     fs::create_dir_all(&dir).expect("Could not create directory");
 
@@ -199,8 +201,6 @@ fn generate_udev_file(path: &PathBuf, program_path: &PathBuf) {
     let content = format!(
         r#"
 # power-daemon - udev rules
-
-ACTION=="change", SUBSYSTEM=="power_supply", KERNEL!="hidpp_battery*", RUN+="{program_path} refresh-full"
 
 ACTION=="add", SUBSYSTEM=="usb", DRIVER=="usb", ENV{{DEVTYPE}}=="usb_device", RUN+="{program_path} refresh-usb"
 
@@ -211,7 +211,27 @@ ACTION=="add", SUBSYSTEM=="pci", ENV{{DEVTYPE}}=="pci_device", RUN+="{program_pa
     fs::write(&dir.join("85-power-daemon.rules"), &content).expect("Could not write to file");
 }
 
+fn generate_acpi_file(path: &PathBuf, program_path: &PathBuf) {
+    debug!("Generating ACPI file");
+
+    let dir = path.join("etc/acpi/events/");
+    fs::create_dir_all(&dir).expect("Could not create directory");
+
+    let program_path = program_path.display();
+
+    let content = format!(
+        r#"
+event=ac_adapter
+action={program_path} refresh-full
+"#
+    );
+
+    fs::write(dir.join("power-options"), content).expect("COuld not write to file");
+}
+
 fn generate_dbus_file(path: &PathBuf) {
+    debug!("Generating DBUS file");
+
     let dir = path.join("usr/share/dbus-1/system.d/");
     fs::create_dir_all(&dir).expect("Could not create directory");
 
@@ -233,10 +253,14 @@ fn generate_dbus_file(path: &PathBuf) {
 </busconfig>
 "#;
 
+    trace!("{content}");
+
     fs::write(dir.join("power-daemon.conf"), content).expect("Could not write to file");
 }
 
 fn genereate_systemd_file(path: &PathBuf, program_path: &PathBuf) {
+    debug!("Generating systemd file");
+
     let dir = path.join("lib/systemd/system/");
     fs::create_dir_all(&dir).expect("Could not create directory");
 
@@ -257,6 +281,8 @@ ExecStart={program_path} daemon
 [Install]
 WantedBy=multi-user.target"#
     );
+
+    trace!("{content}");
 
     fs::write(dir.join("power-options.service"), content).expect("Could not write to file");
 }
