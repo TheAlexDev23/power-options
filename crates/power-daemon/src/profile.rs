@@ -320,7 +320,7 @@ impl ScreenSettings {
 pub struct RadioSettings {
     pub block_wifi: Option<bool>,
     pub block_nfc: Option<bool>,
-    pub block_bluetooth: Option<bool>,
+    pub block_bt: Option<bool>,
 }
 
 impl RadioSettings {
@@ -339,7 +339,7 @@ impl RadioSettings {
                 if nfc { "block" } else { "unblock" },
             ))
         }
-        if let Some(bt) = self.block_bluetooth {
+        if let Some(bt) = self.block_bt {
             run_command(&format!(
                 "rfkill {} bluetooth",
                 if bt { "block" } else { "unblock" },

@@ -33,6 +33,7 @@ enum OpMode {
     RefreshFull,
     RefreshUSB,
     RefreshPCI,
+    PrintSystemInfo,
 }
 
 static LOGGER: StdoutLogger = StdoutLogger;
@@ -76,11 +77,14 @@ async fn main() {
             refresh_reduced(ReducedUpdate::PCI).await;
             refresh_reduced(ReducedUpdate::ASPM).await;
         }
+        OpMode::PrintSystemInfo => {
+            println!("{:#?}", SystemInfo::obtain());
+        }
     }
 }
 
-pub const CONFIG_FILE: &str = "/etc/power-daemon/config.toml";
-pub const PROFILES_DIRECTORY: &str = "/etc/power-daemon/profiles";
+pub const CONFIG_FILE: &str = "/etc/power-options/config.toml";
+pub const PROFILES_DIRECTORY: &str = "/etc/power-options/profiles";
 
 async fn daemon() {
     // From now on, we are the daemon

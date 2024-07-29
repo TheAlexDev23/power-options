@@ -7,13 +7,12 @@ use dioxus::desktop::{use_wry_event_handler, WindowEvent};
 use dioxus::prelude::*;
 use power_daemon::{CPUSettings, CoreSetting, Profile, ProfilesInfo, ReducedUpdate, SystemInfo};
 
-use crate::communication_services::{ControlAction, ControlRoutine, SystemInfoSyncType};
-
+use crate::communication_services::{
+    ControlAction, ControlRoutine, SystemInfoRoutine, SystemInfoSyncType,
+};
 use crate::helpers::{Dropdown, ToggleableDropdown, ToggleableNumericField, ToggleableToggle};
 
-type ToggleableString = (Signal<bool>, Signal<String>);
-type ToggleableInt = (Signal<bool>, Signal<i32>);
-type ToggleableBool = (Signal<bool>, Signal<bool>);
+use super::{ToggleableBool, ToggleableInt, ToggleableString};
 
 #[derive(Default, Debug, Clone)]
 struct CPUForm {
@@ -93,7 +92,7 @@ pub fn CPUGroup(
     system_info: Signal<Option<SystemInfo>>,
     profiles_info: Signal<Option<ProfilesInfo>>,
     control_routine: ControlRoutine,
-    system_info_routine: Coroutine<(Duration, SystemInfoSyncType)>,
+    system_info_routine: SystemInfoRoutine,
 ) -> Element {
     system_info_routine.send((Duration::from_secs_f32(0.5), SystemInfoSyncType::CPU));
     if profiles_info.read().is_none() || system_info.read().is_none() {
@@ -212,7 +211,6 @@ fn CPUSettingsForm(
             ControlAction::SetReducedUpdate(ReducedUpdate::CPU),
             Some(awaiting_completion),
         ));
-        control_routine.send((ControlAction::ResetReducedUpdate, Some(awaiting_completion)));
         control_routine.send((
             ControlAction::UpdateProfile(active_profile_idx as u32, active_profile),
             Some(awaiting_completion),

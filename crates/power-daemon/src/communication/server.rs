@@ -6,7 +6,7 @@ use zbus::{conn::Builder, interface, Connection, Error};
 use super::{CONTROL_OBJECT_NAME, SYSTEM_INFO_OBJECT_NAME, WELL_KNOWN_NAME};
 use crate::{
     systeminfo::{ASPMInfo, CPUInfo, SystemInfo},
-    Instance,
+    Instance, RadioInfo,
 };
 
 pub struct CommunicationServer {
@@ -42,6 +42,9 @@ impl SystemInfoServer {
 
     async fn get_cpu_info(&self) -> String {
         serde_json::to_string(&CPUInfo::obtain()).unwrap()
+    }
+    async fn get_radio_info(&self) -> String {
+        serde_json::to_string(&RadioInfo::obtain()).unwrap()
     }
 
     async fn get_aspm_info(&self) -> String {

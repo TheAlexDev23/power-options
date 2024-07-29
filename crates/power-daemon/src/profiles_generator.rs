@@ -200,12 +200,12 @@ pub fn radio_settings_default(profile_type: &DefaultProfileType) -> RadioSetting
         | DefaultProfileType::Balanced => RadioSettings {
             block_wifi: None,
             block_nfc: Some(true),
-            block_bluetooth: Some(true),
+            block_bt: Some(true),
         },
         DefaultProfileType::Performance | DefaultProfileType::Ultraperformance => RadioSettings {
             block_wifi: None,
             block_nfc: None,
-            block_bluetooth: None,
+            block_bt: None,
         },
     }
 }

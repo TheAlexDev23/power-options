@@ -6,11 +6,13 @@ use serde::{Deserialize, Serialize};
 
 use crate::helpers::{
     file_content_to_bool, file_content_to_list, file_content_to_string, file_content_to_u32,
+    run_command_with_output,
 };
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct SystemInfo {
     pub cpu_info: CPUInfo,
+    pub radio_info: RadioInfo,
     pub aspm_info: ASPMInfo,
 }
 
@@ -20,6 +22,7 @@ impl SystemInfo {
 
         SystemInfo {
             cpu_info: CPUInfo::obtain(),
+            radio_info: RadioInfo::obtain(),
             aspm_info: ASPMInfo::obtain(),
         }
     }
@@ -315,6 +318,59 @@ impl CPUInfo {
 
         self.hybrid = hybrid;
         self.cores = cores;
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct RadioInfo {
+    pub nfc_enabled: bool,
+    pub wifi_enabled: bool,
+    pub bt_enabled: bool,
+}
+
+impl RadioInfo {
+    pub fn obtain() -> RadioInfo {
+        let mut ret = RadioInfo {
+            nfc_enabled: false,
+            wifi_enabled: false,
+            bt_enabled: false,
+        };
+
+        let mut devices: Vec<_> = run_command_with_output("rfkill -r --output TYPE")
+            .0
+            .split('\n')
+            .map(String::from)
+            .collect();
+        let mut status_soft: Vec<_> = run_command_with_output("rfkill -r --output SOFT")
+            .0
+            .split('\n')
+            .map(String::from)
+            .collect();
+        let mut status_hard: Vec<_> = run_command_with_output("rfkill -r --output HARD")
+            .0
+            .split('\n')
+            .map(String::from)
+            .collect();
+
+        devices.remove(0);
+        status_soft.remove(0);
+        status_hard.remove(0);
+
+        for (idx, device) in devices.iter().enumerate() {
+            if *device == "nfc" {
+                ret.nfc_enabled =
+                    status_soft[idx] == "unblocked" && status_hard[idx] == "unblocked";
+            }
+            if *device == "wlan" {
+                ret.wifi_enabled =
+                    status_soft[idx] == "unblocked" && status_hard[idx] == "unblocked";
+            }
+            if *device == "bluetooth" {
+                ret.bt_enabled = status_soft[idx] == "unblocked" && status_hard[idx] == "unblocked";
+            }
+        }
+
+        ret
     }
 }
 

@@ -1,6 +1,6 @@
 use crate::{
     systeminfo::{ASPMInfo, CPUInfo, SystemInfo},
-    Config, Profile, ProfilesInfo, ReducedUpdate,
+    Config, Profile, ProfilesInfo, RadioInfo, ReducedUpdate,
 };
 use zbus::proxy;
 
@@ -15,6 +15,9 @@ trait SystemInfoDBus {
 
     /// Returns a JSON encoded `CPUInfo`
     fn get_cpu_info(&self) -> zbus::Result<String>;
+
+    /// Returns a JSON encoded `RadioInfo`
+    async fn get_radio_info(&self) -> zbus::Result<String>;
 
     /// Returns a JSON encoded `ASPMInfo`
     fn get_aspm_info(&self) -> zbus::Result<String>;
@@ -36,6 +39,9 @@ impl SystemInfoClient {
     }
     pub async fn get_cpu_info(&self) -> zbus::Result<CPUInfo> {
         Ok(serde_json::from_str(&self.get_proxy().await?.get_cpu_info().await?).unwrap())
+    }
+    pub async fn get_radio_info(&self) -> zbus::Result<RadioInfo> {
+        Ok(serde_json::from_str(&self.get_proxy().await?.get_radio_info().await?).unwrap())
     }
     pub async fn get_aspm_info(&self) -> zbus::Result<ASPMInfo> {
         Ok(serde_json::from_str(&self.get_proxy().await?.get_aspm_info().await?).unwrap())

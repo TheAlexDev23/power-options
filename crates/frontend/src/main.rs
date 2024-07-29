@@ -15,6 +15,7 @@ use dioxus::{
     prelude::*,
 };
 use power_daemon::{ProfilesInfo, SystemInfo};
+use radio::RadioGroupProps;
 use tracing::Level;
 
 use setting_groups::*;
@@ -168,7 +169,7 @@ fn SettingGroup(
                     cpu::CPUGroup(CPUGroupProps {system_info, profiles_info, control_routine, system_info_routine})
                 },
                 1 => PlaceholderGroup(current_tab),
-                2 => PlaceholderGroup(current_tab),
+                2 => radio::RadioGroup(RadioGroupProps {profiles_info, control_routine}),
                 3 => PlaceholderGroup(current_tab),
                 4 => PlaceholderGroup(current_tab),
                 5 => PlaceholderGroup(current_tab),

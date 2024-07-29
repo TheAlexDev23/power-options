@@ -15,8 +15,11 @@ use crate::helpers::{wait_for_diff_msg, wait_for_msg};
 pub enum SystemInfoSyncType {
     Whole,
     CPU,
+    Radio,
     ASPM,
 }
+
+pub type SystemInfoRoutine = Coroutine<(Duration, SystemInfoSyncType)>;
 
 pub async fn system_info_service(
     mut rx: UnboundedReceiver<(Duration, SystemInfoSyncType)>,
@@ -54,6 +57,12 @@ pub async fn system_info_service(
                 SystemInfoSyncType::CPU => {
                     system_info.as_mut().unwrap().cpu_info = client
                         .get_cpu_info()
+                        .await
+                        .expect("Could not get system info")
+                }
+                SystemInfoSyncType::Radio => {
+                    system_info.as_mut().unwrap().radio_info = client
+                        .get_radio_info()
                         .await
                         .expect("Could not get system info")
                 }
