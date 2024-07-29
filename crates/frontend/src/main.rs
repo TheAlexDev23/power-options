@@ -14,6 +14,7 @@ use dioxus::{
     desktop::{Config, LogicalSize, WindowBuilder},
     prelude::*,
 };
+use network::NetworkGroupProps;
 use power_daemon::{ProfilesInfo, SystemInfo};
 use radio::RadioGroupProps;
 use tracing::Level;
@@ -170,7 +171,7 @@ fn SettingGroup(
                 },
                 1 => PlaceholderGroup(current_tab),
                 2 => radio::RadioGroup(RadioGroupProps {profiles_info, control_routine}),
-                3 => PlaceholderGroup(current_tab),
+                3 => network::NetworkGroup(NetworkGroupProps { profiles_info, control_routine}),
                 4 => PlaceholderGroup(current_tab),
                 5 => PlaceholderGroup(current_tab),
                 6 => PlaceholderGroup(current_tab),

@@ -350,11 +350,11 @@ impl RadioSettings {
 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub struct NetworkSettings {
-    pub disable_ethernet: bool,
+    pub disable_ethernet: Option<bool>,
 
-    pub disable_wifi_7: bool,
-    pub disable_wifi_6: bool,
-    pub disable_wifi_5: bool,
+    pub disable_wifi_7: Option<bool>,
+    pub disable_wifi_6: Option<bool>,
+    pub disable_wifi_5: Option<bool>,
 
     pub enable_power_save: Option<bool>,
     // Ranges from 0-5, the bigger the value the more performance and less battery savings
@@ -372,7 +372,7 @@ impl NetworkSettings {
     pub fn apply(&self) {
         info!("Applying Network settings");
 
-        if self.disable_ethernet {
+        if self.disable_ethernet.unwrap_or_default() {
             Self::disable_all_ethernet_cards()
         }
 
@@ -399,14 +399,14 @@ impl NetworkSettings {
 
         let mut driver_parameters = String::new();
 
-        if self.disable_wifi_5 {
-            driver_parameters.push_str("disable_11ac=1 ")
+        if let Some(val) = self.disable_wifi_5 {
+            driver_parameters.push_str(&format!("disable_11ac={} ", if val { "1" } else { "0" }));
         }
-        if self.disable_wifi_6 {
-            driver_parameters.push_str("disable_11ax=1 ")
+        if let Some(val) = self.disable_wifi_6 {
+            driver_parameters.push_str(&format!("disable_11ax={} ", if val { "1" } else { "0" }));
         }
-        if self.disable_wifi_7 {
-            driver_parameters.push_str("disable_11be=1 ")
+        if let Some(val) = self.disable_wifi_7 {
+            driver_parameters.push_str(&format!("disable_11be={} ", if val { "1" } else { "0" }));
         }
 
         if let Some(enable_powersave) = self.enable_power_save {
