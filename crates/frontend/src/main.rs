@@ -9,17 +9,14 @@ use std::time::Duration;
 use communication_services::{
     control_service, system_info_service, ControlAction, ControlRoutine, SystemInfoSyncType,
 };
-use cpu::CPUGroupProps;
+use setting_groups::{cpu::CPUGroup, network::NetworkGroup, radio::RadioGroup};
+
 use dioxus::{
     desktop::{Config, LogicalSize, WindowBuilder},
     prelude::*,
 };
-use network::NetworkGroupProps;
 use power_daemon::{ProfilesInfo, SystemInfo};
-use radio::RadioGroupProps;
 use tracing::Level;
-
-use setting_groups::*;
 
 fn main() {
     // Init logger
@@ -163,24 +160,28 @@ fn SettingGroup(
     control_routine: ControlRoutine,
     system_info_routine: Coroutine<(Duration, SystemInfoSyncType)>,
 ) -> Element {
+    let current_tab_val = current_tab();
     rsx! {
         div { class: "settings-group",
-            match current_tab() {
-                0 => {
-                    cpu::CPUGroup(CPUGroupProps {system_info, profiles_info, control_routine, system_info_routine})
-                },
-                1 => PlaceholderGroup(current_tab),
-                2 => radio::RadioGroup(RadioGroupProps {profiles_info, control_routine}),
-                3 => network::NetworkGroup(NetworkGroupProps { profiles_info, control_routine}),
-                4 => PlaceholderGroup(current_tab),
-                5 => PlaceholderGroup(current_tab),
-                6 => PlaceholderGroup(current_tab),
-                _ => rsx! { "Unknown group" },
+            if current_tab_val == 0 {
+                CPUGroup {
+                    system_info,
+                    profiles_info,
+                    control_routine,
+                    system_info_routine
+                }
+            } else if current_tab_val == 2 {
+                RadioGroup { profiles_info, control_routine }
+            } else if current_tab_val == 3 {
+                NetworkGroup { profiles_info, control_routine }
+            } else {
+                PlaceholderGroup { current_tab }
             }
         }
     }
 }
 
+#[component]
 fn PlaceholderGroup(current_tab: Signal<u8>) -> Element {
     rsx! {
         div { "Placeholder group {current_tab}" }
