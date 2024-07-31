@@ -16,7 +16,6 @@ pub enum SystemInfoSyncType {
     None,
     Whole,
     CPU,
-    Radio,
     ASPM,
 }
 
@@ -59,12 +58,6 @@ pub async fn system_info_service(
                 SystemInfoSyncType::CPU => {
                     system_info.as_mut().unwrap().cpu_info = client
                         .get_cpu_info()
-                        .await
-                        .expect("Could not get system info")
-                }
-                SystemInfoSyncType::Radio => {
-                    system_info.as_mut().unwrap().radio_info = client
-                        .get_radio_info()
                         .await
                         .expect("Could not get system info")
                 }
