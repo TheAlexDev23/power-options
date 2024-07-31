@@ -46,11 +46,10 @@ fn App() -> Element {
     control_routine.send((ControlAction::GetProfilesInfo, None));
 
     let current_settings_tab = use_signal(|| 0);
+
     rsx! {
         link { rel: "stylesheet", href: "main.css" }
         script { src: "helpers.js" }
-
-        div { class: "spinner" }
 
         PowerProfilesNav { profiles_info, control_routine }
         SettingGroupsNav { current_tab: current_settings_tab }

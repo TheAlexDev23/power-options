@@ -167,9 +167,51 @@ select:hover {
     }
 }
 
-
 .hidden {
     visibility: hidden;
+}
+
+.tooltip-parent {
+    position: relative;
+}
+
+.tooltip {
+    position: absolute;
+
+    visibility: hidden;
+
+    font-size: 12px;
+
+    color: white;
+
+    padding: 5px;
+    border-radius: 5px;
+
+    width: 200px;
+
+    z-index: 1;
+
+    background-color: #404040;
+}
+
+.tooltip-at-left {
+    right: 105%;
+}
+
+.tooltip-at-right {
+    left: 105%;
+}
+
+.tooltip-at-top {
+    bottom: 105%;
+}
+
+.tooltip-at-bottom {
+    top: 105%;
+}
+
+.tooltip-parent:hover .tooltip {
+    visibility: visible;
 }
 
 .profiles {
@@ -275,12 +317,13 @@ select:hover {
 }
 
 /* Label + toggle groups */
-.option div {
+.option div:first-child {
     display: flex;
     align-items: center;
 }
 
-.option div * {
+/* Label + toggle groups */
+.option div:first-child * {
     margin-right: 10px;
 }
 

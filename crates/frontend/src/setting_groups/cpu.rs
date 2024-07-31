@@ -10,7 +10,9 @@ use power_daemon::{CPUSettings, CoreSetting, Profile, ProfilesInfo, ReducedUpdat
 use crate::communication_services::{
     ControlAction, ControlRoutine, SystemInfoRoutine, SystemInfoSyncType,
 };
-use crate::helpers::{Dropdown, ToggleableDropdown, ToggleableNumericField, ToggleableToggle};
+use crate::helpers::{
+    Dropdown, ToggleableDropdown, ToggleableNumericField, ToggleableToggle, TooltipDirection,
+};
 
 use super::{ToggleableBool, ToggleableInt, ToggleableString};
 
@@ -254,12 +256,22 @@ fn CPUSettingsForm(
             }
 
             div { class: "option-group",
-                if epp_supported && *form.governor.1.read() != "performance" {
+                if epp_supported {
                     div { class: "option",
                         ToggleableDropdown {
                             name: String::from("Energy Performance Preference"),
                             items: epps,
-                            value: form.epp
+                            value: form.epp,
+                            disabled: form.governor.1() == "performance",
+                            dropdown_tooltip: if form.governor.1() == "performance" {
+                                Some(
+                                    String::from(
+                                        "EPP will be locked to the highest setting when the scaling governor is set to performance.",
+                                    ),
+                                )
+                            } else {
+                                None
+                            }
                         }
                     }
                 }
@@ -301,9 +313,22 @@ fn CPUSettingsForm(
                     }
                 }
 
-                if hwp_dyn_boost_supported && *form.mode.1.read() == "active" {
+                if hwp_dyn_boost_supported {
                     div { class: "option",
-                        ToggleableToggle { name: String::from("HWP Dynamic Boost"), value: form.hwp_dyn_boost }
+                        ToggleableToggle {
+                            name: String::from("HWP Dynamic Boost"),
+                            value: form.hwp_dyn_boost,
+                            disabled: form.mode.1() != "active",
+                            toggle_tooltip: if form.mode.1() != "active" {
+                                Some(
+                                    String::from(
+                                        "Dynamic boost is only supported when the operation mode is set to active.",
+                                    ),
+                                )
+                            } else {
+                                None
+                            }
+                        }
                     }
                 }
             }
@@ -548,6 +573,16 @@ fn CoreSettings(
                                     selected: "{core.epp.clone().unwrap()}",
                                     items: epps.clone(),
                                     disabled: core.governor == "performance",
+                                    tooltip: if core.governor == "performance" {
+                                        Some((
+                                            TooltipDirection::AtTop,
+                                            String::from(
+                                                "EPP will be locked to the highest possible value when the governor is set to performance.",
+                                            ),
+                                        ))
+                                    } else {
+                                        None
+                                    },
                                     oninput: {
                                         let mut current_profile = current_profile.clone();
                                         let awaiting_signal = *cores_awaiting_update_signals

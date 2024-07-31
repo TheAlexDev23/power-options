@@ -2,6 +2,25 @@ use std::time::Duration;
 
 use dioxus::prelude::*;
 
+#[derive(PartialEq, Clone)]
+pub enum TooltipDirection {
+    AtRight,
+    AtLeft,
+    AtTop,
+    AtBottom,
+}
+
+impl TooltipDirection {
+    pub fn to_class_name(&self) -> String {
+        String::from(match self {
+            TooltipDirection::AtRight => "tooltip tooltip-at-right",
+            TooltipDirection::AtLeft => "tooltip tooltip-at-left",
+            TooltipDirection::AtTop => "tooltip tooltip-at-top",
+            TooltipDirection::AtBottom => "tooltip tooltip-at-bottom",
+        })
+    }
+}
+
 #[component]
 pub fn ToggleableNumericField(name: String, value: (Signal<bool>, Signal<i32>)) -> Element {
     rsx! {
@@ -56,6 +75,8 @@ pub fn ToggleableDropdown(
     name: String,
     items: Vec<String>,
     value: (Signal<bool>, Signal<String>),
+    disabled: Option<bool>,
+    dropdown_tooltip: Option<String>,
 ) -> Element {
     rsx! {
         div {
@@ -68,20 +89,31 @@ pub fn ToggleableDropdown(
             }
             label { "{name}" }
         }
-        select {
-            onchange: move |v| {
-                value.1.set(v.value());
-            },
-            disabled: !value.0.cloned(),
-            for item in items {
-                option { selected: item == *value.1.read(), "{item}" }
+        div { class: "tooltip-parent",
+            Dropdown {
+                selected: value.1(),
+                onchange: move |v: String| {
+                    value.1.set(v);
+                },
+                disabled: !value.0() || disabled.unwrap_or_default(),
+                items,
+                tooltip: if let Some(ref dropdown_tooltip) = dropdown_tooltip {
+                    Some((TooltipDirection::AtLeft, dropdown_tooltip.clone()))
+                } else {
+                    None
+                }
             }
         }
     }
 }
 
 #[component]
-pub fn ToggleableToggle(name: String, value: (Signal<bool>, Signal<bool>)) -> Element {
+pub fn ToggleableToggle(
+    name: String,
+    value: (Signal<bool>, Signal<bool>),
+    disabled: Option<bool>,
+    toggle_tooltip: Option<String>,
+) -> Element {
     rsx! {
         div {
             input {
@@ -93,38 +125,58 @@ pub fn ToggleableToggle(name: String, value: (Signal<bool>, Signal<bool>)) -> El
             }
             label { "{name}" }
         }
-        input {
-            r#type: "checkbox",
-            onchange: move |v| { value.1.set(v.value() == "true") },
-            checked: "{value.1}",
-            disabled: !value.0.cloned()
+        div { class: "tooltip-parent",
+            if toggle_tooltip.is_some() {
+                span { class: "tooltip tooltip-at-left", "{toggle_tooltip.unwrap()}" }
+            }
+
+            input {
+                r#type: "checkbox",
+                onchange: move |v| { value.1.set(v.value() == "true") },
+                checked: "{value.1}",
+                disabled: !value.0() || disabled.unwrap_or_default()
+            }
         }
     }
 }
 
 #[component]
 pub fn Dropdown(
-    id: Option<String>,
     selected: String,
     items: Vec<String>,
     disabled: bool,
-    oninput: EventHandler<String>,
+    tooltip: Option<(TooltipDirection, String)>,
+    oninput: Option<EventHandler<String>>,
+    onchange: Option<EventHandler<String>>,
     onclick: Option<EventHandler<MouseEvent>>,
 ) -> Element {
     rsx! {
-        select {
-            id,
-            oninput: move |v| {
-                oninput.call(v.value());
-            },
-            onclick: move |e| {
-                if let Some(evt) = onclick {
-                    evt.call(e);
+        div { class: "tooltip-parent",
+            if tooltip.is_some() {
+                span { class: "{tooltip.as_ref().unwrap().0.to_class_name()}",
+                    "{tooltip.as_ref().unwrap().1.clone()}"
                 }
-            },
-            disabled,
-            for item in items {
-                option { selected: item == selected, "{item}" }
+            }
+            select {
+                oninput: move |v| {
+                    if let Some(oninput) = oninput {
+                        oninput.call(v.value());
+                    }
+                },
+                onchange: move |v| {
+                    if let Some(onchange) = onchange {
+                        onchange.call(v.value());
+                    }
+                },
+                onclick: move |e| {
+                    if let Some(onclick) = onclick {
+                        onclick.call(e);
+                    }
+                },
+                disabled,
+                for item in items {
+                    option { selected: item == selected, "{item}" }
+                }
             }
         }
     }
