@@ -3,6 +3,7 @@ use std::time::Duration;
 use dioxus::prelude::*;
 
 #[derive(PartialEq, Clone)]
+#[allow(unused)]
 pub enum TooltipDirection {
     AtRight,
     AtLeft,
@@ -182,6 +183,7 @@ pub fn Dropdown(
     }
 }
 
+/// Awaitable task that will return when the dioxus unbounded receiver has received a message
 pub async fn wait_for_msg<T>(rx: &mut UnboundedReceiver<T>) -> T {
     loop {
         if let Ok(Some(msg)) = rx.try_next() {
@@ -192,6 +194,7 @@ pub async fn wait_for_msg<T>(rx: &mut UnboundedReceiver<T>) -> T {
     }
 }
 
+/// Awaitable task that will only return when the dioxus unbounded receiver has received a message that differs from `current`
 pub async fn wait_for_diff_msg<T: PartialEq>(current: T, rx: &mut UnboundedReceiver<T>) -> T {
     loop {
         if let Ok(Some(msg)) = rx.try_next() {

@@ -1,7 +1,11 @@
+use std::time::Duration;
+
 use dioxus::prelude::*;
 use power_daemon::{NetworkSettings, ProfilesInfo, ReducedUpdate};
 
-use crate::communication_services::{ControlAction, ControlRoutine};
+use crate::communication_services::{
+    ControlAction, ControlRoutine, SystemInfoRoutine, SystemInfoSyncType,
+};
 use crate::helpers::{ToggleableNumericField, ToggleableToggle};
 
 use super::{ToggleableBool, ToggleableInt};
@@ -90,8 +94,11 @@ impl NetworkForm {
 #[component]
 pub fn NetworkGroup(
     profiles_info: Signal<Option<ProfilesInfo>>,
+    system_info_routine: SystemInfoRoutine,
     control_routine: ControlRoutine,
 ) -> Element {
+    system_info_routine.send((Duration::from_secs_f32(15.0), SystemInfoSyncType::None));
+
     if profiles_info.read().is_none() {
         return rsx! { "Connecting to daemon.." };
     }

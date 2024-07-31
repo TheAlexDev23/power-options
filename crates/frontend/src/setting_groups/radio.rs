@@ -1,7 +1,11 @@
+use std::time::Duration;
+
 use dioxus::prelude::*;
 use power_daemon::{ProfilesInfo, RadioSettings, ReducedUpdate};
 
-use crate::communication_services::{ControlAction, ControlRoutine};
+use crate::communication_services::{
+    ControlAction, ControlRoutine, SystemInfoRoutine, SystemInfoSyncType,
+};
 use crate::helpers::ToggleableToggle;
 
 use super::ToggleableBool;
@@ -37,8 +41,11 @@ impl RadioForm {
 #[component]
 pub fn RadioGroup(
     profiles_info: Signal<Option<ProfilesInfo>>,
+    system_info_routine: SystemInfoRoutine,
     control_routine: ControlRoutine,
 ) -> Element {
+    system_info_routine.send((Duration::from_secs_f32(15.0), SystemInfoSyncType::None));
+
     if profiles_info.read().is_none() {
         return rsx! { "Connecting to daemon..." };
     }
@@ -69,6 +76,7 @@ pub fn RadioGroup(
             .unwrap()
             .get_active_profile()
             .clone();
+
         active_profile.radio_settings = RadioSettings {
             block_nfc: if form.nfc.0.cloned() {
                 Some(form.nfc.1.cloned())

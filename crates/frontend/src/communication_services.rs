@@ -13,6 +13,7 @@ use crate::helpers::{wait_for_diff_msg, wait_for_msg};
 
 #[derive(PartialEq, Clone)]
 pub enum SystemInfoSyncType {
+    None,
     Whole,
     CPU,
     Radio,
@@ -48,6 +49,7 @@ pub async fn system_info_service(
             }
 
             match sync_type.as_ref().unwrap() {
+                SystemInfoSyncType::None => {}
                 SystemInfoSyncType::Whole => system_info.set(Some(
                     client
                         .get_system_info()
@@ -124,6 +126,7 @@ pub async fn control_service(
             if let Some(mut signal) = sent_msg.1 {
                 signal.set(true);
             }
+
             match msg {
                 ControlAction::GetConfig => {
                     config.set(Some(
