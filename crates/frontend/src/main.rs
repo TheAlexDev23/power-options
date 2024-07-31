@@ -28,7 +28,7 @@ fn main() {
                 WindowBuilder::new()
                     .with_resizable(true)
                     .with_maximizable(false)
-                    .with_min_inner_size(LogicalSize::new(800, 500))
+                    .with_min_inner_size(LogicalSize::new(950, 560))
                     .with_title("Power options"),
             ),
         )
