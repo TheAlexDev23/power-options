@@ -10,7 +10,8 @@ use communication_services::{
     control_service, system_info_service, ControlAction, ControlRoutine, SystemInfoSyncType,
 };
 use setting_groups::{
-    cpu::CPUGroup, network::NetworkGroup, pci::PCIAndASPMGroup, radio::RadioGroup, usb::USBGroup,
+    cpu::CPUGroup, network::NetworkGroup, pci::PCIAndASPMGroup, radio::RadioGroup, sata::SATAGroup,
+    usb::USBGroup,
 };
 
 use dioxus::{
@@ -233,6 +234,13 @@ fn SettingGroup(
                 }
             } else if current_tab_val == 5 {
                 USBGroup {
+                    system_info,
+                    profiles_info,
+                    control_routine,
+                    system_info_routine
+                }
+            } else if current_tab_val == 6 {
+                SATAGroup {
                     system_info,
                     profiles_info,
                     control_routine,

@@ -1,7 +1,4 @@
-use std::{
-    fs::{self, File},
-    io::Read,
-};
+use std::fs;
 
 use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
@@ -572,8 +569,6 @@ impl USBSettings {
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub struct SATASettings {
     pub active_link_pm_policy: Option<String>,
-    // whitelist or blacklist to exclude/include should be the name just as in /sys/class/scsi_host/{name}
-    pub whiteblacklist: Option<WhiteBlackList<String>>,
 }
 
 impl SATASettings {
@@ -593,20 +588,8 @@ impl SATASettings {
             let entry = entry.expect("Could not read sysfs entry");
             let path = entry.path();
 
-            let enable_pm = WhiteBlackList::should_enable_item(
-                &self.whiteblacklist,
-                &path.file_name().unwrap().to_string_lossy().to_string(),
-                // setting max_performance means disabling power saving
-                pm_policy != "max_performance",
-            );
-
             run_command(&format!(
-                "echo {} > {}",
-                if enable_pm {
-                    pm_policy
-                } else {
-                    "max_performance"
-                },
+                "echo {pm_policy} > {}",
                 path.join("link_power_management_policy").display()
             ))
         }

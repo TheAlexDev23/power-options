@@ -312,11 +312,9 @@ pub fn sata_settings_default(profile_type: &DefaultProfileType) -> SATASettings 
         | DefaultProfileType::Powersave
         | DefaultProfileType::Balanced => SATASettings {
             active_link_pm_policy: Some(String::from("med_power_with_dipm")),
-            whiteblacklist: None,
         },
         DefaultProfileType::Performance | DefaultProfileType::Ultraperformance => SATASettings {
             active_link_pm_policy: Some(String::from("max_performance")),
-            whiteblacklist: None,
         },
     }
 }

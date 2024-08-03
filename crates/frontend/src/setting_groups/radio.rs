@@ -84,7 +84,7 @@ pub fn RadioGroup(
         control_routine.send((ControlAction::GetProfilesInfo, Some(awaiting_completion)));
     };
 
-    let var_name = rsx! {
+    rsx! {
         form {
             onchange: move |_| {
                 changed.set(true);
@@ -122,7 +122,10 @@ pub fn RadioGroup(
                     value: "Cancel"
                 }
             }
+
+            br {}
+            br {}
+            br {}
         }
-    };
-    var_name
+    }
 }

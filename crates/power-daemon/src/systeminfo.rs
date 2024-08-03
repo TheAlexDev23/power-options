@@ -14,6 +14,7 @@ pub struct SystemInfo {
     pub cpu_info: CPUInfo,
     pub pci_info: PCIInfo,
     pub usb_info: USBInfo,
+    pub sata_info: SATAInfo,
 }
 
 impl SystemInfo {
@@ -24,6 +25,7 @@ impl SystemInfo {
             cpu_info: CPUInfo::obtain(),
             pci_info: PCIInfo::obtain(),
             usb_info: USBInfo::obtain(),
+            sata_info: SATAInfo::obtain(),
         }
     }
 }
@@ -432,5 +434,21 @@ impl USBInfo {
         }
 
         USBInfo { usb_devices }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct SATAInfo {
+    pub hosts: u32,
+}
+
+impl SATAInfo {
+    pub fn obtain() -> SATAInfo {
+        SATAInfo {
+            hosts: fs::read_dir("/sys/class/scsi_host/")
+                .expect("Could not read sysfs dir")
+                .filter_map(Result::ok)
+                .count() as u32,
+        }
     }
 }
