@@ -98,6 +98,7 @@ pub enum ControlAction {
     SetReducedUpdate(ReducedUpdate),
     ResetReducedUpdate,
 
+    GetProfileOverride,
     SetProfileOverride(String),
     RemoveProfileOverride,
 }
@@ -108,6 +109,7 @@ pub async fn control_service(
     mut rx: UnboundedReceiver<(ControlAction, Option<Signal<bool>>)>,
     mut config: Signal<Option<Config>>,
     mut profiles_info: Signal<Option<ProfilesInfo>>,
+    mut active_profile_override: Signal<Option<String>>,
 ) {
     let control_client = ControlClient::new()
         .await
@@ -155,6 +157,12 @@ pub async fn control_service(
                     .reset_reduced_update()
                     .await
                     .expect("Could not reset reduced update"),
+                ControlAction::GetProfileOverride => active_profile_override.set(
+                    control_client
+                        .get_profile_override()
+                        .await
+                        .expect("Could not obtain profile override"),
+                ),
                 ControlAction::SetProfileOverride(profile_name) => control_client
                     .set_profile_override(profile_name)
                     .await

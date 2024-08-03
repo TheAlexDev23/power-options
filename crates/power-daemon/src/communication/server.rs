@@ -100,6 +100,13 @@ impl ControlServer {
         self.instance.get_mut().reset_reduced_update();
     }
 
+    async fn get_profile_override(&mut self) -> String {
+        self.instance
+            .get_mut()
+            .temporary_override
+            .clone()
+            .unwrap_or_default()
+    }
     async fn set_profile_override(&mut self, profile_name: String) {
         self.instance
             .get_mut()

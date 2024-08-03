@@ -75,6 +75,7 @@ impl Instance {
 
     pub fn remove_profile_override(&mut self) {
         self.temporary_override = None;
+        self.update();
     }
 
     pub fn set_reduced_update(&mut self, reduced_update: ReducedUpdate) {

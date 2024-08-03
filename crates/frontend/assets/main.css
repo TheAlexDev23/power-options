@@ -303,7 +303,11 @@ input:checked+.slider:before {
 .profiles button.active {
     background-color: #B4B4B4;
     color: black;
-    cursor: pointer;
+}
+
+.profiles button.temporary-override {
+    background-color: #0860F2;
+    color: white;
 }
 
 .setting-groups-selector {

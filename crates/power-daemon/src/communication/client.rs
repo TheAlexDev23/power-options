@@ -63,6 +63,7 @@ trait ControlDBus {
     async fn set_reduced_update(&self, reduced_update: String) -> zbus::Result<()>;
     async fn reset_reduced_update(&self) -> zbus::Result<()>;
 
+    async fn get_profile_override(&self) -> zbus::Result<String>;
     async fn set_profile_override(&self, profile_name: String) -> zbus::Result<()>;
     async fn remove_profile_override(&self) -> zbus::Result<()>;
 }
@@ -115,6 +116,14 @@ impl ControlClient {
     }
     pub async fn reset_reduced_update(&self) -> zbus::Result<()> {
         self.get_proxy().await?.reset_reduced_update().await
+    }
+
+    pub async fn get_profile_override(&self) -> zbus::Result<Option<String>> {
+        self.get_proxy()
+            .await?
+            .get_profile_override()
+            .await
+            .map(|p| if p.is_empty() { None } else { Some(p) })
     }
 
     pub async fn set_profile_override(&self, profile_name: String) -> zbus::Result<()> {

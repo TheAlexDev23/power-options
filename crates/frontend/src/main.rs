@@ -44,8 +44,12 @@ fn App() -> Element {
 
     let config = use_signal(|| Option::None);
     let profiles_info = use_signal(|| Option::None);
-    let control_routine = use_coroutine(move |rx| control_service(rx, config, profiles_info));
+    let active_profile_override = use_signal(|| None);
+    let control_routine = use_coroutine(move |rx| {
+        control_service(rx, config, profiles_info, active_profile_override)
+    });
     control_routine.send((ControlAction::GetProfilesInfo, None));
+    control_routine.send((ControlAction::GetProfileOverride, None));
 
     let current_settings_tab = use_signal(|| 0);
 
@@ -53,7 +57,11 @@ fn App() -> Element {
         link { rel: "stylesheet", href: "main.css" }
         script { src: "helpers.js" }
 
-        PowerProfilesNav { profiles_info, control_routine }
+        PowerProfilesNav {
+            profiles_info,
+            control_routine,
+            active_profile_override
+        }
         SettingGroupsNav { current_tab: current_settings_tab }
         SettingGroup {
             current_tab: current_settings_tab,
@@ -68,10 +76,13 @@ fn App() -> Element {
 #[component]
 fn PowerProfilesNav(
     profiles_info: Signal<Option<ProfilesInfo>>,
+    active_profile_override: ReadOnlySignal<Option<String>>,
     control_routine: ControlRoutine,
 ) -> Element {
-    let waiting = use_signal(|| false);
-    let mut waiting_future_idx = use_signal(|| 0);
+    let waiting_override_set = use_signal(|| false);
+    let mut future_override_idx = use_signal(|| 0);
+
+    let waiting_override_remove = use_signal(|| false);
 
     if profiles_info().is_some() {
         let mut buttons = Vec::new();
@@ -84,13 +95,20 @@ fn PowerProfilesNav(
         {
             let profile_name = profile.profile_name.clone();
             buttons.push((idx, profile_name.clone(), move |_| {
-                waiting_future_idx.set(idx);
-                control_routine.send((ControlAction::ResetReducedUpdate, Some(waiting)));
+                future_override_idx.set(idx);
+                control_routine.send((
+                    ControlAction::ResetReducedUpdate,
+                    Some(waiting_override_set),
+                ));
                 control_routine.send((
                     ControlAction::SetProfileOverride(profile_name.clone()),
-                    Some(waiting),
+                    Some(waiting_override_set),
                 ));
-                control_routine.send((ControlAction::GetProfilesInfo, Some(waiting)));
+                control_routine.send((ControlAction::GetProfilesInfo, Some(waiting_override_set)));
+                control_routine.send((
+                    ControlAction::GetProfileOverride,
+                    Some(waiting_override_set),
+                ));
             }))
         }
 
@@ -99,17 +117,49 @@ fn PowerProfilesNav(
                 ul {
                     for button in buttons {
                         li {
-                            if waiting() && button.0 == waiting_future_idx() {
+                            if waiting_override_set() && button.0 == future_override_idx() {
                                 div { class: "spinner" }
                             } else {
-                                button {
-                                    onclick: button.2,
-                                    class: if button.0 == profiles_info().as_ref().unwrap().active_profile {
-                                        "active"
-                                    } else {
-                                        ""
-                                    },
-                                    "{button.1}"
+                                div { display: "flex", align_items: "center",
+                                    button {
+                                        onclick: button.2,
+                                        class: if button.0 == profiles_info().as_ref().unwrap().active_profile {
+                                            if active_profile_override().is_some()
+                                                && active_profile_override().unwrap() == button.1
+                                            {
+                                                "temporary-override"
+                                            } else {
+                                                "active"
+                                            }
+                                        } else {
+                                            ""
+                                        },
+                                        "{button.1}"
+                                    }
+                                    if active_profile_override().is_some()
+                                        && active_profile_override().unwrap() == button.1
+                                    {
+                                        if waiting_override_remove() {
+                                            div {
+                                                display: "inline-block",
+                                                class: "spinner"
+                                            }
+                                        } else {
+                                            button {
+                                                onclick: move |_| {
+                                                    control_routine
+                                                        .send((ControlAction::ResetReducedUpdate, Some(waiting_override_remove)));
+                                                    control_routine
+                                                        .send((ControlAction::RemoveProfileOverride, Some(waiting_override_remove)));
+                                                    control_routine
+                                                        .send((ControlAction::GetProfilesInfo, Some(waiting_override_remove)));
+                                                    control_routine
+                                                        .send((ControlAction::GetProfileOverride, Some(waiting_override_remove)));
+                                                },
+                                                img { src: "icons/cross.svg" }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
