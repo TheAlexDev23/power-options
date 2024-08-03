@@ -236,7 +236,7 @@ fn CPUSettingsForm(
     });
 
     let epps = get_epps();
-    let governors = get_governors(&*form.mode.1.read());
+    let governors = get_governors(&form.mode.1());
 
     rsx! {
         form {
@@ -341,8 +341,8 @@ fn CPUSettingsForm(
             div { class: "confirm-buttons",
                 button {
                     r#type: "submit",
-                    disabled: !changed.cloned() || *awaiting_completion.read(),
-                    if *awaiting_completion.read() {
+                    disabled: !changed.cloned() || awaiting_completion(),
+                    if awaiting_completion() {
                         div { class: "spinner" }
                     }
                     label { "Apply" }
@@ -368,9 +368,9 @@ fn CoreSettings(
 ) -> Element {
     let mut cpu_info = system_info.cpu_info.clone();
     let mut cpu_info_secondary = use_signal(|| cpu_info.clone());
-    let mut secondary = cpu_info_secondary.read().clone();
+    let mut secondary = cpu_info_secondary().clone();
     cpu_info.sync_core_info(&mut secondary);
-    if *cpu_info_secondary.read() != secondary {
+    if cpu_info_secondary() != secondary {
         cpu_info_secondary.set(secondary);
     }
 
@@ -433,24 +433,24 @@ fn CoreSettings(
 
             for (logical_cpu_id , core) in cpu_info.cores.into_iter().map(|c| (c.logical_cpu_id, c)) {
                 tr {
-                    class: if selected.read().iter().any(|s| *s == logical_cpu_id) { "selected" },
+                    class: if selected().iter().any(|s| *s == logical_cpu_id) { "selected" },
 
                     onclick: move |_| {
-                        let ctrl = *ctrl_pressed.read();
-                        let shift = *shift_pressed.read();
+                        let ctrl = ctrl_pressed();
+                        let shift = shift_pressed();
                         if !ctrl && !shift {
                             selected.set(vec![logical_cpu_id]);
                             shift_selection_pinpoint.set(Some(logical_cpu_id));
                         } else if ctrl && !shift {
-                            let len = selected.read().len();
+                            let len = selected().len();
                             selected.retain(|s| *s != logical_cpu_id);
-                            if len == selected.read().len() {
+                            if len == selected().len() {
                                 selected.push(logical_cpu_id);
                             }
                             shift_selection_pinpoint.set(Some(logical_cpu_id));
                         } else if shift && !ctrl {
-                            if shift_selection_pinpoint.read().is_some() {
-                                let a = shift_selection_pinpoint.read().unwrap();
+                            if shift_selection_pinpoint().is_some() {
+                                let a = shift_selection_pinpoint().unwrap();
                                 let b = logical_cpu_id;
                                 selected.set((a.min(b)..=b.max(a)).collect());
                             } else {
@@ -461,21 +461,14 @@ fn CoreSettings(
                             if selected.is_empty() {
                                 selected.set(vec![logical_cpu_id]);
                             } else {
-                                let range = (selected
-                                    .read()
+                                let range = (selected()
                                     .iter()
                                     .min()
                                     .unwrap()
                                     .clone()
                                     .min(
                                         logical_cpu_id,
-                                    )..=selected
-                                    .read()
-                                    .iter()
-                                    .max()
-                                    .unwrap()
-                                    .clone()
-                                    .max(logical_cpu_id))
+                                    )..=selected().iter().max().unwrap().clone().max(logical_cpu_id))
                                     .collect();
                                 selected.set(range);
                             }
@@ -483,7 +476,7 @@ fn CoreSettings(
                     },
 
                     td {
-                        div { class: if !*cores_awaiting_update_signals.get(&logical_cpu_id).unwrap().read() { "hidden" },
+                        div { class: if !cores_awaiting_update_signals.get(&logical_cpu_id).unwrap()() { "hidden" },
                             div { class: "spinner" }
                         }
                     }
@@ -492,7 +485,7 @@ fn CoreSettings(
                         if core.online.is_some() {
                             input {
                                 onclick: move |e| {
-                                    if selected.read().iter().any(|c| *c == logical_cpu_id) {
+                                    if selected().iter().any(|c| *c == logical_cpu_id) {
                                         e.stop_propagation();
                                     }
                                 },
@@ -505,7 +498,7 @@ fn CoreSettings(
                                         update_core_settings(
                                             &mut current_profile,
                                             profile_id,
-                                            &selected.read(),
+                                            &selected(),
                                             move |core_settings| {
                                                 core_settings.online = Some(v.value() == "true");
                                             },
@@ -556,7 +549,7 @@ fn CoreSettings(
                                         update_core_settings(
                                             &mut current_profile,
                                             profile_id,
-                                            &selected.read(),
+                                            &selected(),
                                             move |core_settings| {
                                                 core_settings.governor = Some(v.clone());
                                             },
@@ -566,7 +559,7 @@ fn CoreSettings(
                                     }
                                 },
                                 onclick: move |e: MouseEvent| {
-                                    if selected.read().iter().any(|c| *c == logical_cpu_id) {
+                                    if selected().iter().any(|c| *c == logical_cpu_id) {
                                         e.stop_propagation();
                                     }
                                 }
@@ -597,7 +590,7 @@ fn CoreSettings(
                                             update_core_settings(
                                                 &mut current_profile,
                                                 profile_id,
-                                                &selected.read(),
+                                                &selected(),
                                                 move |core_settings| {
                                                     core_settings.epp = Some(v.clone());
                                                 },
@@ -607,7 +600,7 @@ fn CoreSettings(
                                         }
                                     },
                                     onclick: move |e: MouseEvent| {
-                                        if selected.read().iter().any(|c| *c == logical_cpu_id) {
+                                        if selected().iter().any(|c| *c == logical_cpu_id) {
                                             e.stop_propagation();
                                         }
                                     }

@@ -99,12 +99,11 @@ pub fn NetworkGroup(
 ) -> Element {
     system_info_routine.send((Duration::from_secs_f32(15.0), SystemInfoSyncType::None));
 
-    if profiles_info.read().is_none() {
+    if profiles_info().is_none() {
         return rsx! { "Connecting to daemon.." };
     }
 
-    let network_settings = profiles_info
-        .read()
+    let network_settings = profiles_info()
         .as_ref()
         .unwrap()
         .get_active_profile()
@@ -114,7 +113,7 @@ pub fn NetworkGroup(
     let mut form_used_settings = use_signal(|| network_settings.clone());
     let mut form = use_hook(|| NetworkForm::new(&network_settings));
 
-    if *form_used_settings.read() != network_settings {
+    if form_used_settings() != network_settings {
         form.set_values(&network_settings);
         form_used_settings.set(network_settings.clone());
     }
@@ -123,13 +122,9 @@ pub fn NetworkGroup(
     let awaiting_completion = use_signal(|| false);
 
     let onsubmit = move || {
-        let active_profile_idx = profiles_info.read().as_ref().unwrap().active_profile;
-        let mut active_profile = profiles_info
-            .read()
-            .as_ref()
-            .unwrap()
-            .get_active_profile()
-            .clone();
+        let profiles_info = profiles_info().unwrap();
+        let active_profile_idx = profiles_info.active_profile;
+        let mut active_profile = profiles_info.get_active_profile().clone();
 
         active_profile.network_settings = NetworkSettings {
             disable_ethernet: if form.disable_ethernet.0.cloned() {
@@ -233,8 +228,8 @@ pub fn NetworkGroup(
             div { class: "confirm-buttons",
                 button {
                     r#type: "submit",
-                    disabled: !changed.cloned() || *awaiting_completion.read(),
-                    if *awaiting_completion.read() {
+                    disabled: !changed.cloned() || awaiting_completion(),
+                    if awaiting_completion() {
                         div { class: "spinner" }
                     }
                     label { "Apply" }

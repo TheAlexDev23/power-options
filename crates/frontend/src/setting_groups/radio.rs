@@ -46,7 +46,7 @@ pub fn RadioGroup(
 ) -> Element {
     system_info_routine.send((Duration::from_secs_f32(15.0), SystemInfoSyncType::None));
 
-    if profiles_info.read().is_none() {
+    if profiles_info().is_none() {
         return rsx! { "Connecting to daemon..." };
     }
 
@@ -126,8 +126,8 @@ pub fn RadioGroup(
             div { class: "confirm-buttons",
                 button {
                     r#type: "submit",
-                    disabled: !changed.cloned() || *awaiting_completion.read(),
-                    if *awaiting_completion.read() {
+                    disabled: !changed() || awaiting_completion(),
+                    if awaiting_completion() {
                         div { class: "spinner" }
                     }
                     label { "Apply" }
