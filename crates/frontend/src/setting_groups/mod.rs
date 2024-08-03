@@ -1,5 +1,6 @@
 pub mod cpu;
 pub mod network;
+pub mod pci;
 pub mod radio;
 
 use dioxus::prelude::*;

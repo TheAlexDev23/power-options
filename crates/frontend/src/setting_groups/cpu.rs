@@ -97,12 +97,12 @@ pub fn CPUGroup(
     system_info_routine: SystemInfoRoutine,
 ) -> Element {
     system_info_routine.send((Duration::from_secs_f32(0.5), SystemInfoSyncType::CPU));
-    if profiles_info.read().is_none() || system_info.read().is_none() {
+    if profiles_info().is_none() || system_info().is_none() {
         return rsx! { "Connecting to the daemon..." };
     }
 
-    let profiles_info = profiles_info.read().as_ref().unwrap().clone();
-    let system_info = system_info.read().as_ref().unwrap().clone();
+    let profiles_info = profiles_info().as_ref().unwrap().clone();
+    let system_info = system_info().as_ref().unwrap().clone();
 
     rsx! {
         CPUSettingsForm {
@@ -120,6 +120,10 @@ pub fn CPUGroup(
             profiles_info: profiles_info.clone(),
             control_routine
         }
+
+        br {}
+        br {}
+        br {}
     }
 }
 
@@ -147,7 +151,7 @@ fn CPUSettingsForm(
 
     let mut form = use_hook(|| CPUForm::new(&cpu_settings));
 
-    if cpu_settings != *form_used_settings.read() {
+    if cpu_settings != form_used_settings() {
         form.set_values(&cpu_settings);
         form_used_settings.set(cpu_settings.clone());
     }
@@ -199,7 +203,7 @@ fn CPUSettingsForm(
                 None
             },
 
-            hwp_dyn_boost: if *form.mode.1.read() == "active"
+            hwp_dyn_boost: if form.mode.1() == "active"
                 && hwp_dyn_boost_supported
                 && form.hwp_dyn_boost.0.cloned()
             {
@@ -217,13 +221,14 @@ fn CPUSettingsForm(
             ControlAction::UpdateProfile(active_profile_idx as u32, active_profile),
             Some(awaiting_completion),
         ));
+        control_routine.send((ControlAction::GetProfilesInfo, Some(awaiting_completion)));
     };
 
     use_effect(move || {
         // If the mode overwriting is disabled we set it to reflect the system current opmode
         // The reasoning is: the user does not set an explicit override so the opmode is not guaranteed, therefore we will assume the value is what the system is currently at
         // And even though the current value of the system does not reflect the users selection, it still won't be set by the daemon as the override is disabled
-        if !*form.mode.0.read() {
+        if !form.mode.0() {
             if let Some(ref mode) = cpu_info.mode {
                 form.mode.1.set(mode.clone());
             }
@@ -632,10 +637,6 @@ fn CoreSettings(
                 }
             }
         }
-
-        br {}
-        br {}
-        br {}
     }
 }
 

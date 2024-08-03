@@ -1,6 +1,6 @@
 use crate::{
-    systeminfo::{ASPMInfo, CPUInfo, SystemInfo},
-    Config, Profile, ProfilesInfo, ReducedUpdate,
+    systeminfo::{CPUInfo, SystemInfo},
+    Config, PCIInfo, Profile, ProfilesInfo, ReducedUpdate,
 };
 use zbus::proxy;
 
@@ -16,8 +16,8 @@ trait SystemInfoDBus {
     /// Returns a JSON encoded `CPUInfo`
     fn get_cpu_info(&self) -> zbus::Result<String>;
 
-    /// Returns a JSON encoded `ASPMInfo`
-    fn get_aspm_info(&self) -> zbus::Result<String>;
+    /// Returns a JSON encoded `PCIInfo`
+    fn get_pci_info(&self) -> zbus::Result<String>;
 }
 
 #[derive(Clone)]
@@ -37,8 +37,8 @@ impl SystemInfoClient {
     pub async fn get_cpu_info(&self) -> zbus::Result<CPUInfo> {
         Ok(serde_json::from_str(&self.get_proxy().await?.get_cpu_info().await?).unwrap())
     }
-    pub async fn get_aspm_info(&self) -> zbus::Result<ASPMInfo> {
-        Ok(serde_json::from_str(&self.get_proxy().await?.get_aspm_info().await?).unwrap())
+    pub async fn get_pci_info(&self) -> zbus::Result<PCIInfo> {
+        Ok(serde_json::from_str(&self.get_proxy().await?.get_pci_info().await?).unwrap())
     }
 
     async fn get_proxy(&self) -> zbus::Result<SystemInfoDBusProxy> {

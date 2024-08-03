@@ -12,7 +12,7 @@ use crate::helpers::{
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct SystemInfo {
     pub cpu_info: CPUInfo,
-    pub aspm_info: ASPMInfo,
+    pub pci_info: PCIInfo,
 }
 
 impl SystemInfo {
@@ -21,7 +21,7 @@ impl SystemInfo {
 
         SystemInfo {
             cpu_info: CPUInfo::obtain(),
-            aspm_info: ASPMInfo::obtain(),
+            pci_info: PCIInfo::obtain(),
         }
     }
 }
@@ -320,8 +320,60 @@ impl CPUInfo {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct PCIInfo {
+    pub pci_devices: Vec<PCIDeviceInfo>,
+    pub aspm_info: ASPMInfo,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct PCIDeviceInfo {
+    pub display_name: String,
+    pub pci_address: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct ASPMInfo {
     pub supported_modes: Option<Vec<String>>,
+}
+
+impl PCIInfo {
+    pub fn obtain() -> PCIInfo {
+        let mut entries: Vec<_> = fs::read_dir("/sys/bus/pci/devices")
+            .expect("Could not read sysfs directory")
+            .filter_map(Result::ok)
+            .collect();
+
+        entries.sort_by(|a, b| {
+            natord::compare(a.path().to_str().unwrap(), b.path().to_str().unwrap())
+        });
+
+        let mut pci_devices = Vec::new();
+
+        for device in entries {
+            let display_name = run_command_with_output(&format!(
+                "lspci -s \"{}\" | sed -E 's/^[0-9a-f]+:[0-9a-f]+.[0-9] //; s/ \\(rev.*\\)//'",
+                device.file_name().into_string().unwrap()
+            ))
+            .0;
+
+            let pci_address = device
+                .file_name()
+                .into_string()
+                .unwrap()
+                .strip_prefix("0000:")
+                .unwrap()
+                .to_string();
+
+            pci_devices.push(PCIDeviceInfo {
+                display_name,
+                pci_address,
+            })
+        }
+        PCIInfo {
+            aspm_info: ASPMInfo::obtain(),
+            pci_devices,
+        }
+    }
 }
 
 impl ASPMInfo {

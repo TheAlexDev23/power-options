@@ -7,9 +7,11 @@ pub mod systeminfo;
 
 mod helpers;
 
-pub use config::*;
-pub use profile::*;
 use serde::{Deserialize, Serialize};
+
+pub use config::*;
+pub use helpers::{WhiteBlackList, WhiteBlackListType};
+pub use profile::*;
 pub use systeminfo::*;
 
 use std::{

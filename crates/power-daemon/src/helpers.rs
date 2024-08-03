@@ -8,33 +8,40 @@ use std::{
 use log::{debug, trace};
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
-pub enum WhiteBlackList<T: PartialEq> {
-    Whitelist(Vec<T>),
-    Blacklist(Vec<T>),
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Default)]
+pub struct WhiteBlackList<T: PartialEq> {
+    pub items: Vec<T>,
+    pub list_type: WhiteBlackListType,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Default)]
+pub enum WhiteBlackListType {
+    #[default]
+    Whitelist,
+    Blacklist,
 }
 
 impl<T: PartialEq> WhiteBlackList<T> {
-    // If enable = true and no list provided, will return true for all items
-    // If enable = true, will return true for items in whitelist or only for items outside of blacklist
-    // If enable = false, will return false for all items
+    /// If enable = true and no list provided, will return true for all items
+    /// If enable = true, will return true for items in whitelist or only for items outside of blacklist
+    /// If enable = false, will return false for all items
     pub fn should_enable_item(whiteblacklist: &Option<Self>, item: &T, enable: bool) -> bool {
         if !enable {
             // Always disable
             false
         } else if let Some(ref whiteblacklist) = whiteblacklist {
-            match whiteblacklist {
+            match whiteblacklist.list_type {
                 // If on whitelist always enable, otherwise always disable
-                WhiteBlackList::Whitelist(ref list) => {
-                    if list.iter().any(|i| i == item) {
+                WhiteBlackListType::Whitelist => {
+                    if whiteblacklist.items.iter().any(|i| i == item) {
                         true
                     } else {
                         false
                     }
                 }
                 // If on blacklist always disable, otherwise always enable
-                WhiteBlackList::Blacklist(ref list) => {
-                    if list.iter().any(|i| i == item) {
+                WhiteBlackListType::Blacklist => {
+                    if whiteblacklist.items.iter().any(|i| i == item) {
                         false
                     } else {
                         true
@@ -44,6 +51,23 @@ impl<T: PartialEq> WhiteBlackList<T> {
         } else {
             // No list, always enable
             true
+        }
+    }
+}
+
+impl WhiteBlackListType {
+    pub fn to_display_string(&self) -> String {
+        match self {
+            WhiteBlackListType::Whitelist => String::from("Whitelist"),
+            WhiteBlackListType::Blacklist => String::from("Blacklist"),
+        }
+    }
+
+    pub fn from_display_string(display_string: &str) -> Option<WhiteBlackListType> {
+        match display_string {
+            "Whitelist" => Some(WhiteBlackListType::Whitelist),
+            "Blacklist" => Some(WhiteBlackListType::Blacklist),
+            _ => None,
         }
     }
 }
@@ -63,7 +87,7 @@ pub fn run_command(command: &str) {
 // Runs command, returns (stdout, stdin), does not check for argument validity or program succesful completion.
 // Wil panic if: can't parse arguments, can't create command, can't run command
 pub fn run_command_with_output(command: &str) -> (String, String) {
-    debug!("getting output of: {command}");
+    trace!("getting output of: {command}");
 
     let mut command_proc = Command::new("sh");
     command_proc.args(["-c", command]);

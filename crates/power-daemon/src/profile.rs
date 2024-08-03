@@ -470,7 +470,7 @@ impl ASPMSettings {
 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub struct PCISettings {
-    pub enable_power_management: bool,
+    pub enable_power_management: Option<bool>,
     // whitelist or blacklist device to exlude/include.
     // Should be the name of the device under /sys/bus/pci/devices excluding the beggining 0000:
     pub whiteblacklist: Option<WhiteBlackList<String>>,
@@ -478,7 +478,11 @@ pub struct PCISettings {
 
 impl PCISettings {
     pub fn apply(&self) {
-        info!("Applying PCI settings");
+        info!("Applying PCI PM settings");
+
+        if self.enable_power_management.is_none() {
+            return;
+        }
 
         let entries = fs::read_dir("/sys/bus/pci/devices").expect("Could not read sysfs directory");
 
@@ -497,7 +501,7 @@ impl PCISettings {
             let enable_pm = WhiteBlackList::should_enable_item(
                 &self.whiteblacklist,
                 &device_name.to_string(),
-                self.enable_power_management,
+                self.enable_power_management.unwrap(),
             );
 
             run_command(&format!(
@@ -512,8 +516,8 @@ impl PCISettings {
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub struct USBSettings {
     pub enable_power_management: bool,
-    // whitelist or blacklist to exlude/include (vendor id, product id)
-    pub whiteblacklist: Option<WhiteBlackList<(String, String)>>,
+    // whitelist or blacklist to exlude/include vendor_id:product_id
+    pub whiteblacklist: Option<WhiteBlackList<String>>,
 }
 
 impl USBSettings {
@@ -545,7 +549,7 @@ impl USBSettings {
 
             let enable_pm = WhiteBlackList::should_enable_item(
                 &self.whiteblacklist,
-                &(vendor_id, product_id),
+                &format!("{vendor_id}:{product_id}"),
                 self.enable_power_management,
             );
 

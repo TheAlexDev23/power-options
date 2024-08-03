@@ -9,7 +9,9 @@ use std::time::Duration;
 use communication_services::{
     control_service, system_info_service, ControlAction, ControlRoutine, SystemInfoSyncType,
 };
-use setting_groups::{cpu::CPUGroup, network::NetworkGroup, radio::RadioGroup};
+use setting_groups::{
+    cpu::CPUGroup, network::NetworkGroup, pci::PCIAndASPMGroup, radio::RadioGroup,
+};
 
 use dioxus::{
     desktop::{Config, LogicalSize, WindowBuilder},
@@ -71,10 +73,9 @@ fn PowerProfilesNav(
     let waiting = use_signal(|| false);
     let mut waiting_future_idx = use_signal(|| 0);
 
-    if profiles_info.read().is_some() {
+    if profiles_info().is_some() {
         let mut buttons = Vec::new();
-        for (idx, profile) in profiles_info
-            .read()
+        for (idx, profile) in profiles_info()
             .as_ref()
             .unwrap()
             .profiles
@@ -98,12 +99,12 @@ fn PowerProfilesNav(
                 ul {
                     for button in buttons {
                         li {
-                            if *waiting.read() && button.0 == *waiting_future_idx.read() {
+                            if waiting() && button.0 == waiting_future_idx() {
                                 div { class: "spinner" }
                             } else {
                                 button {
                                     onclick: button.2,
-                                    class: if button.0 == profiles_info.read().as_ref().unwrap().active_profile {
+                                    class: if button.0 == profiles_info().as_ref().unwrap().active_profile {
                                         "active"
                                     } else {
                                         ""
@@ -173,10 +174,21 @@ fn SettingGroup(
                 RadioGroup { profiles_info, control_routine, system_info_routine }
             } else if current_tab_val == 3 {
                 NetworkGroup { profiles_info, control_routine, system_info_routine }
+            } else if current_tab_val == 4 {
+                PCIAndASPMGroup {
+                    system_info,
+                    profiles_info,
+                    control_routine,
+                    system_info_routine
+                }
             } else {
                 PlaceholderGroup { current_tab }
             }
         }
+
+        br {}
+        br {}
+        br {}
     }
 }
 

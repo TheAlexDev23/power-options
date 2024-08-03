@@ -1,6 +1,7 @@
 use std::time::Duration;
 
 use dioxus::prelude::*;
+use power_daemon::{WhiteBlackList, WhiteBlackListType};
 
 #[derive(PartialEq, Clone)]
 #[allow(unused)]
@@ -136,6 +137,201 @@ pub fn ToggleableToggle(
                 onchange: move |v| { value.1.set(v.value() == "true") },
                 checked: "{value.1}",
                 disabled: !value.0() || disabled.unwrap_or_default()
+            }
+        }
+    }
+}
+
+#[component]
+pub fn ToggleableRadio(
+    toggle_label: String,
+    list_name: String,
+    value: (Signal<bool>, Signal<String>),
+    items: Vec<String>,
+    onchange: Option<EventHandler<String>>,
+) -> Element {
+    rsx! {
+        div {
+            input {
+                checked: "{value.0}",
+                r#type: "checkbox",
+                onchange: move |v| {
+                    value.0.set(v.value() == "true");
+                }
+            }
+            label { "{toggle_label}" }
+        }
+
+        fieldset {
+            legend { "{list_name}" }
+            for item in items.into_iter() {
+                div {
+                    input {
+                        r#type: "radio",
+                        checked: value.1() == item,
+                        disabled: !value.0(),
+                        oninput: move |_| {
+                            value.1.set(item.clone());
+                            if let Some(onchange) = onchange {
+                                onchange.call(item.clone());
+                            }
+                        }
+                    }
+                    label { "{item}" }
+                }
+            }
+        }
+    }
+}
+
+#[component]
+fn ToggleableStringWhiteBlackListTypeToggle(
+    value: (Signal<bool>, Signal<WhiteBlackList<String>>),
+    toggle_name: String,
+    onchange: Option<EventHandler<bool>>,
+) -> Element {
+    rsx! {
+        div {
+            input {
+                checked: "{value.0}",
+                r#type: "checkbox",
+                onchange: move |v| {
+                    value.0.set(v.value() == "true");
+                }
+            }
+            label { "{toggle_name}" }
+        }
+
+        div { display: "flex", align_items: "center",
+            label { margin_right: "4px", "Whitelist" }
+            label { class: "toggle-switch",
+                input {
+                    r#type: "checkbox",
+                    checked: value.1().list_type == WhiteBlackListType::Blacklist,
+                    disabled: !value.0(),
+                    oninput: move |v| {
+                        value
+                            .1
+                            .write()
+                            .list_type = if v.value() == "true" {
+                            WhiteBlackListType::Blacklist
+                        } else {
+                            WhiteBlackListType::Whitelist
+                        };
+                    }
+                }
+                span { class: "slider" }
+            }
+
+            label { margin_left: "4px", "Blacklist" }
+        }
+    }
+}
+
+#[component]
+pub fn ToggleableSwitchToggle(
+    value: (Signal<bool>, Signal<bool>),
+    toggle_name: String,
+    names: Option<(String, String)>,
+    onchange: Option<EventHandler<bool>>,
+) -> Element {
+    rsx! {
+        div {
+            input {
+                checked: "{value.0}",
+                r#type: "checkbox",
+                onchange: move |v| {
+                    value.0.set(v.value() == "true");
+                }
+            }
+            label { "{toggle_name}" }
+        }
+
+        div { display: "flex", align_items: "center",
+            if names.is_some() {
+                label { margin_right: "4px", "{names.as_ref().unwrap().0.clone()}" }
+            }
+            label { class: "toggle-switch",
+                input {
+                    r#type: "checkbox",
+                    checked: value.1,
+                    disabled: !value.0(),
+                    oninput: move |v| { value.1.set(v.value() == "true") }
+                }
+                span { class: "slider" }
+            }
+            if names.is_some() {
+                label { margin_left: "4px", "{names.as_ref().unwrap().1.clone()}" }
+            }
+        }
+    }
+}
+
+#[derive(Props, PartialEq, Clone)]
+pub struct ToggleableStringWhiteBlackListProps<const C: usize> {
+    pub value: (Signal<bool>, Signal<WhiteBlackList<String>>),
+    pub columns: [String; C],
+    pub rows: Vec<[String; C]>,
+    /// The index within `columns` that will identify the element in the whiteblacklist.
+    /// If multiple informational columns are available it should point to the one that will identify each element in the whiteblacklist
+    pub value_index: usize,
+}
+
+#[component]
+pub fn ToggleableStringWhiteBlackList<const C: usize>(
+    mut props: ToggleableStringWhiteBlackListProps<C>,
+) -> Element {
+    rsx! {
+        div { class: "option-group",
+            div { class: "option",
+                ToggleableStringWhiteBlackListTypeToggle { toggle_name: "Enable custom include/exclude list", value: props.value }
+            }
+        }
+
+        if props.value.0() {
+            div {
+                h3 { "{props.value.1().list_type.to_display_string()}" }
+
+                table {
+                    tr {
+                        th { "" }
+                        for column in props.columns.iter() {
+                            th { "{column}" }
+                        }
+                    }
+
+                    for row in props.rows.into_iter() {
+                        tr {
+                            td {
+                                input {
+                                    r#type: "checkbox",
+                                    checked: props.value.1().items.iter().any(|i| **i == row[props.value_index].clone()),
+                                    oninput: {
+                                        let value_identifier = row[props.value_index].clone();
+                                        move |v| {
+                                            if v.value() == "true" {
+                                                props.value.1.write().items.push(value_identifier.clone());
+                                            } else {
+                                                let pos = props
+                                                    .value
+                                                    .1()
+                                                    .items
+                                                    .iter()
+                                                    .position(|e| *e == *value_identifier)
+                                                    .unwrap();
+                                                props.value.1.write().items.remove(pos);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            for item in row.iter() {
+                                td { "{item}" }
+                            }
+                        }
+                    }
+                }
             }
         }
     }

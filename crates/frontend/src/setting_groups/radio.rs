@@ -50,8 +50,7 @@ pub fn RadioGroup(
         return rsx! { "Connecting to daemon..." };
     }
 
-    let radio_settings = profiles_info
-        .read()
+    let radio_settings = profiles_info()
         .as_ref()
         .unwrap()
         .get_active_profile()
@@ -60,7 +59,7 @@ pub fn RadioGroup(
 
     let mut form_used_settings = use_signal(|| radio_settings.clone());
     let mut form = use_hook(|| RadioForm::new(&radio_settings));
-    if *form_used_settings.read() != radio_settings {
+    if form_used_settings() != radio_settings {
         form.set_values(&radio_settings);
         form_used_settings.set(radio_settings.clone());
     }
@@ -69,9 +68,8 @@ pub fn RadioGroup(
     let awaiting_completion = use_signal(|| false);
 
     let onsubmit = move || {
-        let active_profile_idx = profiles_info.read().as_ref().unwrap().active_profile;
-        let mut active_profile = profiles_info
-            .read()
+        let active_profile_idx = profiles_info().as_ref().unwrap().active_profile;
+        let mut active_profile = profiles_info()
             .as_ref()
             .unwrap()
             .get_active_profile()
@@ -102,6 +100,7 @@ pub fn RadioGroup(
             ControlAction::UpdateProfile(active_profile_idx as u32, active_profile),
             Some(awaiting_completion),
         ));
+        control_routine.send((ControlAction::GetProfilesInfo, Some(awaiting_completion)));
     };
 
     let var_name = rsx! {

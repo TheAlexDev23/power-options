@@ -16,7 +16,7 @@ pub enum SystemInfoSyncType {
     None,
     Whole,
     CPU,
-    ASPM,
+    PCI,
 }
 
 pub type SystemInfoRoutine = Coroutine<(Duration, SystemInfoSyncType)>;
@@ -36,8 +36,7 @@ pub async fn system_info_service(
 
     loop {
         if refreshing {
-            if *sync_type.as_ref().unwrap() != SystemInfoSyncType::Whole
-                && system_info.read().is_none()
+            if *sync_type.as_ref().unwrap() != SystemInfoSyncType::Whole && system_info().is_none()
             {
                 system_info.set(Some(
                     client
@@ -61,9 +60,9 @@ pub async fn system_info_service(
                         .await
                         .expect("Could not get system info")
                 }
-                SystemInfoSyncType::ASPM => {
-                    system_info.as_mut().unwrap().aspm_info = client
-                        .get_aspm_info()
+                SystemInfoSyncType::PCI => {
+                    system_info.as_mut().unwrap().pci_info = client
+                        .get_pci_info()
                         .await
                         .expect("Could not get system info")
                 }
@@ -94,6 +93,7 @@ pub enum ControlAction {
 
     UpdateConfig(Config),
     UpdateProfile(u32, Profile),
+    Update,
 
     SetReducedUpdate(ReducedUpdate),
     ResetReducedUpdate,
@@ -143,6 +143,10 @@ pub async fn control_service(
                     .update_profile(idx, updated)
                     .await
                     .expect("Could not update profile"),
+                ControlAction::Update => control_client
+                    .update()
+                    .await
+                    .expect("Could not apply current profile"),
                 ControlAction::SetReducedUpdate(reduced_update) => control_client
                     .set_reduced_update(reduced_update)
                     .await

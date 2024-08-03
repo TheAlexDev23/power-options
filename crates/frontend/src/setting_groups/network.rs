@@ -182,6 +182,7 @@ pub fn NetworkGroup(
             ControlAction::UpdateProfile(active_profile_idx as u32, active_profile),
             Some(awaiting_completion),
         ));
+        control_routine.send((ControlAction::GetProfilesInfo, Some(awaiting_completion)));
     };
 
     rsx! {
@@ -247,6 +248,10 @@ pub fn NetworkGroup(
                     value: "Cancel"
                 }
             }
+
+            br {}
+            br {}
+            br {}
         }
     }
 }

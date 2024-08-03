@@ -259,7 +259,7 @@ pub fn aspm_settings_default(
     profile_type: &DefaultProfileType,
     system_info: &SystemInfo,
 ) -> ASPMSettings {
-    if system_info.aspm_info.supported_modes.is_none() {
+    if system_info.pci_info.aspm_info.supported_modes.is_none() {
         ASPMSettings { mode: None }
     } else {
         ASPMSettings {
@@ -279,11 +279,11 @@ pub fn pci_settings_default(profile_type: &DefaultProfileType) -> PCISettings {
         DefaultProfileType::Superpowersave
         | DefaultProfileType::Powersave
         | DefaultProfileType::Balanced => PCISettings {
-            enable_power_management: true,
+            enable_power_management: Some(true),
             whiteblacklist: None,
         },
         DefaultProfileType::Performance | DefaultProfileType::Ultraperformance => PCISettings {
-            enable_power_management: false,
+            enable_power_management: Some(false),
             whiteblacklist: None,
         },
     }

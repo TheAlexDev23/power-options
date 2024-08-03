@@ -104,7 +104,6 @@ option {
 button {
     border: none;
     border-radius: 5px;
-    background-color: #525252;
 }
 
 button:hover {
@@ -167,6 +166,64 @@ select:hover {
     }
 }
 
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 20px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-switch .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #525252;
+    border-radius: 34px;
+    transition: .4s;
+}
+
+.toggle-switch .slider:before {
+    position: absolute;
+    content: "";
+    height: 15px;
+    width: 15px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    transition: .2s;
+    border-radius: 50%;
+}
+
+.toggle-switch input:disabled+.slider {
+    background-color: #404040;
+}
+
+.toggle-switch input:disabled+.slider::before {
+    background-color: #C0C0C0;
+}
+
+
+.toggle-switch input:checked+.slider {
+    background-color: #0860F2;
+}
+
+.toggle-switch input:focus+.slider {
+    box-shadow: 0 0 1px #0860F2;
+}
+
+input:checked+.slider:before {
+    transform: translateX(20px);
+}
+
 .hidden {
     visibility: hidden;
 }
@@ -213,6 +270,7 @@ select:hover {
 .tooltip-parent:hover .tooltip {
     visibility: visible;
 }
+
 
 .profiles {
     position: absolute;
@@ -311,6 +369,8 @@ select:hover {
     align-items: center;
 
     background-color: #323232;
+
+    border-radius: 5px;
 
     padding: 12px;
     margin-bottom: 5px;
