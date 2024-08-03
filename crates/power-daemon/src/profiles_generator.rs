@@ -108,13 +108,13 @@ pub fn cpu_settings_default(
         DefaultProfileType::Superpowersave => CPUSettings {
             mode,
             governor: Some(String::from("powersave")),
-            energy_performance_preference: if widespread_driver {
+            epp: if widespread_driver {
                 Some(String::from("power"))
             } else {
                 None
             },
-            min_frequency: None,
-            max_frequency: None,
+            min_freq: None,
+            max_freq: None,
             min_perf_pct: Some(0),
             max_perf_pct: Some(70),
             boost: if widespread_driver { Some(false) } else { None },
@@ -128,13 +128,13 @@ pub fn cpu_settings_default(
                 // Like ondemand but more gradual
                 "conservative"
             })),
-            energy_performance_preference: if widespread_driver {
+            epp: if widespread_driver {
                 Some(String::from("balance_power"))
             } else {
                 None
             },
-            min_frequency: None,
-            max_frequency: None,
+            min_freq: None,
+            max_freq: None,
             min_perf_pct: Some(0),
             max_perf_pct: Some(100),
             boost: if widespread_driver { Some(false) } else { None },
@@ -147,13 +147,13 @@ pub fn cpu_settings_default(
             } else {
                 "ondemand"
             })),
-            energy_performance_preference: if widespread_driver {
+            epp: if widespread_driver {
                 Some(String::from("default"))
             } else {
                 None
             },
-            min_frequency: None,
-            max_frequency: None,
+            min_freq: None,
+            max_freq: None,
             min_perf_pct: Some(0),
             max_perf_pct: Some(100),
             boost: if widespread_driver { Some(true) } else { None },
@@ -163,13 +163,13 @@ pub fn cpu_settings_default(
             mode,
             // To set EPP balance_performance we cannot set governor to performance. idk why the scaling driver behaves like that
             governor: Some(String::from("powersave")),
-            energy_performance_preference: if widespread_driver {
+            epp: if widespread_driver {
                 Some(String::from("balance_performance"))
             } else {
                 None
             },
-            min_frequency: None,
-            max_frequency: None,
+            min_freq: None,
+            max_freq: None,
             min_perf_pct: Some(0),
             max_perf_pct: Some(100),
             boost: if widespread_driver { Some(true) } else { None },
@@ -178,13 +178,13 @@ pub fn cpu_settings_default(
         DefaultProfileType::Ultraperformance => CPUSettings {
             mode,
             governor: Some(String::from("performance")),
-            energy_performance_preference: if widespread_driver {
+            epp: if widespread_driver {
                 Some(String::from("performance"))
             } else {
                 None
             },
-            min_frequency: None,
-            max_frequency: None,
+            min_freq: None,
+            max_freq: None,
             min_perf_pct: Some(30),
             max_perf_pct: Some(100),
             boost: if widespread_driver { Some(true) } else { None },
@@ -294,11 +294,13 @@ pub fn usb_settings_default(profile_type: &DefaultProfileType) -> USBSettings {
         DefaultProfileType::Superpowersave
         | DefaultProfileType::Powersave
         | DefaultProfileType::Balanced => USBSettings {
-            enable_power_management: true,
+            autosuspend_delay_ms: None,
+            enable_pm: Some(true),
             whiteblacklist: None,
         },
         DefaultProfileType::Performance | DefaultProfileType::Ultraperformance => USBSettings {
-            enable_power_management: false,
+            autosuspend_delay_ms: None,
+            enable_pm: Some(false),
             whiteblacklist: None,
         },
     }

@@ -6,9 +6,8 @@ use power_daemon::{NetworkSettings, ProfilesInfo, ReducedUpdate};
 use crate::communication_services::{
     ControlAction, ControlRoutine, SystemInfoRoutine, SystemInfoSyncType,
 };
+use crate::helpers::{ToggleableBool, ToggleableInt};
 use crate::helpers::{ToggleableNumericField, ToggleableToggle};
-
-use super::{ToggleableBool, ToggleableInt};
 
 #[derive(Debug, Clone, PartialEq, Default)]
 struct NetworkForm {
@@ -34,60 +33,18 @@ impl NetworkForm {
 
     pub fn set_values(&mut self, network_settings: &NetworkSettings) {
         self.disable_ethernet
-            .0
-            .set(network_settings.disable_ethernet.is_some());
-        self.disable_ethernet
-            .1
-            .set(network_settings.disable_ethernet.unwrap_or_default());
+            .from(network_settings.disable_ethernet);
 
-        self.disable_wifi_7
-            .0
-            .set(network_settings.disable_wifi_7.is_some());
-        self.disable_wifi_7
-            .1
-            .set(network_settings.disable_wifi_7.unwrap_or_default());
-
-        self.disable_wifi_6
-            .0
-            .set(network_settings.disable_wifi_6.is_some());
-        self.disable_wifi_6
-            .1
-            .set(network_settings.disable_wifi_6.unwrap_or_default());
-
-        self.disable_wifi_5
-            .0
-            .set(network_settings.disable_wifi_5.is_some());
-        self.disable_wifi_5
-            .1
-            .set(network_settings.disable_wifi_5.unwrap_or_default());
+        self.disable_wifi_7.from(network_settings.disable_wifi_7);
+        self.disable_wifi_6.from(network_settings.disable_wifi_6);
+        self.disable_wifi_5.from(network_settings.disable_wifi_5);
 
         self.enable_power_save
-            .0
-            .set(network_settings.enable_power_save.is_some());
-        self.enable_power_save
-            .1
-            .set(network_settings.enable_power_save.unwrap_or_default());
+            .from(network_settings.enable_power_save);
+        self.enable_uapsd.from(network_settings.enable_uapsd);
 
-        self.enable_uapsd
-            .0
-            .set(network_settings.enable_uapsd.is_some());
-        self.enable_uapsd
-            .1
-            .set(network_settings.enable_uapsd.unwrap_or_default());
-
-        self.power_level
-            .0
-            .set(network_settings.power_level.is_some());
-        self.power_level
-            .1
-            .set(network_settings.power_level.unwrap_or_default() as i32);
-
-        self.power_scheme
-            .0
-            .set(network_settings.power_scheme.is_some());
-        self.power_scheme
-            .1
-            .set(network_settings.power_scheme.unwrap_or_default() as i32);
+        self.power_level.from_u8(network_settings.power_level);
+        self.power_scheme.from_u8(network_settings.power_scheme);
     }
 }
 
@@ -100,7 +57,7 @@ pub fn NetworkGroup(
     system_info_routine.send((Duration::from_secs_f32(15.0), SystemInfoSyncType::None));
 
     if profiles_info().is_none() {
-        return rsx! { "Connecting to daemon.." };
+        return rsx! { "Connecting to the daemon.." };
     }
 
     let network_settings = profiles_info()
@@ -127,46 +84,17 @@ pub fn NetworkGroup(
         let mut active_profile = profiles_info.get_active_profile().clone();
 
         active_profile.network_settings = NetworkSettings {
-            disable_ethernet: if form.disable_ethernet.0.cloned() {
-                Some(form.disable_ethernet.1.cloned())
-            } else {
-                None
-            },
-            disable_wifi_7: if form.disable_wifi_7.0.cloned() {
-                Some(form.disable_wifi_7.1.cloned())
-            } else {
-                None
-            },
-            disable_wifi_6: if form.disable_wifi_6.0.cloned() {
-                Some(form.disable_wifi_6.1.cloned())
-            } else {
-                None
-            },
-            disable_wifi_5: if form.disable_wifi_5.0.cloned() {
-                Some(form.disable_wifi_5.1.cloned())
-            } else {
-                None
-            },
-            enable_power_save: if form.enable_power_save.0.cloned() {
-                Some(form.enable_power_save.1.cloned())
-            } else {
-                None
-            },
-            power_level: if form.power_level.0.cloned() {
-                Some(form.power_level.1.cloned() as u8)
-            } else {
-                None
-            },
-            power_scheme: if form.power_scheme.0.cloned() {
-                Some(form.power_scheme.1.cloned() as u8)
-            } else {
-                None
-            },
-            enable_uapsd: if form.enable_uapsd.0.cloned() {
-                Some(form.enable_uapsd.1.cloned())
-            } else {
-                None
-            },
+            disable_ethernet: form.disable_ethernet.into_base(),
+
+            disable_wifi_7: form.disable_wifi_7.into_base(),
+            disable_wifi_6: form.disable_wifi_6.into_base(),
+            disable_wifi_5: form.disable_wifi_5.into_base(),
+
+            enable_power_save: form.enable_power_save.into_base(),
+            enable_uapsd: form.enable_uapsd.into_base(),
+
+            power_level: form.power_level.into_u8(),
+            power_scheme: form.power_scheme.into_u8(),
         };
 
         control_routine.send((

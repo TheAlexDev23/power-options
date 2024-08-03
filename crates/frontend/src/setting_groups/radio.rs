@@ -6,9 +6,8 @@ use power_daemon::{ProfilesInfo, RadioSettings, ReducedUpdate};
 use crate::communication_services::{
     ControlAction, ControlRoutine, SystemInfoRoutine, SystemInfoSyncType,
 };
+use crate::helpers::ToggleableBool;
 use crate::helpers::ToggleableToggle;
-
-use super::ToggleableBool;
 
 #[derive(Default, PartialEq, Clone, Debug)]
 struct RadioForm {
@@ -25,16 +24,9 @@ impl RadioForm {
     }
 
     pub fn set_values(&mut self, radio_settings: &RadioSettings) {
-        self.nfc.0.set(radio_settings.block_nfc.is_some());
-        self.nfc.1.set(radio_settings.block_nfc.unwrap_or_default());
-
-        self.wifi.0.set(radio_settings.block_wifi.is_some());
-        self.wifi
-            .1
-            .set(radio_settings.block_wifi.unwrap_or_default());
-
-        self.bt.0.set(radio_settings.block_bt.is_some());
-        self.bt.1.set(radio_settings.block_bt.unwrap_or_default());
+        self.nfc.from(radio_settings.block_nfc);
+        self.wifi.from(radio_settings.block_wifi);
+        self.bt.from(radio_settings.block_bt);
     }
 }
 
@@ -47,7 +39,7 @@ pub fn RadioGroup(
     system_info_routine.send((Duration::from_secs_f32(15.0), SystemInfoSyncType::None));
 
     if profiles_info().is_none() {
-        return rsx! { "Connecting to daemon..." };
+        return rsx! { "Connecting to the daemon..." };
     }
 
     let radio_settings = profiles_info()
@@ -76,22 +68,11 @@ pub fn RadioGroup(
             .clone();
 
         active_profile.radio_settings = RadioSettings {
-            block_nfc: if form.nfc.0.cloned() {
-                Some(form.nfc.1.cloned())
-            } else {
-                None
-            },
-            block_wifi: if form.wifi.0.cloned() {
-                Some(form.wifi.1.cloned())
-            } else {
-                None
-            },
-            block_bt: if form.bt.0.cloned() {
-                Some(form.bt.1.cloned())
-            } else {
-                None
-            },
+            block_nfc: form.nfc.into_base(),
+            block_wifi: form.wifi.into_base(),
+            block_bt: form.bt.into_base(),
         };
+
         control_routine.send((
             ControlAction::SetReducedUpdate(ReducedUpdate::Radio),
             Some(awaiting_completion),

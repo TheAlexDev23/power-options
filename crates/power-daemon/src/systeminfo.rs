@@ -13,6 +13,7 @@ use crate::helpers::{
 pub struct SystemInfo {
     pub cpu_info: CPUInfo,
     pub pci_info: PCIInfo,
+    pub usb_info: USBInfo,
 }
 
 impl SystemInfo {
@@ -22,6 +23,7 @@ impl SystemInfo {
         SystemInfo {
             cpu_info: CPUInfo::obtain(),
             pci_info: PCIInfo::obtain(),
+            usb_info: USBInfo::obtain(),
         }
     }
 }
@@ -398,5 +400,37 @@ impl ASPMInfo {
                 )
             },
         }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct USBInfo {
+    pub usb_devices: Vec<USBDeviceInfo>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct USBDeviceInfo {
+    pub display_name: String,
+    pub id: String,
+}
+
+impl USBInfo {
+    pub fn obtain() -> USBInfo {
+        let mut usb_devices = Vec::new();
+        let lsusb = run_command_with_output("lsusb").0;
+
+        let re = Regex::new(r"ID (\w+:\w+) (.+)").unwrap();
+        for line in lsusb.lines() {
+            let captures = re.captures(line).unwrap();
+            let name = &captures[2];
+            let id = &captures[1];
+
+            usb_devices.push(USBDeviceInfo {
+                display_name: name.to_string(),
+                id: id.to_string(),
+            });
+        }
+
+        USBInfo { usb_devices }
     }
 }

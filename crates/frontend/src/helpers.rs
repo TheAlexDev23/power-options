@@ -3,6 +3,104 @@ use std::time::Duration;
 use dioxus::prelude::*;
 use power_daemon::{WhiteBlackList, WhiteBlackListType};
 
+#[derive(Clone, Copy, PartialEq, Default, Debug)]
+pub struct ToggleableString(pub Signal<bool>, pub Signal<String>);
+
+#[derive(Clone, Copy, PartialEq, Default, Debug)]
+pub struct ToggleableInt(pub Signal<bool>, pub Signal<i32>);
+
+#[derive(Clone, Copy, PartialEq, Default, Debug)]
+pub struct ToggleableBool(pub Signal<bool>, pub Signal<bool>);
+
+#[derive(Clone, Copy, PartialEq, Default, Debug)]
+pub struct ToggleableStringWhiteBlackList(pub Signal<bool>, pub Signal<WhiteBlackList<String>>);
+
+impl ToggleableString {
+    pub fn from(&mut self, other: Option<String>) {
+        self.0.set(other.is_some());
+        self.1.set(other.unwrap_or_default());
+    }
+    pub fn from_or(&mut self, other: Option<String>, fallback: String) {
+        self.0.set(other.is_some());
+        self.1.set(other.unwrap_or(fallback));
+    }
+
+    pub fn into_base(&self) -> Option<String> {
+        if self.0() {
+            Some(self.1())
+        } else {
+            None
+        }
+    }
+}
+
+impl ToggleableInt {
+    pub fn from(&mut self, other: Option<i32>) {
+        self.0.set(other.is_some());
+        self.1.set(other.unwrap_or_default());
+    }
+    pub fn from_u32(&mut self, other: Option<u32>) {
+        self.0.set(other.is_some());
+        self.1.set(other.unwrap_or_default() as i32);
+    }
+    pub fn from_u8(&mut self, other: Option<u8>) {
+        self.0.set(other.is_some());
+        self.1.set(other.unwrap_or_default() as i32);
+    }
+
+    pub fn into_base(&self) -> Option<i32> {
+        if self.0() {
+            Some(self.1())
+        } else {
+            None
+        }
+    }
+    pub fn into_u32(&self) -> Option<u32> {
+        if self.0() {
+            Some(self.1() as u32)
+        } else {
+            None
+        }
+    }
+    pub fn into_u8(&self) -> Option<u8> {
+        if self.0() {
+            Some(self.1() as u8)
+        } else {
+            None
+        }
+    }
+}
+
+impl ToggleableBool {
+    pub fn from(&mut self, other: Option<bool>) {
+        self.0.set(other.is_some());
+        self.1.set(other.unwrap_or_default());
+    }
+
+    pub fn into_base(&self) -> Option<bool> {
+        if self.0() {
+            Some(self.1())
+        } else {
+            None
+        }
+    }
+}
+
+impl ToggleableStringWhiteBlackList {
+    pub fn from(&mut self, other: Option<WhiteBlackList<String>>) {
+        self.0.set(other.is_some());
+        self.1.set(other.unwrap_or_default());
+    }
+
+    pub fn into_base(&self) -> Option<WhiteBlackList<String>> {
+        if self.0() {
+            Some(self.1())
+        } else {
+            None
+        }
+    }
+}
+
 #[derive(PartialEq, Clone)]
 #[allow(unused)]
 pub enum TooltipDirection {
@@ -24,7 +122,7 @@ impl TooltipDirection {
 }
 
 #[component]
-pub fn ToggleableNumericField(name: String, value: (Signal<bool>, Signal<i32>)) -> Element {
+pub fn ToggleableNumericField(name: String, value: ToggleableInt) -> Element {
     rsx! {
         div {
             input {
@@ -49,7 +147,7 @@ pub fn ToggleableNumericField(name: String, value: (Signal<bool>, Signal<i32>)) 
 }
 
 #[component]
-pub fn ToggleableTextField(name: String, value: (Signal<bool>, Signal<String>)) -> Element {
+pub fn ToggleableTextField(name: String, value: ToggleableString) -> Element {
     rsx! {
         div {
             input {
@@ -76,7 +174,7 @@ pub fn ToggleableTextField(name: String, value: (Signal<bool>, Signal<String>)) 
 pub fn ToggleableDropdown(
     name: String,
     items: Vec<String>,
-    value: (Signal<bool>, Signal<String>),
+    value: ToggleableString,
     disabled: Option<bool>,
     dropdown_tooltip: Option<String>,
 ) -> Element {
@@ -112,7 +210,7 @@ pub fn ToggleableDropdown(
 #[component]
 pub fn ToggleableToggle(
     name: String,
-    value: (Signal<bool>, Signal<bool>),
+    value: ToggleableBool,
     disabled: Option<bool>,
     toggle_tooltip: Option<String>,
 ) -> Element {
@@ -146,7 +244,7 @@ pub fn ToggleableToggle(
 pub fn ToggleableRadio(
     toggle_label: String,
     list_name: String,
-    value: (Signal<bool>, Signal<String>),
+    value: ToggleableString,
     items: Vec<String>,
     onchange: Option<EventHandler<String>>,
 ) -> Element {
@@ -186,7 +284,7 @@ pub fn ToggleableRadio(
 
 #[component]
 fn ToggleableStringWhiteBlackListTypeToggle(
-    value: (Signal<bool>, Signal<WhiteBlackList<String>>),
+    value: ToggleableStringWhiteBlackList,
     toggle_name: String,
     onchange: Option<EventHandler<bool>>,
 ) -> Element {
@@ -228,48 +326,9 @@ fn ToggleableStringWhiteBlackListTypeToggle(
     }
 }
 
-#[component]
-pub fn ToggleableSwitchToggle(
-    value: (Signal<bool>, Signal<bool>),
-    toggle_name: String,
-    names: Option<(String, String)>,
-    onchange: Option<EventHandler<bool>>,
-) -> Element {
-    rsx! {
-        div {
-            input {
-                checked: "{value.0}",
-                r#type: "checkbox",
-                onchange: move |v| {
-                    value.0.set(v.value() == "true");
-                }
-            }
-            label { "{toggle_name}" }
-        }
-
-        div { display: "flex", align_items: "center",
-            if names.is_some() {
-                label { margin_right: "4px", "{names.as_ref().unwrap().0.clone()}" }
-            }
-            label { class: "toggle-switch",
-                input {
-                    r#type: "checkbox",
-                    checked: value.1,
-                    disabled: !value.0(),
-                    oninput: move |v| { value.1.set(v.value() == "true") }
-                }
-                span { class: "slider" }
-            }
-            if names.is_some() {
-                label { margin_left: "4px", "{names.as_ref().unwrap().1.clone()}" }
-            }
-        }
-    }
-}
-
 #[derive(Props, PartialEq, Clone)]
 pub struct ToggleableStringWhiteBlackListProps<const C: usize> {
-    pub value: (Signal<bool>, Signal<WhiteBlackList<String>>),
+    pub value: ToggleableStringWhiteBlackList,
     pub columns: [String; C],
     pub rows: Vec<[String; C]>,
     /// The index within `columns` that will identify the element in the whiteblacklist.
@@ -278,7 +337,7 @@ pub struct ToggleableStringWhiteBlackListProps<const C: usize> {
 }
 
 #[component]
-pub fn ToggleableStringWhiteBlackList<const C: usize>(
+pub fn ToggleableStringWhiteBlackListDisplay<const C: usize>(
     mut props: ToggleableStringWhiteBlackListProps<C>,
 ) -> Element {
     rsx! {

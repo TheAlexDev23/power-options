@@ -3,6 +3,8 @@ Linux application for efficient power management
 
 ## Dependencies
 - zsh
+- lspci
+- lsusb
 - acpi
 - xrandr: resolution/refresh rate control
 - brightnessctl: brightness control

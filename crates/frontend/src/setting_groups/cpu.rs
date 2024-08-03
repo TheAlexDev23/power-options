@@ -5,26 +5,32 @@ use dioxus::desktop::tao::event::Event;
 use dioxus::desktop::tao::keyboard::ModifiersState;
 use dioxus::desktop::{use_wry_event_handler, WindowEvent};
 use dioxus::prelude::*;
+
 use power_daemon::{CPUSettings, CoreSetting, Profile, ProfilesInfo, ReducedUpdate, SystemInfo};
 
 use crate::communication_services::{
     ControlAction, ControlRoutine, SystemInfoRoutine, SystemInfoSyncType,
 };
+
 use crate::helpers::{
     Dropdown, ToggleableDropdown, ToggleableNumericField, ToggleableToggle, TooltipDirection,
 };
 
-use super::{ToggleableBool, ToggleableInt, ToggleableString};
+use crate::helpers::{ToggleableBool, ToggleableInt, ToggleableString};
 
 #[derive(Default, Debug, Clone)]
 struct CPUForm {
     pub mode: ToggleableString,
+
     pub epp: ToggleableString,
     pub governor: ToggleableString,
+
     pub min_freq: ToggleableInt,
     pub max_freq: ToggleableInt,
+
     pub min_perf_pct: ToggleableInt,
     pub max_perf_pct: ToggleableInt,
+
     pub boost: ToggleableBool,
     pub hwp_dyn_boost: ToggleableBool,
 }
@@ -37,55 +43,21 @@ impl CPUForm {
     }
 
     pub fn set_values(&mut self, cpu_settings: &CPUSettings) {
-        self.mode.0.set(cpu_settings.mode.is_some());
         self.mode
-            .1
-            .set(cpu_settings.mode.clone().unwrap_or(String::from("passive")));
+            .from_or(cpu_settings.mode.clone(), String::from("passive"));
 
-        self.epp
-            .0
-            .set(cpu_settings.energy_performance_preference.is_some());
-        self.epp.1.set(
-            cpu_settings
-                .energy_performance_preference
-                .clone()
-                .unwrap_or_default(),
-        );
+        self.epp.from(cpu_settings.epp.clone());
 
-        self.governor.0.set(cpu_settings.governor.is_some());
-        self.governor
-            .1
-            .set(cpu_settings.governor.clone().unwrap_or_default());
+        self.governor.from(cpu_settings.governor.clone());
 
-        self.min_freq.0.set(cpu_settings.min_frequency.is_some());
-        self.min_freq
-            .1
-            .set(cpu_settings.min_frequency.unwrap_or_default() as i32);
+        self.min_freq.from_u32(cpu_settings.min_freq);
+        self.max_freq.from_u32(cpu_settings.max_freq);
 
-        self.max_freq.0.set(cpu_settings.max_frequency.is_some());
-        self.max_freq
-            .1
-            .set(cpu_settings.max_frequency.unwrap_or_default() as i32);
+        self.min_perf_pct.from_u8(cpu_settings.min_perf_pct);
+        self.max_perf_pct.from_u8(cpu_settings.max_perf_pct);
 
-        self.min_perf_pct.0.set(cpu_settings.min_perf_pct.is_some());
-        self.min_perf_pct
-            .1
-            .set(cpu_settings.min_perf_pct.unwrap_or_default() as i32);
-
-        self.max_perf_pct.0.set(cpu_settings.max_perf_pct.is_some());
-        self.max_perf_pct
-            .1
-            .set(cpu_settings.max_perf_pct.unwrap_or_default() as i32);
-
-        self.boost.0.set(cpu_settings.boost.is_some());
-        self.boost.1.set(cpu_settings.boost.unwrap_or_default());
-
-        self.hwp_dyn_boost
-            .0
-            .set(cpu_settings.hwp_dyn_boost.is_some());
-        self.hwp_dyn_boost
-            .1
-            .set(cpu_settings.hwp_dyn_boost.unwrap_or_default());
+        self.boost.from(cpu_settings.boost);
+        self.hwp_dyn_boost.from(cpu_settings.hwp_dyn_boost);
     }
 }
 
@@ -146,11 +118,8 @@ fn CPUSettingsForm(
     let boost_supported = cpu_info.boost.is_some();
     let hwp_dyn_boost_supported = cpu_info.hwp_dynamic_boost.is_some();
 
-    // The CPUSettings used to configure the form if these change, it means that the daemon settings changed so we would neet to refresh.
     let mut form_used_settings = use_signal(|| cpu_settings.clone());
-
     let mut form = use_hook(|| CPUForm::new(&cpu_settings));
-
     if cpu_settings != form_used_settings() {
         form.set_values(&cpu_settings);
         form_used_settings.set(cpu_settings.clone());
@@ -161,55 +130,31 @@ fn CPUSettingsForm(
         let mut active_profile = profiles_info.get_active_profile().clone();
 
         active_profile.cpu_settings = CPUSettings {
-            mode: if mode_supported && form.mode.0.cloned() {
-                Some(form.mode.1.cloned())
-            } else {
+            mode: if !mode_supported {
                 None
-            },
-            governor: if form.governor.0.cloned() {
-                Some(form.governor.1.cloned())
             } else {
-                None
-            },
-            energy_performance_preference: if epp_supported && form.epp.0.cloned() {
-                Some(form.epp.1.cloned())
-            } else {
-                None
-            },
-            min_frequency: if form.min_freq.0.cloned() {
-                Some(form.min_freq.1.cloned() as u32 * 1000)
-            } else {
-                None
-            },
-            max_frequency: if form.max_freq.0.cloned() {
-                Some(form.max_freq.1.cloned() as u32 * 1000)
-            } else {
-                None
-            },
-            min_perf_pct: if form.min_perf_pct.0.cloned() {
-                Some(form.min_perf_pct.1.cloned() as u8)
-            } else {
-                None
-            },
-            max_perf_pct: if form.max_perf_pct.0.cloned() {
-                Some(form.max_perf_pct.1.cloned() as u8)
-            } else {
-                None
+                form.mode.into_base()
             },
 
-            boost: if form.boost.0.cloned() {
-                Some(form.boost.1.cloned())
-            } else {
+            epp: if !epp_supported {
                 None
+            } else {
+                form.epp.into_base()
             },
 
-            hwp_dyn_boost: if form.mode.1() == "active"
-                && hwp_dyn_boost_supported
-                && form.hwp_dyn_boost.0.cloned()
-            {
-                Some(form.hwp_dyn_boost.1.cloned())
-            } else {
+            governor: form.governor.into_base(),
+
+            min_freq: form.min_freq.into_u32().map(|v| v * 1000),
+            max_freq: form.max_freq.into_u32().map(|v| v * 1000),
+
+            min_perf_pct: form.min_perf_pct.into_u8(),
+            max_perf_pct: form.max_perf_pct.into_u8(),
+
+            boost: form.boost.into_base(),
+            hwp_dyn_boost: if !(form.mode.1() == "active" || hwp_dyn_boost_supported) {
                 None
+            } else {
+                form.hwp_dyn_boost.into_base()
             },
         };
 

@@ -7,7 +7,7 @@ use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    helpers::{run_command, run_command_with_output, WhiteBlackList},
+    helpers::{file_content_to_string, run_command, run_command_with_output, WhiteBlackList},
     ReducedUpdate,
 };
 
@@ -99,10 +99,10 @@ pub struct CPUSettings {
     pub mode: Option<String>,
 
     pub governor: Option<String>,
-    pub energy_performance_preference: Option<String>,
+    pub epp: Option<String>,
 
-    pub min_frequency: Option<u32>,
-    pub max_frequency: Option<u32>,
+    pub min_freq: Option<u32>,
+    pub max_freq: Option<u32>,
 
     // Minimum allowed P-state scalling as percentage
     // Only supported on intel
@@ -157,7 +157,7 @@ impl CPUSettings {
             ));
         }
 
-        if let Some(ref epp) = self.energy_performance_preference {
+        if let Some(ref epp) = self.epp {
             run_command(&format!(
                 "echo {} > /sys/devices/system/cpu/cpu*/cpufreq/energy_performance_preference",
                 epp
@@ -182,13 +182,13 @@ impl CPUSettings {
             }
         }
 
-        if let Some(min_frequency) = self.min_frequency {
+        if let Some(min_frequency) = self.min_freq {
             run_command(&format!(
                 "echo {} > /sys/devices/system/cpu/cpu*/cpufreq/scaling_min_freq",
                 min_frequency
             ));
         }
-        if let Some(max_frequency) = self.max_frequency {
+        if let Some(max_frequency) = self.max_freq {
             run_command(&format!(
                 "echo {} > /sys/devices/system/cpu/cpu*/cpufreq/scaling_max_freq",
                 max_frequency
@@ -515,7 +515,8 @@ impl PCISettings {
 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub struct USBSettings {
-    pub enable_power_management: bool,
+    pub enable_pm: Option<bool>,
+    pub autosuspend_delay_ms: Option<u32>,
     // whitelist or blacklist to exlude/include vendor_id:product_id
     pub whiteblacklist: Option<WhiteBlackList<String>>,
 }
@@ -526,6 +527,10 @@ impl USBSettings {
 
         let entries = fs::read_dir("/sys/bus/usb/devices").expect("Could not read sysfs directory");
 
+        if self.enable_pm.is_none() {
+            return;
+        }
+
         for entry in entries {
             let entry = entry.expect("Could not read sysfs entry");
             let path = entry.path();
@@ -535,29 +540,31 @@ impl USBSettings {
                 continue;
             }
 
-            let mut vendor_id = String::new();
-            File::open(path.join("idVendor"))
-                .expect("Could not read usb device vendor id")
-                .read_to_string(&mut vendor_id)
-                .expect("Could not read usb device vendor id");
+            let vendor_id = file_content_to_string(path.join("idVendor"));
+            let product_id = file_content_to_string(path.join("idProduct"));
 
-            let mut product_id = String::new();
-            File::open(path.join("idProduct"))
-                .expect("Could not read usb device product id")
-                .read_to_string(&mut product_id)
-                .expect("Could not read usb device product id");
+            if let Some(enable_power_management) = self.enable_pm {
+                let enable_pm = WhiteBlackList::should_enable_item(
+                    &self.whiteblacklist,
+                    &format!("{vendor_id}:{product_id}"),
+                    enable_power_management,
+                );
 
-            let enable_pm = WhiteBlackList::should_enable_item(
-                &self.whiteblacklist,
-                &format!("{vendor_id}:{product_id}"),
-                self.enable_power_management,
-            );
+                run_command(&format!(
+                    "echo {} > {}",
+                    if enable_pm { "auto" } else { "on" },
+                    path.join("power/control").display()
+                ));
 
-            run_command(&format!(
-                "echo {} > {}",
-                if enable_pm { "auto" } else { "on" },
-                path.join("power/control").display()
-            ))
+                if enable_pm {
+                    if let Some(auto_suspend_ms) = self.autosuspend_delay_ms {
+                        run_command(&format!(
+                            "echo {auto_suspend_ms} > {}",
+                            path.join("power/autosuspend_delay_ms").display()
+                        ));
+                    }
+                }
+            }
         }
     }
 }

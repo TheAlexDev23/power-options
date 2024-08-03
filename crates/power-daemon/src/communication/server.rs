@@ -6,7 +6,7 @@ use zbus::{conn::Builder, interface, Connection, Error};
 use super::{CONTROL_OBJECT_NAME, SYSTEM_INFO_OBJECT_NAME, WELL_KNOWN_NAME};
 use crate::{
     systeminfo::{CPUInfo, SystemInfo},
-    Instance, PCIInfo,
+    Instance, PCIInfo, USBInfo,
 };
 
 pub struct CommunicationServer {
@@ -46,6 +46,10 @@ impl SystemInfoServer {
 
     async fn get_pci_info(&self) -> String {
         serde_json::to_string(&PCIInfo::obtain()).unwrap()
+    }
+
+    async fn get_usb_info(&self) -> String {
+        serde_json::to_string(&USBInfo::obtain()).unwrap()
     }
 }
 

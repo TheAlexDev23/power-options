@@ -1,21 +1,19 @@
 use std::time::Duration;
 
 use dioxus::prelude::*;
-use power_daemon::{
-    ASPMSettings, PCISettings, ProfilesInfo, ReducedUpdate, SystemInfo, WhiteBlackList,
-};
-
-use super::{ToggleableBool, ToggleableString};
+use power_daemon::{ASPMSettings, PCISettings, ProfilesInfo, ReducedUpdate, SystemInfo};
 
 use crate::communication_services::{
     ControlAction, ControlRoutine, SystemInfoRoutine, SystemInfoSyncType,
 };
-use crate::helpers::{ToggleableDropdown, ToggleableStringWhiteBlackList, ToggleableToggle};
+
+use crate::helpers::{ToggleableBool, ToggleableString, ToggleableStringWhiteBlackList};
+use crate::helpers::{ToggleableDropdown, ToggleableStringWhiteBlackListDisplay, ToggleableToggle};
 
 #[derive(PartialEq, Clone, Default)]
 struct PCIAndASPMForm {
     pub enable_pci_pm: ToggleableBool,
-    pub pci_pm_whiteblacklist: (Signal<bool>, Signal<WhiteBlackList<String>>),
+    pub pci_pm_whiteblacklist: ToggleableStringWhiteBlackList,
     pub aspm: ToggleableString,
 }
 
@@ -28,23 +26,11 @@ impl PCIAndASPMForm {
 
     pub fn set_values(&mut self, pci_settings: &PCISettings, aspm_settings: &ASPMSettings) {
         self.enable_pci_pm
-            .0
-            .set(pci_settings.enable_power_management.is_some());
-        self.enable_pci_pm
-            .1
-            .set(pci_settings.enable_power_management.unwrap_or_default());
-
+            .from(pci_settings.enable_power_management);
         self.pci_pm_whiteblacklist
-            .0
-            .set(pci_settings.whiteblacklist.is_some());
-        self.pci_pm_whiteblacklist
-            .1
-            .set(pci_settings.whiteblacklist.clone().unwrap_or_default());
+            .from(pci_settings.whiteblacklist.clone());
 
-        self.aspm.0.set(aspm_settings.mode.is_some());
-        self.aspm
-            .1
-            .set(aspm_settings.mode.clone().unwrap_or_default());
+        self.aspm.from(aspm_settings.mode.clone());
     }
 }
 
@@ -58,7 +44,7 @@ pub fn PCIAndASPMGroup(
     system_info_routine.send((Duration::from_secs_f32(2.0), SystemInfoSyncType::PCI));
 
     if profiles_info().is_none() || system_info().is_none() {
-        return rsx! { "Connecting to daemon.." };
+        return rsx! { "Connecting to the daemon.." };
     }
 
     let pci_info = system_info().as_ref().unwrap().pci_info.clone();
@@ -94,24 +80,12 @@ pub fn PCIAndASPMGroup(
         let mut active_profile = profiles_info.get_active_profile().clone();
 
         active_profile.pci_settings = PCISettings {
-            enable_power_management: if form.enable_pci_pm.0() {
-                Some(form.enable_pci_pm.1())
-            } else {
-                None
-            },
-            whiteblacklist: if form.pci_pm_whiteblacklist.0() {
-                Some(form.pci_pm_whiteblacklist.1())
-            } else {
-                None
-            },
+            enable_power_management: form.enable_pci_pm.into_base(),
+            whiteblacklist: form.pci_pm_whiteblacklist.into_base(),
         };
 
         active_profile.aspm_settings = ASPMSettings {
-            mode: if form.aspm.0() {
-                Some(form.aspm.1())
-            } else {
-                None
-            },
+            mode: form.aspm.into_base(),
         };
 
         control_routine.send((
@@ -163,7 +137,7 @@ pub fn PCIAndASPMGroup(
             }
 
             if form.enable_pci_pm.1() {
-                ToggleableStringWhiteBlackList {
+                ToggleableStringWhiteBlackListDisplay {
                     value: form.pci_pm_whiteblacklist,
                     columns: ["Address".to_string(), "Device Name".to_string()],
                     rows: pci_info
