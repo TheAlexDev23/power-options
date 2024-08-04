@@ -6,7 +6,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     helpers::{file_content_to_string, run_command, run_command_with_output, WhiteBlackList},
-    ReducedUpdate,
+    profiles_generator::{self, DefaultProfileType},
+    ReducedUpdate, SystemInfo,
 };
 
 pub fn find_profile_index_by_name(vec: &Vec<Profile>, name: &str) -> usize {
@@ -32,6 +33,7 @@ impl ProfilesInfo {
 pub struct Profile {
     /// Name of the profile. Should match the profile filename
     pub profile_name: String,
+    pub base_profile: DefaultProfileType,
 
     pub cpu_settings: CPUSettings,
     pub cpu_core_settings: CPUCoreSettings,
@@ -92,6 +94,14 @@ impl Profile {
             ReducedUpdate::SATA => self.sata_settings.apply(),
             ReducedUpdate::Kernel => self.kernel_settings.apply(),
         }
+    }
+
+    pub fn get_original_values(&self, system_info: &SystemInfo) -> Profile {
+        profiles_generator::create_default(
+            &self.profile_name,
+            self.base_profile.clone(),
+            system_info,
+        )
     }
 }
 

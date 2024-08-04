@@ -85,6 +85,10 @@ impl ControlServer {
         }
     }
 
+    async fn reset_profile(&mut self, idx: u32) {
+        self.instance.get_mut().reset_profile(idx as usize);
+    }
+
     async fn update_profile(&mut self, idx: u32, updated: String) {
         match serde_json::from_str(&updated) {
             Ok(profile) => {

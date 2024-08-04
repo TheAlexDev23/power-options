@@ -106,6 +106,8 @@ pub enum ControlAction {
     GetProfilesInfo,
 
     UpdateConfig(Config),
+
+    ResetProfile(u32),
     UpdateProfile(u32, Profile),
     Update,
 
@@ -157,6 +159,10 @@ pub async fn control_service(
                     .expect("Could not update config"),
                 ControlAction::UpdateProfile(idx, updated) => control_client
                     .update_profile(idx, updated)
+                    .await
+                    .expect("Could not update profile"),
+                ControlAction::ResetProfile(idx) => control_client
+                    .reset_profile(idx)
                     .await
                     .expect("Could not update profile"),
                 ControlAction::Update => control_client

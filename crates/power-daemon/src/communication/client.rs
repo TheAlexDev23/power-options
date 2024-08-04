@@ -70,6 +70,8 @@ trait ControlDBus {
     async fn update(&self) -> zbus::Result<()>;
 
     async fn update_config(&self, updated: String) -> zbus::Result<()>;
+
+    async fn reset_profile(&self, idx: u32) -> zbus::Result<()>;
     async fn update_profile(&self, idx: u32, updated: String) -> zbus::Result<()>;
 
     async fn set_reduced_update(&self, reduced_update: String) -> zbus::Result<()>;
@@ -107,6 +109,10 @@ impl ControlClient {
             .await?
             .update_config(serde_json::to_string(&config).expect("Could not serialize config"))
             .await
+    }
+
+    pub async fn reset_profile(&self, idx: u32) -> zbus::Result<()> {
+        self.get_proxy().await?.reset_profile(idx).await
     }
     pub async fn update_profile(&self, idx: u32, updated: Profile) -> zbus::Result<()> {
         self.get_proxy()

@@ -123,6 +123,17 @@ impl Instance {
         self.update_without_reduced();
     }
 
+    pub fn reset_profile(&mut self, idx: usize) {
+        debug!("Resetting profile No {idx}");
+        let system_info = SystemInfo::obtain();
+
+        self.profiles_info.profiles[idx] =
+            self.profiles_info.profiles[idx].get_original_values(&system_info);
+        serialize_profiles(&self.profiles_info.profiles, &self.profiles_path);
+
+        self.update_without_reduced();
+    }
+
     pub fn update_profile(&mut self, idx: usize, profile: Profile) {
         debug!("Updating profile No {idx}");
         trace!("New profile: {profile:#?}");

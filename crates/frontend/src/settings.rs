@@ -60,6 +60,9 @@ pub fn SettingsMenu(
     let mut changed = use_signal(|| false);
     let awaiting_completion = use_signal(|| false);
 
+    let awaiting_reset = use_signal(|| false);
+    let mut awaiting_reset_idx = use_signal(|| 0);
+
     let onsubmit = {
         let config = config.clone();
         move || {
@@ -117,6 +120,7 @@ pub fn SettingsMenu(
                         th { "" }
                         th { "" }
                         th { "" }
+                        th { "" }
                     }
 
                     for (idx , name) in form.profiles.cloned().into_iter().enumerate() {
@@ -150,6 +154,23 @@ pub fn SettingsMenu(
                                 }
                             } else {
                                 td { "" }
+                            }
+
+                            td {
+                                if awaiting_reset() && awaiting_reset_idx() == idx {
+                                    div { class: "spinner" }
+                                } else if !awaiting_reset() {
+                                    button {
+                                        onclick: move |_| {
+                                            awaiting_reset_idx.set(idx);
+                                            control_routine
+                                                .send((ControlAction::ResetProfile(idx as u32), Some(awaiting_reset)));
+                                            control_routine.send((ControlAction::GetProfilesInfo, Some(awaiting_reset)));
+                                        },
+                                        r#type: "button",
+                                        "Reset to defaults"
+                                    }
+                                }
                             }
                         }
                     }

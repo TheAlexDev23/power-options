@@ -5,6 +5,7 @@ use std::{
 };
 
 use log::{debug, trace};
+use serde::{Deserialize, Serialize};
 
 use crate::{
     profile::{
@@ -14,7 +15,7 @@ use crate::{
     systeminfo::{CPUFreqDriver, SystemInfo},
 };
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum DefaultProfileType {
     Superpowersave,
     Powersave,
@@ -69,13 +70,15 @@ pub fn create_profile_file<P: AsRef<Path>>(
         .expect("Could not write to profile file");
 }
 
-fn create_default(
+pub fn create_default(
     name: &str,
     profile_type: DefaultProfileType,
     system_info: &SystemInfo,
 ) -> Profile {
     Profile {
         profile_name: String::from(name),
+        base_profile: profile_type.clone(),
+
         cpu_settings: cpu_settings_default(&profile_type, system_info),
         cpu_core_settings: CPUCoreSettings::default(),
         screen_settings: ScreenSettings::default(),
