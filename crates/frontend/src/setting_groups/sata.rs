@@ -3,12 +3,11 @@ use std::time::Duration;
 use dioxus::prelude::*;
 use power_daemon::{ProfilesInfo, ReducedUpdate, SATASettings, SystemInfo};
 
-use crate::{
-    communication_services::{
-        ControlAction, ControlRoutine, SystemInfoRoutine, SystemInfoSyncType,
-    },
-    helpers::{ToggleableDropdown, ToggleableString},
+use crate::communication_services::{
+    ControlAction, ControlRoutine, SystemInfoRoutine, SystemInfoSyncType,
 };
+use crate::helpers::toggleable_components::ToggleableDropdown;
+use crate::helpers::toggleable_types::ToggleableString;
 
 #[component]
 pub fn SATAGroup(

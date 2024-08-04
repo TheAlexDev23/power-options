@@ -6,8 +6,8 @@ use power_daemon::{ProfilesInfo, RadioSettings, ReducedUpdate};
 use crate::communication_services::{
     ControlAction, ControlRoutine, SystemInfoRoutine, SystemInfoSyncType,
 };
-use crate::helpers::ToggleableBool;
-use crate::helpers::ToggleableToggle;
+use crate::helpers::toggleable_components::ToggleableToggle;
+use crate::helpers::toggleable_types::ToggleableBool;
 
 #[derive(Default, PartialEq, Clone, Debug)]
 struct RadioForm {

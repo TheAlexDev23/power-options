@@ -9,7 +9,7 @@ use power_daemon::ProfilesInfo;
 use power_daemon::ReducedUpdate;
 use power_daemon::{communication::client::SystemInfoClient, Profile};
 
-use crate::helpers::{wait_for_diff_msg, wait_for_msg};
+use crate::helpers::coroutine_extensions::{wait_for_diff_msg, wait_for_msg};
 
 #[derive(PartialEq, Clone)]
 pub enum SystemInfoSyncType {

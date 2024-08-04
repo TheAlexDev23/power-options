@@ -13,10 +13,11 @@ use crate::communication_services::{
 };
 
 use crate::helpers::{
-    Dropdown, ToggleableDropdown, ToggleableNumericField, ToggleableToggle, TooltipDirection,
+    components::Dropdown,
+    toggleable_components::{ToggleableDropdown, ToggleableNumericField, ToggleableToggle},
+    toggleable_types::{ToggleableBool, ToggleableInt, ToggleableString},
+    TooltipDirection,
 };
-
-use crate::helpers::{ToggleableBool, ToggleableInt, ToggleableString};
 
 #[derive(Default, Debug, Clone)]
 struct CPUForm {

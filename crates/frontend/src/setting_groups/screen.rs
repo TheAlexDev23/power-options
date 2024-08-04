@@ -6,8 +6,8 @@ use power_daemon::{ProfilesInfo, ReducedUpdate, ScreenSettings};
 use crate::communication_services::{
     ControlAction, ControlRoutine, SystemInfoRoutine, SystemInfoSyncType,
 };
-use crate::helpers::ToggleableNumericField;
-use crate::helpers::{ToggleableInt, ToggleableString, ToggleableTextField};
+use crate::helpers::toggleable_components::{ToggleableNumericField, ToggleableTextField};
+use crate::helpers::toggleable_types::{ToggleableInt, ToggleableString};
 
 #[derive(PartialEq, Clone, Default)]
 struct ScreenForm {

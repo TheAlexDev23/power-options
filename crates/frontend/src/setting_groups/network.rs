@@ -6,8 +6,8 @@ use power_daemon::{NetworkSettings, ProfilesInfo, ReducedUpdate};
 use crate::communication_services::{
     ControlAction, ControlRoutine, SystemInfoRoutine, SystemInfoSyncType,
 };
-use crate::helpers::{ToggleableBool, ToggleableInt};
-use crate::helpers::{ToggleableNumericField, ToggleableToggle};
+use crate::helpers::toggleable_components::{ToggleableNumericField, ToggleableToggle};
+use crate::helpers::toggleable_types::{ToggleableBool, ToggleableInt};
 
 #[derive(Debug, Clone, PartialEq, Default)]
 struct NetworkForm {

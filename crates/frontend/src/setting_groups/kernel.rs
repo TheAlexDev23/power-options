@@ -6,8 +6,8 @@ use power_daemon::{KernelSettings, ProfilesInfo, ReducedUpdate};
 use crate::communication_services::{
     ControlAction, ControlRoutine, SystemInfoRoutine, SystemInfoSyncType,
 };
-use crate::helpers::{ToggleableBool, ToggleableInt};
-use crate::helpers::{ToggleableNumericField, ToggleableToggle};
+use crate::helpers::toggleable_components::{ToggleableNumericField, ToggleableToggle};
+use crate::helpers::toggleable_types::{ToggleableBool, ToggleableInt};
 
 #[derive(PartialEq, Clone, Default)]
 struct KernelForm {

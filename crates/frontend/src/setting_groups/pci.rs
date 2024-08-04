@@ -7,13 +7,17 @@ use crate::communication_services::{
     ControlAction, ControlRoutine, SystemInfoRoutine, SystemInfoSyncType,
 };
 
-use crate::helpers::{ToggleableBool, ToggleableString, ToggleableStringWhiteBlackList};
-use crate::helpers::{ToggleableDropdown, ToggleableStringWhiteBlackListDisplay, ToggleableToggle};
+use crate::helpers::toggleable_components::{
+    ToggleableDropdown, ToggleableToggle, ToggleableWhiteBlackListDisplay,
+};
+use crate::helpers::toggleable_types::{
+    ToggleableBool, ToggleableString, ToggleableWhiteBlackList,
+};
 
 #[derive(PartialEq, Clone, Default)]
 struct PCIAndASPMForm {
     pub enable_pci_pm: ToggleableBool,
-    pub pci_pm_whiteblacklist: ToggleableStringWhiteBlackList,
+    pub pci_pm_whiteblacklist: ToggleableWhiteBlackList,
     pub aspm: ToggleableString,
 }
 
@@ -137,7 +141,7 @@ pub fn PCIAndASPMGroup(
             }
 
             if form.enable_pci_pm.1() {
-                ToggleableStringWhiteBlackListDisplay {
+                ToggleableWhiteBlackListDisplay {
                     value: form.pci_pm_whiteblacklist,
                     columns: ["Address".to_string(), "Device Name".to_string()],
                     rows: pci_info
@@ -145,7 +149,7 @@ pub fn PCIAndASPMGroup(
                         .iter()
                         .map(|d| [d.pci_address.clone(), d.display_name.clone()])
                         .collect::<Vec<_>>(),
-                    value_index: 0
+                    identifying_column: 0
                 }
             }
 

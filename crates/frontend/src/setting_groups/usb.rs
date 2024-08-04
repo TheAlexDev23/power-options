@@ -6,16 +6,16 @@ use power_daemon::{ProfilesInfo, ReducedUpdate, SystemInfo, USBSettings};
 use crate::communication_services::{
     ControlAction, ControlRoutine, SystemInfoRoutine, SystemInfoSyncType,
 };
-use crate::helpers::{
-    ToggleableBool, ToggleableInt, ToggleableNumericField, ToggleableStringWhiteBlackList,
+use crate::helpers::toggleable_components::{
+    ToggleableNumericField, ToggleableToggle, ToggleableWhiteBlackListDisplay,
 };
-use crate::helpers::{ToggleableStringWhiteBlackListDisplay, ToggleableToggle};
+use crate::helpers::toggleable_types::{ToggleableBool, ToggleableInt, ToggleableWhiteBlackList};
 
 #[derive(PartialEq, Clone, Default)]
 struct USBForm {
     pub enable_pm: ToggleableBool,
     pub autosuspend_delay_ms: ToggleableInt,
-    pub whiteblacklist: ToggleableStringWhiteBlackList,
+    pub whiteblacklist: ToggleableWhiteBlackList,
 }
 
 impl USBForm {
@@ -107,7 +107,7 @@ pub fn USBGroup(
             }
 
             if form.enable_pm.1() {
-                ToggleableStringWhiteBlackListDisplay {
+                ToggleableWhiteBlackListDisplay {
                     value: form.whiteblacklist,
                     columns: ["ID".to_string(), "Device Name".to_string()],
                     rows: usb_info
@@ -115,7 +115,7 @@ pub fn USBGroup(
                         .iter()
                         .map(|d| [d.id.clone(), d.display_name.clone()])
                         .collect::<Vec<_>>(),
-                    value_index: 0
+                    identifying_column: 0
                 }
             }
 
