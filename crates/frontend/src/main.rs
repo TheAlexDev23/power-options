@@ -10,8 +10,8 @@ use communication_services::{
     control_service, system_info_service, ControlAction, ControlRoutine, SystemInfoSyncType,
 };
 use setting_groups::{
-    cpu::CPUGroup, network::NetworkGroup, pci::PCIAndASPMGroup, radio::RadioGroup, sata::SATAGroup,
-    usb::USBGroup,
+    cpu::CPUGroup, kernel::KernelGroup, network::NetworkGroup, pci::PCIAndASPMGroup,
+    radio::RadioGroup, sata::SATAGroup, usb::USBGroup,
 };
 
 use dioxus::{
@@ -183,6 +183,7 @@ fn SettingGroupsNav(current_tab: Signal<u8>) -> Element {
         ("icons/navbar-aspm.svg", "PCI"),
         ("icons/navbar-usb.svg", "USB"),
         ("icons/navbar-sata.svg", "SATA"),
+        ("icons/linux-tux.svg", "Kernel"),
     ];
 
     rsx! {
@@ -246,6 +247,8 @@ fn SettingGroup(
                     control_routine,
                     system_info_routine
                 }
+            } else if current_tab_val == 7 {
+                KernelGroup { profiles_info, control_routine, system_info_routine }
             } else {
                 PlaceholderGroup { current_tab }
             }
