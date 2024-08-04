@@ -9,8 +9,8 @@ use log::{debug, error, trace};
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Default)]
-pub struct WhiteBlackList<T: PartialEq> {
-    pub items: Vec<T>,
+pub struct WhiteBlackList {
+    pub items: Vec<String>,
     pub list_type: WhiteBlackListType,
 }
 
@@ -21,11 +21,11 @@ pub enum WhiteBlackListType {
     Blacklist,
 }
 
-impl<T: PartialEq> WhiteBlackList<T> {
+impl WhiteBlackList {
     /// If enable = true and no list provided, will return true for all items
     /// If enable = true, will return true for items in whitelist or only for items outside of blacklist
     /// If enable = false, will return false for all items
-    pub fn should_enable_item(whiteblacklist: &Option<Self>, item: &T, enable: bool) -> bool {
+    pub fn should_enable_item(whiteblacklist: &Option<Self>, item: &str, enable: bool) -> bool {
         if !enable {
             // Always disable
             false

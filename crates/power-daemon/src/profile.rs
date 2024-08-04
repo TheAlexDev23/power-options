@@ -490,7 +490,7 @@ pub struct PCISettings {
     pub enable_power_management: Option<bool>,
     // whitelist or blacklist device to exlude/include.
     // Should be the name of the device under /sys/bus/pci/devices excluding the beggining 0000:
-    pub whiteblacklist: Option<WhiteBlackList<String>>,
+    pub whiteblacklist: Option<WhiteBlackList>,
 }
 
 impl PCISettings {
@@ -538,7 +538,7 @@ pub struct USBSettings {
     pub enable_pm: Option<bool>,
     pub autosuspend_delay_ms: Option<u32>,
     // whitelist or blacklist to exlude/include vendor_id:product_id
-    pub whiteblacklist: Option<WhiteBlackList<String>>,
+    pub whiteblacklist: Option<WhiteBlackList>,
 }
 
 impl USBSettings {

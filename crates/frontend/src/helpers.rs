@@ -13,7 +13,7 @@ pub struct ToggleableInt(pub Signal<bool>, pub Signal<i32>);
 pub struct ToggleableBool(pub Signal<bool>, pub Signal<bool>);
 
 #[derive(Clone, Copy, PartialEq, Default, Debug)]
-pub struct ToggleableStringWhiteBlackList(pub Signal<bool>, pub Signal<WhiteBlackList<String>>);
+pub struct ToggleableStringWhiteBlackList(pub Signal<bool>, pub Signal<WhiteBlackList>);
 
 impl ToggleableString {
     pub fn from(&mut self, other: Option<String>) {
@@ -87,12 +87,12 @@ impl ToggleableBool {
 }
 
 impl ToggleableStringWhiteBlackList {
-    pub fn from(&mut self, other: Option<WhiteBlackList<String>>) {
+    pub fn from(&mut self, other: Option<WhiteBlackList>) {
         self.0.set(other.is_some());
         self.1.set(other.unwrap_or_default());
     }
 
-    pub fn into_base(&self) -> Option<WhiteBlackList<String>> {
+    pub fn into_base(&self) -> Option<WhiteBlackList> {
         if self.0() {
             Some(self.1())
         } else {
