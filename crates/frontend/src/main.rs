@@ -116,14 +116,19 @@ fn PowerProfilesNav(
         rsx! {
             nav { class: "profiles",
                 ul {
-                    for button in buttons {
+                    for mut button in buttons {
                         li {
                             if waiting_override_set() && button.0 == future_override_idx() {
                                 div { class: "spinner" }
                             } else {
                                 div { display: "flex", align_items: "center",
                                     button {
-                                        onclick: button.2,
+                                        onclick: move |e| {
+                                            if waiting_override_remove() || waiting_override_set() {
+                                                return;
+                                            }
+                                            button.2(e);
+                                        },
                                         class: if button.0 == profiles_info().as_ref().unwrap().active_profile {
                                             if active_profile_override().is_some()
                                                 && active_profile_override().unwrap() == button.1
@@ -148,6 +153,9 @@ fn PowerProfilesNav(
                                         } else {
                                             button {
                                                 onclick: move |_| {
+                                                    if waiting_override_remove() || waiting_override_set() {
+                                                        return;
+                                                    }
                                                     control_routine
                                                         .send((ControlAction::ResetReducedUpdate, Some(waiting_override_remove)));
                                                     control_routine
