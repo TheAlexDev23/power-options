@@ -12,269 +12,20 @@ body,
     user-select: none;
 }
 
-
 body {
-    background-color: #242424;
     margin: 0;
     padding: 0;
 }
 
-button,
-select,
-option,
-input {
-    background-color: #525252;
-}
-
-button:disabled,
-select:disabled,
-option:disabled,
-input:disabled {
-    background-color: #404040;
-    color: #C0C0C0;
-}
-
-
-nav ul {
-    display: flex;
-    justify-content: space-around;
-
-    padding: 0;
-    list-style-type: none;
-}
-
-input {
-    border: none;
-    border-radius: 5px;
-}
-
-input[type="checkbox"] {
-    appearance: none;
-
-    width: 20px;
-    height: 20px;
-
-    border: none;
-    border-radius: 3px;
-
-    transition: all 100ms linear;
-}
-
-input[type="checkbox"]:checked {
-    background-image: url("icons/icon-checked.svg");
-    background-color: #0860F2;
-    background-size: 80%;
-    background-repeat: no-repeat;
-    background-position: center;
-}
-
-input[type="checkbox"]:checked:disabled {
-    background-color: #404040;
-}
-
-form input[type="submit"] {
-    background-color: #0860F2;
-}
-
-form input[type="submit"]:disabled {
-    background-color: #525252;
-}
-
-input[type="text"],
-textarea {
-    user-select: text;
-}
-
-* {
-    color: white;
-}
-
-select,
-option {
-    appearance: none;
-
-    border: none;
-    border-radius: 5px;
-
-    font-size: 15px;
-
-    padding: 3px 5px;
-}
-
-button {
-    border: none;
-    border-radius: 5px;
-}
-
-button:hover {
-    cursor: pointer;
-}
-
-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-th {
-    text-align: left;
-}
-
-td:first-child,
-th:first-child {
-    border-top-left-radius: 10px;
-    border-bottom-left-radius: 10px;
-}
-
-td:last-child,
-th:last-child {
-    border-top-right-radius: 10px;
-    border-bottom-right-radius: 10px;
-}
-
-td,
-th {
-    padding: 5px;
-}
-
-td:hover,
-button:hover,
-button:hover *,
-input[type="checkbox"]:hover,
-input[type="submit"]:hover,
-input[type="reset"]:hover,
-input[type="button"]:hover,
-select:hover {
-    cursor: pointer;
-}
-
-.spinner {
-    border: 5px solid #33383a;
-    border-top: 5px solid #70685c;
-    border-radius: 50%;
-    width: 12px;
-    height: 12px;
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    0% {
-        transform: rotate(0deg);
-    }
-
-    100% {
-        transform: rotate(360deg);
-    }
-}
-
-.toggle-switch {
-    position: relative;
-    display: inline-block;
-    width: 40px;
-    height: 20px;
-}
-
-.toggle-switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-
-.toggle-switch .slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: #525252;
-    border-radius: 34px;
-    transition: .4s;
-}
-
-.toggle-switch .slider:before {
-    position: absolute;
-    content: "";
-    height: 15px;
-    width: 15px;
-    left: 2px;
-    bottom: 2px;
-    background-color: white;
-    transition: .2s;
-    border-radius: 50%;
-}
-
-.toggle-switch input:disabled+.slider {
-    background-color: #404040;
-}
-
-.toggle-switch input:disabled+.slider::before {
-    background-color: #C0C0C0;
-}
-
-
-.toggle-switch input:checked+.slider {
-    background-color: #0860F2;
-}
-
-.toggle-switch input:focus+.slider {
-    box-shadow: 0 0 1px #0860F2;
-}
-
-input:checked+.slider:before {
-    transform: translateX(20px);
-}
-
-.hidden {
-    visibility: hidden;
-}
-
-.tooltip-parent {
-    position: relative;
-}
-
-.tooltip {
-    position: absolute;
-
-    visibility: hidden;
-
-    font-size: 12px;
-
-    color: white;
-
-    padding: 5px;
-    border-radius: 5px;
-
-    width: 200px;
-
-    z-index: 1;
-
-    background-color: #404040;
-}
-
-.tooltip-at-left {
-    right: 105%;
-}
-
-.tooltip-at-right {
-    left: 105%;
-}
-
-.tooltip-at-top {
-    bottom: 105%;
-}
-
-.tooltip-at-bottom {
-    top: 105%;
-}
-
-.tooltip-parent:hover .tooltip {
-    visibility: visible;
-}
-
 
 .profiles {
-    position: absolute;
+    position: static;
     top: 0;
+    bottom: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 
     width: 100vw;
     height: 60px;
@@ -283,7 +34,16 @@ input:checked+.slider:before {
     border-bottom: black solid 1px;
 }
 
-.profiles button {
+.profiles ul {
+    display: flex;
+    justify-content: space-around;
+
+    width: 100%;
+
+    margin: 0;
+}
+
+.profiles ul button {
     max-width: 220px;
     height: 30px;
 
@@ -311,11 +71,9 @@ input:checked+.slider:before {
 }
 
 .setting-groups-selector {
-    position: absolute;
-    top: 60px;
-    height: calc(100vh - 50px);
-
     overflow: auto;
+
+    width: 200px;
 
     background-color: #323232;
 
@@ -340,26 +98,20 @@ input:checked+.slider:before {
 }
 
 .setting-groups-selector li:hover {
-    background-color: #525252;
     cursor: pointer;
 }
 
-.setting-groups-selector li.selected {
-    background-color: #525252;
-}
-
 .settings-group {
-    position: absolute;
     overflow-x: auto;
 
     display: flex;
     flex-direction: column;
     align-items: stretch;
 
-    top: 60px;
-    left: 180px;
-    width: calc(100vw - 230px);
-    height: calc(100vh - 60px);
+    width: 100%;
+    /* height:100% does show overvlow scroll and static/sticky items do not work, so need to resort to this */
+    height: -webkit-fill-available;
+
     padding: 25px;
 }
 
@@ -371,8 +123,6 @@ input:checked+.slider:before {
     display: flex;
     justify-content: space-between;
     align-items: center;
-
-    background-color: #323232;
 
     border-radius: 5px;
 
@@ -409,10 +159,6 @@ input:checked+.slider:before {
     font-size: 15px;
 }
 
-.confirm-buttons [type="submit"]:not([disabled]) {
-    background-color: #0860F2;
-}
-
 .confirm-buttons button .spinner {
     position: absolute;
 }
@@ -421,7 +167,6 @@ input:checked+.slider:before {
     display: flex;
     flex-direction: column;
 }
-
 
 #cpu-form label {
     width: 300px;
@@ -434,20 +179,4 @@ input:checked+.slider:before {
 #cpu-cores-table tr {
     border-radius: 15px;
     padding: 5px;
-}
-
-#cpu-cores-table tr:hover {
-    background-color: #606060;
-}
-
-#cpu-cores-table tr.selected {
-    background-color: #0860F2;
-}
-
-#cpu-cores-table tr:hover.selected {
-    background-color: #0862f2b4;
-}
-
-#cpu-cores-table tr.selected-secondary {
-    background-color: #373737;
 }

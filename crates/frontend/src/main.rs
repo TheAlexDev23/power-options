@@ -56,6 +56,9 @@ fn App() -> Element {
 
     rsx! {
         link { rel: "stylesheet", href: "main.css" }
+        link { rel: "stylesheet", href: "color.css" }
+        link { rel: "stylesheet", href: "custom-elements.css" }
+
         script { src: "helpers.js" }
 
         PowerProfilesNav {
@@ -63,13 +66,16 @@ fn App() -> Element {
             control_routine,
             active_profile_override
         }
-        SettingGroupsNav { current_tab: current_settings_tab }
-        SettingGroup {
-            current_tab: current_settings_tab,
-            system_info,
-            profiles_info,
-            control_routine,
-            system_info_routine
+        div { display: "flex",
+
+            SettingGroupsNav { current_tab: current_settings_tab }
+            SettingGroup {
+                current_tab: current_settings_tab,
+                system_info,
+                profiles_info,
+                control_routine,
+                system_info_routine
+            }
         }
     }
 }
@@ -177,7 +183,7 @@ fn PowerProfilesNav(
             }
         }
     } else {
-        rsx! {}
+        rsx! {  }
     }
 }
 
