@@ -5,7 +5,7 @@ use std::{
     process::{Command, Stdio},
 };
 
-use log::{debug, trace};
+use log::{debug, error, trace};
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Default)]
@@ -74,14 +74,25 @@ impl WhiteBlackListType {
 
 pub fn run_command(command: &str) {
     debug!("running: {command}");
-    Command::new("zsh")
+    let output = Command::new("zsh")
         .args(["-c", command])
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .spawn()
         .expect("Could not run command")
-        .wait()
+        .wait_with_output()
         .expect("Could not wait command");
+
+    trace!(
+        "Command output: {}",
+        String::from_utf8(output.stdout).unwrap()
+    );
+    if !output.stderr.is_empty() {
+        error!(
+            "Command returned with stderr: {}",
+            String::from_utf8(output.stderr).unwrap()
+        );
+    }
 }
 
 // Runs command, returns (stdout, stdin), does not check for argument validity or program succesful completion.

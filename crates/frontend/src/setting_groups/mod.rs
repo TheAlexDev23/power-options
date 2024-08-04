@@ -4,4 +4,5 @@ pub mod network;
 pub mod pci;
 pub mod radio;
 pub mod sata;
+pub mod screen;
 pub mod usb;

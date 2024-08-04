@@ -11,7 +11,7 @@ use communication_services::{
 };
 use setting_groups::{
     cpu::CPUGroup, kernel::KernelGroup, network::NetworkGroup, pci::PCIAndASPMGroup,
-    radio::RadioGroup, sata::SATAGroup, usb::USBGroup,
+    radio::RadioGroup, sata::SATAGroup, screen::ScreenGroup, usb::USBGroup,
 };
 
 use dioxus::{
@@ -230,6 +230,8 @@ fn SettingGroup(
                     control_routine,
                     system_info_routine
                 }
+            } else if current_tab_val == 1 {
+                ScreenGroup { profiles_info, control_routine, system_info_routine }
             } else if current_tab_val == 2 {
                 RadioGroup { profiles_info, control_routine, system_info_routine }
             } else if current_tab_val == 3 {

@@ -319,7 +319,7 @@ impl ScreenSettings {
             run_command(&format!("xrandr -r {}", refresh_rate));
         }
         if let Some(brightness) = self.brightness {
-            run_command(&format!("brightnessctl -s {}%", brightness));
+            run_command(&format!("brightnessctl s {}%", brightness));
         }
     }
 }
