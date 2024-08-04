@@ -1,3 +1,4 @@
+use std::path::Path;
 use std::{fs, path::PathBuf};
 
 use clap::{Parser, Subcommand};
@@ -100,8 +101,11 @@ async fn daemon() {
         return;
     }
 
-    let config = power_daemon::parse_config(CONFIG_FILE);
-    let mut handle = Instance::new(config, PROFILES_DIRECTORY);
+    let config_path = Path::new(CONFIG_FILE);
+    let profiles_path = Path::new(PROFILES_DIRECTORY);
+
+    let config = power_daemon::parse_config(&config_path);
+    let mut handle = Instance::new(config, &config_path, &profiles_path);
 
     handle.update();
 

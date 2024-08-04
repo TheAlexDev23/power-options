@@ -17,10 +17,10 @@ pub use systeminfo::*;
 use std::{
     fs,
     io::{Read, Write},
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 
-use log::{debug, trace};
+use log::{debug, error, trace};
 
 #[derive(Clone, Deserialize, Serialize, PartialEq, Debug)]
 pub enum ReducedUpdate {
@@ -39,7 +39,8 @@ pub enum ReducedUpdate {
 }
 
 pub struct Instance {
-    profiles_path: String,
+    profiles_path: PathBuf,
+    config_path: PathBuf,
     config: Config,
     profiles_info: ProfilesInfo,
     reduced_update: Option<ReducedUpdate>,
@@ -47,10 +48,11 @@ pub struct Instance {
 }
 
 impl Instance {
-    pub fn new(config: Config, profiles_path: &str) -> Instance {
+    pub fn new(config: Config, config_path: &Path, profiles_path: &Path) -> Instance {
         let profiles = parse_profiles(&config, profiles_path);
         Instance {
-            profiles_path: String::from(profiles_path),
+            profiles_path: PathBuf::from(profiles_path),
+            config_path: PathBuf::from(config_path),
             config,
             profiles_info: ProfilesInfo {
                 profiles,
@@ -134,6 +136,76 @@ impl Instance {
         self.update_without_reduced();
     }
 
+    pub fn remove_profile(&mut self, idx: usize) {
+        if self.profiles_info.profiles.len() <= 1 {
+            error!("There's only 1 or less avaiable profiles. Cannot remove remaining. Ignoring..");
+            return;
+        }
+        if idx >= self.profiles_info.profiles.len() {
+            error!("Profile index out of bounds. Ignoring..");
+            return;
+        }
+
+        let profile = &self.profiles_info.profiles[idx];
+
+        let mut should_update = false;
+
+        if let Some(ref temporary_override) = self.temporary_override {
+            if *temporary_override == profile.profile_name {
+                self.temporary_override = None;
+                should_update = true;
+            }
+        }
+        if let Some(ref persistent_override) = self.config.profile_override {
+            if *persistent_override == profile.profile_name {
+                self.config.profile_override = None;
+                should_update = true;
+            }
+        }
+
+        if self.config.bat_profile == profile.profile_name {
+            self.config.bat_profile = self
+                .profiles_info
+                .profiles
+                .first()
+                .unwrap()
+                .profile_name
+                .clone();
+            should_update = true;
+        }
+        if self.config.ac_profile == profile.profile_name {
+            self.config.ac_profile = self
+                .profiles_info
+                .profiles
+                .last()
+                .unwrap()
+                .profile_name
+                .clone();
+            should_update = true;
+        }
+
+        self.config.profiles.remove(
+            self.config
+                .profiles
+                .iter()
+                .position(|p| *p == profile.profile_name)
+                .unwrap(),
+        );
+        fs::remove_file(
+            self.profiles_path
+                .join(&format!("{}.toml", &profile.profile_name)),
+        )
+        .expect("Could not remove profile file");
+
+        self.profiles_info.profiles.remove(idx);
+
+        write_config(&self.config, &self.config_path);
+
+        if should_update {
+            self.update_without_reduced();
+        }
+    }
+
     pub fn update_profile(&mut self, idx: usize, profile: Profile) {
         debug!("Updating profile No {idx}");
         trace!("New profile: {profile:#?}");
@@ -155,15 +227,23 @@ impl Instance {
     }
 }
 
-pub fn parse_config(path: &str) -> Config {
+pub fn write_config(config: &Config, path: &Path) {
+    fs::write(
+        path,
+        toml::to_string_pretty(config).expect("Could not serialize config"),
+    )
+    .expect("Could not write to config");
+}
+
+pub fn parse_config(path: &Path) -> Config {
     toml::from_str::<Config>(&fs::read_to_string(path).expect("Could not read config"))
         .expect("Could not parse config")
 }
 
-fn parse_profiles(config: &Config, path: &str) -> Vec<Profile> {
+fn parse_profiles(config: &Config, path: &Path) -> Vec<Profile> {
     let mut profiles = Vec::new();
     for profile_name in config.profiles.iter() {
-        let path = PathBuf::from(format!("{path}/{profile_name}.toml"));
+        let path = path.join(format!("{profile_name}.toml"));
         let mut file = fs::File::open(&path).expect("Could not read file");
         let mut contents = String::new();
         file.read_to_string(&mut contents)
@@ -177,9 +257,9 @@ fn parse_profiles(config: &Config, path: &str) -> Vec<Profile> {
     profiles
 }
 
-fn serialize_profiles(profiles: &Vec<Profile>, path: &str) {
+fn serialize_profiles(profiles: &Vec<Profile>, path: &Path) {
     for profile in profiles.iter() {
-        let path = PathBuf::from(format!("{path}/{}.toml", profile.profile_name));
+        let path = path.join(format!("{}.toml", profile.profile_name));
         let mut file = fs::File::create(&path).expect("Could not read file");
         file.write(
             toml::to_string_pretty(profile)

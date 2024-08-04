@@ -61,7 +61,15 @@ pub fn SettingsMenu(
     let awaiting_completion = use_signal(|| false);
 
     let awaiting_reset = use_signal(|| false);
+    let awaiting_remove = use_signal(|| false);
+    let mut awaiting_profile_action = use_signal(|| false);
+
+    use_effect(move || {
+        awaiting_profile_action.set(awaiting_reset() || awaiting_remove());
+    });
+
     let mut awaiting_reset_idx = use_signal(|| 0);
+    let mut awaiting_remove_idx = use_signal(|| 0);
 
     let onsubmit = {
         let config = config.clone();
@@ -104,6 +112,8 @@ pub fn SettingsMenu(
             width: "100%",
 
             form {
+                id: "settings-form",
+
                 width: "80%",
                 onchange: move |_| {
                     changed.set(true);
@@ -115,7 +125,7 @@ pub fn SettingsMenu(
 
                 label { "Profile order" }
 
-                table { max_width: "400px",
+                table { max_width: "600px",
                     tr {
                         th { "" }
                         th { "" }
@@ -156,10 +166,10 @@ pub fn SettingsMenu(
                                 td { "" }
                             }
 
-                            td {
+                            td { width: "20px",
                                 if awaiting_reset() && awaiting_reset_idx() == idx {
                                     div { class: "spinner" }
-                                } else if !awaiting_reset() {
+                                } else if !awaiting_profile_action() {
                                     button {
                                         onclick: move |_| {
                                             awaiting_reset_idx.set(idx);
@@ -168,7 +178,25 @@ pub fn SettingsMenu(
                                             control_routine.send((ControlAction::GetProfilesInfo, Some(awaiting_reset)));
                                         },
                                         r#type: "button",
-                                        "Reset to defaults"
+                                        "Reset"
+                                    }
+                                }
+                            }
+
+                            td { width: "20px",
+                                if awaiting_remove() && awaiting_remove_idx() == idx {
+                                    div { class: "spinner" }
+                                } else if !awaiting_profile_action() {
+                                    button {
+                                        onclick: move |_| {
+                                            awaiting_remove_idx.set(idx);
+                                            control_routine
+                                                .send((ControlAction::RemoveProfile(idx as u32), Some(awaiting_remove)));
+                                            control_routine.send((ControlAction::GetConfig, Some(awaiting_remove)));
+                                            control_routine.send((ControlAction::GetProfilesInfo, Some(awaiting_remove)));
+                                        },
+                                        r#type: "button",
+                                        "Remove"
                                     }
                                 }
                             }

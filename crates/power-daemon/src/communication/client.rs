@@ -71,6 +71,7 @@ trait ControlDBus {
 
     async fn update_config(&self, updated: String) -> zbus::Result<()>;
 
+    async fn remove_profile(&self, idx: u32) -> zbus::Result<()>;
     async fn reset_profile(&self, idx: u32) -> zbus::Result<()>;
     async fn update_profile(&self, idx: u32, updated: String) -> zbus::Result<()>;
 
@@ -111,6 +112,9 @@ impl ControlClient {
             .await
     }
 
+    pub async fn remove_profile(&self, idx: u32) -> zbus::Result<()> {
+        self.get_proxy().await?.remove_profile(idx).await
+    }
     pub async fn reset_profile(&self, idx: u32) -> zbus::Result<()> {
         self.get_proxy().await?.reset_profile(idx).await
     }

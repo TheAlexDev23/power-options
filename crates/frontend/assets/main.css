@@ -182,3 +182,7 @@ body {
     border-radius: 15px;
     padding: 5px;
 }
+
+#settings-form table button {
+    font-size: 14px;
+}
