@@ -1,6 +1,7 @@
 use std::fs;
 
 use log::{debug, error, info};
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -48,16 +49,20 @@ impl Profile {
     pub fn apply_all(&self) {
         info!("Applying profile: {}", self.profile_name);
 
-        self.cpu_settings.apply();
-        self.cpu_core_settings.apply();
-        self.screen_settings.apply();
-        self.radio_settings.apply();
-        self.network_settings.apply();
-        self.aspm_settings.apply();
-        self.pci_settings.apply();
-        self.usb_settings.apply();
-        self.sata_settings.apply();
-        self.kernel_settings.apply();
+        let settings_functions: Vec<Box<dyn FnOnce() + Send>> = vec![
+            Box::new(|| self.cpu_settings.apply()),
+            Box::new(|| self.cpu_core_settings.apply()),
+            Box::new(|| self.screen_settings.apply()),
+            Box::new(|| self.radio_settings.apply()),
+            Box::new(|| self.network_settings.apply()),
+            Box::new(|| self.aspm_settings.apply()),
+            Box::new(|| self.pci_settings.apply()),
+            Box::new(|| self.usb_settings.apply()),
+            Box::new(|| self.sata_settings.apply()),
+            Box::new(|| self.kernel_settings.apply()),
+        ];
+
+        settings_functions.into_par_iter().for_each(|f| f());
     }
 
     pub fn apply_reduced(&self, reduced_update: &ReducedUpdate) {
@@ -116,7 +121,7 @@ pub struct CPUSettings {
 
 impl CPUSettings {
     pub fn apply(&self) {
-        info!("Applying CPU settings");
+        info!("Applying CPU settings on {:?}", std::thread::current().id());
 
         if let Some(ref mode) = self.mode {
             if fs::metadata("/sys/devices/system/cpu/intel_pstate").is_ok() {
@@ -232,7 +237,10 @@ pub struct CoreSetting {
 
 impl CPUCoreSettings {
     pub fn apply(&self) {
-        info!("Applying CPU core settings");
+        info!(
+            "Applying CPU core settings on {:?}",
+            std::thread::current().id()
+        );
 
         // In the UI, when disabling a core and then resetting the core override self.online would be set to None
         // But the user likely would have meant to return cpu back to the default values in the profile.
@@ -299,7 +307,10 @@ pub struct ScreenSettings {
 
 impl ScreenSettings {
     pub fn apply(&self) {
-        info!("Applying Screen settings");
+        info!(
+            "Applying Screen settings on {:?}",
+            std::thread::current().id()
+        );
 
         if let Some(ref resolution) = self.resolution {
             run_command(&format!("xrandr --mode {}", resolution));
@@ -322,7 +333,10 @@ pub struct RadioSettings {
 
 impl RadioSettings {
     pub fn apply(&self) {
-        info!("Applying Radio settings");
+        info!(
+            "Applying Radio settings on {:?}",
+            std::thread::current().id()
+        );
 
         if let Some(wifi) = self.block_wifi {
             run_command(&format!(
@@ -367,7 +381,10 @@ pub struct NetworkSettings {
 
 impl NetworkSettings {
     pub fn apply(&self) {
-        info!("Applying Network settings");
+        info!(
+            "Applying Network settings on {:?}",
+            std::thread::current().id()
+        );
 
         if self.disable_ethernet.unwrap_or_default() {
             Self::disable_all_ethernet_cards()
@@ -454,7 +471,10 @@ pub struct ASPMSettings {
 
 impl ASPMSettings {
     pub fn apply(&self) {
-        info!("Applying ASPM settings");
+        info!(
+            "Applying ASPM settings on {:?}",
+            std::thread::current().id()
+        );
 
         if let Some(ref mode) = self.mode {
             run_command(&format!(
@@ -475,7 +495,10 @@ pub struct PCISettings {
 
 impl PCISettings {
     pub fn apply(&self) {
-        info!("Applying PCI PM settings");
+        info!(
+            "Applying PCI PM settings on {:?}",
+            std::thread::current().id()
+        );
 
         if self.enable_power_management.is_none() {
             return;
@@ -520,7 +543,7 @@ pub struct USBSettings {
 
 impl USBSettings {
     pub fn apply(&self) {
-        info!("Applying USB settings");
+        info!("Applying USB settings on {:?}", std::thread::current().id());
 
         let entries = fs::read_dir("/sys/bus/usb/devices").expect("Could not read sysfs directory");
 
@@ -573,7 +596,10 @@ pub struct SATASettings {
 
 impl SATASettings {
     pub fn apply(&self) {
-        info!("Applying SATA settings");
+        info!(
+            "Applying SATA settings on {:?}",
+            std::thread::current().id()
+        );
 
         if self.active_link_pm_policy.is_none() {
             return;
@@ -605,7 +631,10 @@ pub struct KernelSettings {
 
 impl KernelSettings {
     pub fn apply(&self) {
-        info!("Applying Kernel settings");
+        info!(
+            "Applying Kernel settings on {:?}",
+            std::thread::current().id()
+        );
 
         if let Some(disable_wd) = self.disable_nmi_watchdog {
             run_command(&format!(

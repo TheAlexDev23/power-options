@@ -12,3 +12,4 @@ proctitle = "0.1.1"
 toml = "0.8.15"
 colored = "2.1.0"
 tokio = { version = "1.38.1", features = ["full"] }
+clap-verbosity-flag = "2.2.1"

@@ -1,6 +1,8 @@
 use std::{fs, path::PathBuf};
 
 use clap::{Parser, Subcommand};
+use clap_verbosity_flag::{InfoLevel, Verbosity};
+
 use colored::Colorize;
 use log::{debug, error, trace, Level, Log, Metadata, Record};
 use nix::unistd::Uid;
@@ -16,6 +18,8 @@ use power_daemon::communication::server::CommunicationServer;
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
+    #[command(flatten)]
+    verbose: Verbosity<InfoLevel>,
     #[command(subcommand)]
     mode: OpMode,
 }
@@ -64,10 +68,11 @@ impl Log for StdoutLogger {
 
 #[tokio::main]
 async fn main() {
-    log::set_logger(&LOGGER).expect("Could not set logger");
-    log::set_max_level(log::LevelFilter::Debug);
-
     let args = Args::parse();
+
+    log::set_logger(&LOGGER).expect("Could not set logger");
+    log::set_max_level(args.verbose.log_level_filter());
+
     match args.mode {
         OpMode::Daemon => daemon().await,
         OpMode::GenerateFiles { path, program_path } => generate_files(path, program_path),
