@@ -119,7 +119,8 @@ impl Instance {
         self.config = config;
         // We might have updated the profiles too in the config, so reloading them is a must
         self.profiles_info.profiles = parse_profiles(&self.config, &self.profiles_path);
-        self.update();
+
+        self.update_without_reduced();
     }
 
     pub fn update_profile(&mut self, idx: usize, profile: Profile) {
@@ -129,7 +130,17 @@ impl Instance {
         self.profiles_info.profiles[idx] = profile;
         // We actually need to update the underlying files
         serialize_profiles(&self.profiles_info.profiles, &self.profiles_path);
+
         self.update();
+    }
+
+    fn update_without_reduced(&mut self) {
+        let reduced_update = self.reduced_update.clone();
+        self.reset_reduced_update();
+        self.update();
+        if let Some(reduced_update) = reduced_update {
+            self.set_reduced_update(reduced_update);
+        }
     }
 }
 

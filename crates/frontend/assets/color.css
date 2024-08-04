@@ -132,6 +132,10 @@ select:hover {
     background-color: #0860F2;
 }
 
+button.primary {
+    background-color: #0860F2;
+}
+
 .toggle-switch .slider {
     background-color: #525252;
 }
@@ -164,11 +168,11 @@ select:hover {
     background-color: #373737;
 }
 
-.setting-groups-selector li:hover {
+.side-bar li:hover {
     background-color: #525252;
 }
 
-.setting-groups-selector li.selected {
+.side-bar li.selected {
     background-color: #525252;
 }
 

@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::profiles_generator::DefaultProfileType;
 
-#[derive(Deserialize, Serialize, Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct Config {
     pub ac_profile: String,
     pub bat_profile: String,

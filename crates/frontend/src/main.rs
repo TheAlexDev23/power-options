@@ -3,6 +3,7 @@
 mod communication_services;
 mod helpers;
 mod setting_groups;
+mod settings;
 
 use std::time::Duration;
 
@@ -13,6 +14,7 @@ use setting_groups::{
     cpu::CPUGroup, kernel::KernelGroup, network::NetworkGroup, pci::PCIAndASPMGroup,
     radio::RadioGroup, sata::SATAGroup, screen::ScreenGroup, usb::USBGroup,
 };
+use settings::SettingsMenu;
 
 use dioxus::{
     desktop::{Config, LogicalSize, WindowBuilder},
@@ -49,8 +51,11 @@ fn App() -> Element {
     let control_routine = use_coroutine(move |rx| {
         control_service(rx, config, profiles_info, active_profile_override)
     });
+
     control_routine.send((ControlAction::GetProfilesInfo, None));
     control_routine.send((ControlAction::GetProfileOverride, None));
+
+    let settings_opened = use_signal(|| false);
 
     let current_settings_tab = use_signal(|| 0);
 
@@ -61,20 +66,33 @@ fn App() -> Element {
 
         script { src: "helpers.js" }
 
-        PowerProfilesNav {
-            profiles_info,
-            control_routine,
-            active_profile_override
-        }
-        div { display: "flex",
-
-            SettingGroupsNav { current_tab: current_settings_tab }
-            SettingGroup {
-                current_tab: current_settings_tab,
-                system_info,
-                profiles_info,
+        if settings_opened() {
+            SettingsMenu {
+                settings_opened,
+                config,
                 control_routine,
                 system_info_routine
+            }
+        } else {
+            div { class: "top-bar",
+                PowerProfilesNav {
+                    profiles_info,
+                    control_routine,
+                    active_profile_override
+                }
+
+                ManageProfilesButton { settings_opened }
+            }
+
+            div { display: "flex",
+                SettingGroupsNav { current_tab: current_settings_tab }
+                SettingGroup {
+                    current_tab: current_settings_tab,
+                    system_info,
+                    profiles_info,
+                    control_routine,
+                    system_info_routine
+                }
             }
         }
     }
@@ -120,7 +138,7 @@ fn PowerProfilesNav(
         }
 
         rsx! {
-            nav { class: "profiles",
+            nav { class: "profiles-selector",
                 ul {
                     for mut button in buttons {
                         li {
@@ -183,7 +201,23 @@ fn PowerProfilesNav(
             }
         }
     } else {
-        rsx! {  }
+        rsx! {}
+    }
+}
+
+#[component]
+fn ManageProfilesButton(settings_opened: Signal<bool>) -> Element {
+    rsx! {
+        div {
+            button {
+                onclick: move |_| {
+                    settings_opened.set(true);
+                },
+                class: "primary",
+                font_size: "14px",
+                "Manage Profiles"
+            }
+        }
     }
 }
 
@@ -201,7 +235,7 @@ fn SettingGroupsNav(current_tab: Signal<u8>) -> Element {
     ];
 
     rsx! {
-        nav { class: "setting-groups-selector",
+        nav { class: "side-bar",
             ul {
                 for (group_id , group) in setting_groups.iter().enumerate() {
                     li {

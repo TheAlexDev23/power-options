@@ -17,8 +17,7 @@ body {
     padding: 0;
 }
 
-
-.profiles {
+.top-bar {
     position: static;
     top: 0;
     bottom: 0;
@@ -27,14 +26,13 @@ body {
     align-items: center;
     justify-content: space-between;
 
-    width: 100vw;
-    height: 60px;
+    padding: 10px 20px;
 
     background-color: #373737;
     border-bottom: black solid 1px;
 }
 
-.profiles ul {
+.profiles-selector ul {
     display: flex;
     justify-content: space-around;
 
@@ -43,7 +41,11 @@ body {
     margin: 0;
 }
 
-.profiles ul button {
+.profiles-selector li {
+    margin: 0 20px;
+}
+
+.profiles-selector ul button {
     max-width: 220px;
     height: 30px;
 
@@ -55,22 +57,22 @@ body {
     transition: all 100ms ease-in-out;
 }
 
-.profiles button:hover {
+.profiles-selector button:hover {
     background-color: #707070;
     cursor: pointer;
 }
 
-.profiles button.active {
+.profiles-selector button.active {
     background-color: #B4B4B4;
     color: black;
 }
 
-.profiles button.temporary-override {
+.profiles-selector button.temporary-override {
     background-color: #0860F2;
     color: white;
 }
 
-.setting-groups-selector {
+.side-bar {
     overflow: auto;
 
     width: 200px;
@@ -81,23 +83,23 @@ body {
     padding-right: 20px;
 }
 
-.setting-groups-selector ul {
+.side-bar ul {
     flex-direction: column;
 }
 
-.setting-groups-selector button {
+.side-bar button {
     font-size: 17px;
 
     background-color: transparent;
 }
 
-.setting-groups-selector li {
+.side-bar li {
     margin-top: 10px;
     border-radius: 7px;
     padding: 5px;
 }
 
-.setting-groups-selector li:hover {
+.side-bar li:hover {
     cursor: pointer;
 }
 
