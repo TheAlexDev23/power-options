@@ -1,13 +1,13 @@
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::sync::{Mutex, MutexGuard};
 
-pub struct SyncedValue<T> {
+pub struct SyncedValue<T: PartialEq> {
     value: Mutex<Option<T>>,
 
     listeners: Mutex<Vec<Box<dyn Fn(Option<&T>) + Send>>>,
 }
 
-impl<T> SyncedValue<T> {
+impl<T: PartialEq> SyncedValue<T> {
     pub fn new() -> SyncedValue<T> {
         SyncedValue {
             value: Mutex::new(None),
@@ -24,7 +24,13 @@ impl<T> SyncedValue<T> {
 
     pub fn set_blocking(&self, new_value: T) {
         let mut value = self.value.blocking_lock();
-        *value = Some(new_value);
+        let new_value = Some(new_value);
+
+        if *value == new_value {
+            return;
+        }
+
+        *value = new_value;
         for listener in self.listeners.blocking_lock().iter() {
             listener(value.as_ref());
         }
