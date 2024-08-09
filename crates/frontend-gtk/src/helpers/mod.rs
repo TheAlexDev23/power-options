@@ -1,6 +1,8 @@
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::sync::{Mutex, MutexGuard};
 
+pub mod extra_bindings;
+
 pub struct SyncedValue<T: PartialEq> {
     value: Mutex<Option<T>>,
 

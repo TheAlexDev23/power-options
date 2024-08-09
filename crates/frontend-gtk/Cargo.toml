@@ -8,5 +8,6 @@ lazy_static = "1.5.0"
 power-daemon = { version = "0.1.0", path = "../power-daemon", features = [
     "client",
 ] }
-relm4 = "0.9.0"
+relm4 = { version = "0.9.0", features = ["gnome_46", "libadwaita"] }
 tokio = { version = "1.39.2", features = ["full"] }
+tracker = "0.2.2"

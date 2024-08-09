@@ -4,17 +4,17 @@ use relm4::prelude::*;
 
 use crate::communications::daemon_control;
 
-use super::{AppInput, AppSyncOutput};
+use super::{AppInput, AppSyncUpdate};
 
 #[derive(Debug, Clone)]
 pub enum HeaderInput {
-    Sync(AppSyncOutput),
+    Sync(AppSyncUpdate),
     ChangingTo(Option<usize>),
     ResettingFrom(usize),
 }
 
-impl From<AppSyncOutput> for HeaderInput {
-    fn from(value: AppSyncOutput) -> Self {
+impl From<AppSyncUpdate> for HeaderInput {
+    fn from(value: AppSyncUpdate) -> Self {
         Self::Sync(value)
     }
 }
@@ -63,7 +63,7 @@ impl SimpleComponent for Header {
     fn update(&mut self, message: Self::Input, _sender: ComponentSender<Self>) {
         match message {
             HeaderInput::Sync(message) => {
-                if let AppSyncOutput::ProfilesInfo(profiles_info) = message {
+                if let AppSyncUpdate::ProfilesInfo(profiles_info) = message {
                     self.profiles_info = (*profiles_info).clone();
                 }
             }
@@ -76,7 +76,12 @@ impl SimpleComponent for Header {
         widgets
             .header_bar
             .set_title_widget(Some(&if let Some(ref profiles_info) = self.profiles_info {
-                let ret = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+                let ret = gtk::CenterBox::new();
+                ret.set_expand(true);
+
+                let profiles_list = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+
+                profiles_list.add_css_class("linked");
                 let active_profile_name = &self
                     .profiles_info
                     .as_ref()
@@ -87,7 +92,7 @@ impl SimpleComponent for Header {
                 for (idx, profile) in profiles_info.profiles.iter().enumerate() {
                     if let Some(changing_to) = self.changing_to {
                         if idx == changing_to {
-                            ret.append(
+                            profiles_list.append(
                                 &gtk::Spinner::builder().spinning(true).visible(true).build(),
                             );
                             continue;
@@ -122,14 +127,27 @@ impl SimpleComponent for Header {
                         }
                     ));
 
-                    ret.append(&toggle_button);
+                    profiles_list.append(&toggle_button);
                 }
+                ret.set_center_widget(Some(&profiles_list));
+
+                let button = gtk::Button::builder()
+                    .label("Apply")
+                    .sensitive(true)
+                    .css_classes([relm4::css::SUGGESTED_ACTION])
+                    .build();
+                button.connect_clicked(move |_| sender.output(AppInput::ApplySettings).unwrap());
+
+                ret.set_end_widget(Some(&button));
+
                 ret
             } else {
-                let ret = gtk::Box::new(gtk::Orientation::Horizontal, 0);
-                ret.append(&gtk::Label::new(Some(
+                let ret = gtk::CenterBox::new();
+                let center_widget = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+                center_widget.append(&gtk::Label::new(Some(
                     "Obtaining information about profiles...",
                 )));
+                ret.set_center_widget(Some(&center_widget));
                 ret
             }))
     }
