@@ -48,7 +48,7 @@ impl SimpleComponent for Header {
     ) -> ComponentParts<Self> {
         let model = Header {
             profiles_info: None,
-            changing_to: Some(2),
+            changing_to: None,
         };
 
         let widgets = HeaderWidgets { header_bar: root };
@@ -87,7 +87,9 @@ impl SimpleComponent for Header {
                 for (idx, profile) in profiles_info.profiles.iter().enumerate() {
                     if let Some(changing_to) = self.changing_to {
                         if idx == changing_to {
-                            ret.append(&gtk::Spinner::new());
+                            ret.append(
+                                &gtk::Spinner::builder().spinning(true).visible(true).build(),
+                            );
                             continue;
                         }
                     }
