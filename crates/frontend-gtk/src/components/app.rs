@@ -1,4 +1,5 @@
 use std::convert::identity;
+use std::sync::Arc;
 
 use gtk::glib::clone;
 use gtk::prelude::*;
@@ -16,10 +17,9 @@ pub enum AppInput {
 
 #[derive(Debug, Clone)]
 pub enum AppSyncOutput {
-    // TODO: use rc or arc instead of cloning
-    ProfilesInfo(Option<ProfilesInfo>),
-    SystemInfo(Option<SystemInfo>),
-    Config(Option<Config>),
+    ProfilesInfo(Arc<Option<ProfilesInfo>>),
+    SystemInfo(Arc<Option<SystemInfo>>),
+    Config(Arc<Option<Config>>),
 }
 
 pub struct App {
@@ -69,16 +69,21 @@ impl SimpleAsyncComponent for App {
 
 impl App {
     async fn setup_sync_listeners(&self) {
-        let header_sender = self.header.sender().clone();
+        let send_to_all = {
+            let header_sender = self.header.sender().clone();
+            move |msg: AppSyncOutput| {
+                header_sender.send(msg.into()).unwrap();
+            }
+        };
 
         communications::PROFILES_INFO
             .listen(clone!(
                 #[strong]
-                header_sender,
+                send_to_all,
                 move |profiles_info| {
-                    header_sender
-                        .send(AppSyncOutput::ProfilesInfo(profiles_info.cloned()).into())
-                        .unwrap();
+                    send_to_all(AppSyncOutput::ProfilesInfo(Arc::from(
+                        profiles_info.cloned(),
+                    )));
                 }
             ))
             .await;
@@ -86,11 +91,9 @@ impl App {
         communications::CONFIG
             .listen(clone!(
                 #[strong]
-                header_sender,
+                send_to_all,
                 move |config| {
-                    header_sender
-                        .send(AppSyncOutput::Config(config.cloned()).into())
-                        .unwrap();
+                    send_to_all(AppSyncOutput::Config(Arc::from(config.cloned())));
                 }
             ))
             .await;
@@ -98,11 +101,9 @@ impl App {
         communications::SYSTEM_INFO
             .listen(clone!(
                 #[strong]
-                header_sender,
+                send_to_all,
                 move |system_info| {
-                    header_sender
-                        .send(AppSyncOutput::SystemInfo(system_info.cloned()).into())
-                        .unwrap();
+                    send_to_all(AppSyncOutput::SystemInfo(Arc::from(system_info.cloned())));
                 }
             ))
             .await;

@@ -64,7 +64,7 @@ impl SimpleComponent for Header {
         match message {
             HeaderInput::Sync(message) => {
                 if let AppSyncOutput::ProfilesInfo(profiles_info) = message {
-                    self.profiles_info = profiles_info;
+                    self.profiles_info = (*profiles_info).clone();
                 }
             }
             HeaderInput::ChangingTo(idx) => self.changing_to = idx,
