@@ -10,13 +10,6 @@ use crate::{
     ReducedUpdate, SystemInfo,
 };
 
-pub fn find_profile_index_by_name(vec: &Vec<Profile>, name: &str) -> usize {
-    vec.iter().position(|p| p.profile_name == name).unwrap()
-}
-pub fn try_find_profile_index_by_name(vec: &Vec<Profile>, name: &str) -> Option<usize> {
-    vec.iter().position(|p| p.profile_name == name)
-}
-
 #[derive(Serialize, Deserialize, Default, Clone, Debug, PartialEq)]
 pub struct ProfilesInfo {
     pub active_profile: usize,
@@ -26,6 +19,15 @@ pub struct ProfilesInfo {
 impl ProfilesInfo {
     pub fn get_active_profile(&self) -> &Profile {
         &self.profiles[self.active_profile]
+    }
+    pub fn find_profile_index_by_name(&self, name: &str) -> usize {
+        self.profiles
+            .iter()
+            .position(|p| p.profile_name == name)
+            .unwrap()
+    }
+    pub fn try_find_profile_index_by_name(&self, name: &str) -> Option<usize> {
+        self.profiles.iter().position(|p| p.profile_name == name)
     }
 }
 

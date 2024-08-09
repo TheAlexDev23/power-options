@@ -68,7 +68,11 @@ impl Instance {
         self.update();
     }
     pub fn try_set_profile_override(&mut self, name: String) {
-        if try_find_profile_index_by_name(&self.profiles_info.profiles, &name).is_none() {
+        if self
+            .profiles_info
+            .try_find_profile_index_by_name(&name)
+            .is_none()
+        {
             debug!("Not updating profile override because profile name does not match with any existing profiles");
         } else {
             self.set_profile_override(name);
@@ -88,19 +92,22 @@ impl Instance {
     }
 
     pub fn update(&mut self) {
-        let profiles = &self.profiles_info.profiles;
         let active_profile = if let Some(ref temporary_override) = self.temporary_override {
             debug!("Picking temporary profile override");
-            profile::find_profile_index_by_name(&profiles, &temporary_override)
+            self.profiles_info
+                .find_profile_index_by_name(&temporary_override)
         } else if let Some(ref profile_override) = self.config.profile_override {
             debug!("Picking settings profile override");
-            profile::find_profile_index_by_name(&profiles, profile_override)
+            self.profiles_info
+                .find_profile_index_by_name(profile_override)
         } else if helpers::system_on_ac() {
             debug!("Picking AC profile");
-            profile::find_profile_index_by_name(&profiles, &self.config.ac_profile)
+            self.profiles_info
+                .find_profile_index_by_name(&self.config.ac_profile)
         } else {
             debug!("Picking BAT profile");
-            profile::find_profile_index_by_name(&profiles, &self.config.bat_profile)
+            self.profiles_info
+                .find_profile_index_by_name(&self.config.bat_profile)
         };
 
         self.profiles_info.active_profile = active_profile;
