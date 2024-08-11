@@ -11,6 +11,7 @@ pub enum HeaderInput {
     Sync(AppSyncUpdate),
     ChangingTo(Option<usize>),
     ResettingFrom(usize),
+    AllowApplyButton(bool),
 }
 
 impl From<AppSyncUpdate> for HeaderInput {
@@ -19,10 +20,11 @@ impl From<AppSyncUpdate> for HeaderInput {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Header {
     profiles_info: Option<ProfilesInfo>,
     changing_to: Option<usize>,
+    enable_apply_button: bool,
 }
 
 #[derive(Debug)]
@@ -46,10 +48,7 @@ impl SimpleComponent for Header {
         root: Self::Root,
         _sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
-        let model = Header {
-            profiles_info: None,
-            changing_to: None,
-        };
+        let model = Header::default();
 
         let widgets = HeaderWidgets { header_bar: root };
 
@@ -69,6 +68,7 @@ impl SimpleComponent for Header {
             }
             HeaderInput::ChangingTo(idx) => self.changing_to = idx,
             HeaderInput::ResettingFrom(_) => todo!(),
+            HeaderInput::AllowApplyButton(v) => self.enable_apply_button = v,
         }
     }
 
@@ -133,7 +133,7 @@ impl SimpleComponent for Header {
 
                 let button = gtk::Button::builder()
                     .label("Apply")
-                    .sensitive(true)
+                    .sensitive(self.enable_apply_button)
                     .css_classes([relm4::css::SUGGESTED_ACTION])
                     .build();
                 button.connect_clicked(move |_| sender.output(AppInput::ApplySettings).unwrap());

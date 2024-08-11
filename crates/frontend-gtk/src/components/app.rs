@@ -9,11 +9,13 @@ use relm4::Controller;
 
 use super::groups::*;
 use super::Header;
+use super::HeaderInput;
 use crate::communications;
 
 #[derive(Debug)]
 pub enum AppInput {
     ApplySettings,
+    SetChanged(bool),
 }
 
 #[derive(Debug, Clone)]
@@ -69,6 +71,13 @@ impl SimpleAsyncComponent for App {
             "CPU",
         );
 
+        {
+            let sender = sender.clone();
+            settings_group_stack.connect_visible_child_notify(move |_| {
+                sender.input(AppInput::SetChanged(false));
+            });
+        }
+
         let model = App {
             header: Header::builder()
                 .launch(())
@@ -93,6 +102,12 @@ impl SimpleAsyncComponent for App {
                         self.cpu_group.sender().send(CPUInput::Apply).unwrap();
                     }
                 }
+            }
+            AppInput::SetChanged(v) => {
+                self.header
+                    .sender()
+                    .send(HeaderInput::AllowApplyButton(v))
+                    .unwrap();
             }
         }
     }

@@ -1,3 +1,4 @@
+use core::f64;
 use std::u32;
 
 use lazy_static::lazy_static;
@@ -40,6 +41,7 @@ lazy_static! {
 pub enum CPUInput {
     Sync(AppSyncUpdate),
     ReactivityUpdate,
+    Changed,
     Apply,
     #[allow(private_interfaces)]
     UpdatingForm(bool),
@@ -102,6 +104,9 @@ pub struct CPUGroup {
 
     #[do_not_track]
     active_profile: Option<(usize, Profile)>,
+
+    #[do_not_track]
+    last_cpu_settings: Option<CPUSettings>,
 }
 
 impl CPUGroup {
@@ -136,13 +141,23 @@ impl CPUGroup {
             })
             .unwrap() as u32;
 
+        // Without info the allowed range would be 0,0 preventing us from
+        // setting a value
+        if !self.info_obtained {
+            self.min_freq.guard().set_lower(f64::MIN);
+            self.min_freq.guard().set_upper(f64::MAX);
+
+            self.max_freq.guard().set_lower(f64::MIN);
+            self.max_freq.guard().set_upper(f64::MAX);
+        }
+
         if let Some(min) = cpu_settings.min_freq {
-            self.min_freq.guard().set_value(min as f64);
+            self.min_freq.guard().set_value(min as f64 / 1000.0);
         } else {
             self.pending_frequencies_update.0 = true;
         }
         if let Some(max) = cpu_settings.max_freq {
-            self.max_freq.guard().set_value(max as f64);
+            self.max_freq.guard().set_value(max as f64 / 1000.0);
         } else {
             self.pending_frequencies_update.1 = true;
         }
@@ -212,8 +227,8 @@ impl CPUGroup {
                 .to_string(),
             ),
             epp: Some(EPPS[epp].to_string()),
-            min_freq: Some(self.min_freq.value().value() as u32),
-            max_freq: Some(self.max_freq.value().value() as u32),
+            min_freq: Some(self.min_freq.value().value() as u32 * 1000),
+            max_freq: Some(self.max_freq.value().value() as u32 * 1000),
             min_perf_pct: Some(self.min_perf.value().value() as u8),
             max_perf_pct: Some(self.max_perf.value().value() as u8),
             boost: Some(self.boost.value()),
@@ -260,6 +275,7 @@ impl SimpleComponent for CPUGroup {
                             },
                             set_model: Some(&gtk::StringList::new(&["active", "passive"])),
                             add_binding: (&model.mode, "selected"),
+                            connect_selected_item_notify => CPUInput::Changed,
                         },
 
                         adw::ComboRow {
@@ -277,6 +293,7 @@ impl SimpleComponent for CPUGroup {
                             },
                             add_binding: (&model.available_epps, "model"),
                             add_binding: (&model.epp, "selected"),
+                            connect_selected_item_notify => CPUInput::Changed,
                         },
 
                         adw::ComboRow {
@@ -284,6 +301,7 @@ impl SimpleComponent for CPUGroup {
                             add_binding: (&model.available_governors, "model"),
                             add_binding: (&model.governor, "selected"),
                             connect_selected_item_notify => CPUInput::ReactivityUpdate,
+                            connect_selected_item_notify => CPUInput::Changed,
                         }
                     },
 
@@ -291,11 +309,13 @@ impl SimpleComponent for CPUGroup {
                         adw::SpinRow {
                             set_title: "Minimum frequency (MHz)",
                             add_binding: (&model.min_freq, "adjustment"),
+                            connect_value_notify => CPUInput::Changed,
                         },
 
                         adw::SpinRow {
                             set_title: "Maximum frequency (MHz)",
                             add_binding: (&model.max_freq, "adjustment"),
+                            connect_value_notify => CPUInput::Changed,
                         }
                     },
 
@@ -311,6 +331,7 @@ impl SimpleComponent for CPUGroup {
                                 None
                             },
                             add_binding: (&model.min_perf, "adjustment"),
+                            connect_value_notify => CPUInput::Changed,
                         },
 
                         adw::SpinRow {
@@ -324,6 +345,7 @@ impl SimpleComponent for CPUGroup {
                                 None
                             },
                             add_binding: (&model.max_perf, "adjustment"),
+                            connect_value_notify => CPUInput::Changed,
                         }
                     },
 
@@ -339,6 +361,7 @@ impl SimpleComponent for CPUGroup {
                                 None
                             },
                             add_binding: (&model.boost, "active"),
+                            connect_active_notify  => CPUInput::Changed,
                         },
 
                         adw::SwitchRow {
@@ -352,6 +375,7 @@ impl SimpleComponent for CPUGroup {
                                 None
                             },
                             add_binding: (&model.hwp_dyn_boost, "active"),
+                            connect_active_notify  => CPUInput::Changed,
                         }
                     }
                 }
@@ -376,12 +400,22 @@ impl SimpleComponent for CPUGroup {
 
         match message {
             CPUInput::ReactivityUpdate => {}
+            CPUInput::Changed => {
+                if let Some(ref last_settings) = self.last_cpu_settings {
+                    sender
+                        .output(AppInput::SetChanged(
+                            *last_settings != self.to_cpu_settings(),
+                        ))
+                        .unwrap()
+                }
+            }
             CPUInput::Sync(message) => {
                 if let AppSyncUpdate::ProfilesInfo(ref profiles_info) = message {
                     if let Some(profiles_info) = profiles_info.as_ref() {
                         let profile = profiles_info.get_active_profile();
                         self.active_profile = Some((profiles_info.active_profile, profile.clone()));
                         self.from_cpu_settings(&profile.cpu_settings);
+                        self.last_cpu_settings = Some(self.to_cpu_settings());
                     }
                 }
 
