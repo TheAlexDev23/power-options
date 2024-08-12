@@ -43,9 +43,7 @@ pub enum CPUInput {
     ReactivityUpdate,
     Changed,
     Apply,
-    #[allow(private_interfaces)]
     UpdatingForm(bool),
-    UpdatingCore(Option<usize>),
 }
 
 impl From<AppSyncUpdate> for CPUInput {
@@ -61,7 +59,6 @@ pub struct CPUGroup {
     settings_obtained: bool,
 
     updating_form: bool,
-    updating_core: Option<usize>,
 
     can_change_modes: bool,
     can_change_epps: bool,
@@ -249,6 +246,16 @@ impl SimpleComponent for CPUGroup {
         gtk::Box {
             set_homogeneous: true,
             set_expand: true,
+            if model.updating_form {
+                gtk::Box {
+                    set_align: gtk::Align::Center,
+                    gtk::Label::new(Some("Applying...")),
+                    gtk::Spinner {
+                        set_spinning: true,
+                        set_visible: true,
+                    }
+                }
+            } else
             if !model.info_obtained || model.active_profile.is_none() {
                 gtk::Box {
                     set_align: gtk::Align::Center,
@@ -447,7 +454,6 @@ impl SimpleComponent for CPUGroup {
                 });
             }
             CPUInput::UpdatingForm(v) => self.updating_form = v,
-            CPUInput::UpdatingCore(v) => self.updating_core = v,
         }
     }
 }
