@@ -1,7 +1,5 @@
-use core::f64;
-use std::u32;
+use std::time::Duration;
 
-use lazy_static::lazy_static;
 use power_daemon::{CPUInfo, CPUSettings, Profile};
 
 use adw::prelude::*;
@@ -11,39 +9,20 @@ use relm4::{
     RelmObjectExt,
 };
 
+use super::{CPU_EPPS, CPU_GOVERNORS_ACTIVE, CPU_GOVERNORS_PASSIVE};
 use crate::{
-    communications::daemon_control,
+    communications::{daemon_control, system_info},
     helpers::extra_bindings::{AdjustmentBinding, StringListBinding},
     AppInput, AppSyncUpdate,
 };
-
-lazy_static! {
-    static ref MODES: Vec<&'static str> = vec!["active", "passive"];
-    static ref EPPS: Vec<&'static str> = vec![
-        "performance",
-        "balance_performance",
-        "default",
-        "balance_power",
-        "power",
-    ];
-    static ref GOVERNORS_ACTIVE: Vec<&'static str> = vec!["performance", "powersave"];
-    static ref GOVERNORS_PASSIVE: Vec<&'static str> = vec![
-        "conservative",
-        "ondemand",
-        "userspace",
-        "powersave",
-        "performance",
-        "schedutil",
-    ];
-}
 
 #[derive(Debug, Clone)]
 pub enum CPUInput {
     Sync(AppSyncUpdate),
     ReactivityUpdate,
+    ConfigureSysinfo,
     Changed,
     Apply,
-    UpdatingForm(bool),
 }
 
 impl From<AppSyncUpdate> for CPUInput {
@@ -57,8 +36,6 @@ impl From<AppSyncUpdate> for CPUInput {
 pub struct CPUGroup {
     info_obtained: bool,
     settings_obtained: bool,
-
-    updating_form: bool,
 
     can_change_modes: bool,
     can_change_epps: bool,
@@ -112,13 +89,13 @@ impl CPUGroup {
     }
 
     fn from_cpu_settings(&mut self, cpu_settings: &CPUSettings) {
-        let epps = EPPS.clone();
+        let epps = CPU_EPPS.clone();
 
         let governors = if cpu_settings.mode.as_ref().unwrap_or(&"passive".to_string()) == "active"
         {
-            GOVERNORS_ACTIVE.clone()
+            CPU_GOVERNORS_ACTIVE.clone()
         } else {
-            GOVERNORS_PASSIVE.clone()
+            CPU_GOVERNORS_PASSIVE.clone()
         };
 
         *self.available_epps.guard() = gtk::StringList::new(&epps);
@@ -217,15 +194,15 @@ impl CPUGroup {
             mode: Some(if active { "active" } else { "passive" }.to_string()),
             governor: Some(
                 if active {
-                    GOVERNORS_ACTIVE[gov]
+                    CPU_GOVERNORS_ACTIVE[gov]
                 } else {
-                    GOVERNORS_PASSIVE[gov]
+                    CPU_GOVERNORS_PASSIVE[gov]
                 }
                 .to_string(),
             ),
-            epp: Some(EPPS[epp].to_string()),
-            min_freq: Some(self.min_freq.value().value() as u32 * 1000),
-            max_freq: Some(self.max_freq.value().value() as u32 * 1000),
+            epp: Some(CPU_EPPS[epp].to_string()),
+            min_freq: Some(self.min_freq.value().value() as u32),
+            max_freq: Some(self.max_freq.value().value() as u32),
             min_perf_pct: Some(self.min_perf.value().value() as u8),
             max_perf_pct: Some(self.max_perf.value().value() as u8),
             boost: Some(self.boost.value()),
@@ -246,16 +223,6 @@ impl SimpleComponent for CPUGroup {
         gtk::Box {
             set_homogeneous: true,
             set_expand: true,
-            if model.updating_form {
-                gtk::Box {
-                    set_align: gtk::Align::Center,
-                    gtk::Label::new(Some("Applying...")),
-                    gtk::Spinner {
-                        set_spinning: true,
-                        set_visible: true,
-                    }
-                }
-            } else
             if !model.info_obtained || model.active_profile.is_none() {
                 gtk::Box {
                     set_align: gtk::Align::Center,
@@ -438,7 +405,7 @@ impl SimpleComponent for CPUGroup {
                     return;
                 }
 
-                sender.input(CPUInput::UpdatingForm(true));
+                sender.output(AppInput::SetUpdating(true)).unwrap();
 
                 let mut active_profile = self.active_profile.clone().unwrap();
                 active_profile.1.cpu_settings = self.to_cpu_settings();
@@ -450,10 +417,13 @@ impl SimpleComponent for CPUGroup {
 
                     daemon_control::get_profiles_info().await;
 
-                    sender.input(CPUInput::UpdatingForm(false));
+                    sender.output(AppInput::SetUpdating(false)).unwrap();
                 });
             }
-            CPUInput::UpdatingForm(v) => self.updating_form = v,
+            CPUInput::ConfigureSysinfo => system_info::set_system_info_sync(
+                Duration::from_secs_f32(5.0),
+                system_info::SystemInfoSyncType::CPU,
+            ),
         }
     }
 }

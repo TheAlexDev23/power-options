@@ -68,8 +68,8 @@ pub struct CoreInfo {
     pub current_frequency: u32,
     pub base_frequency: u32,
 
-    pub min_frequency: u32,
-    pub max_frequency: u32,
+    pub total_min_frequency: u32,
+    pub total_max_frequency: u32,
 
     pub scaling_min_frequency: u32,
     pub scaling_max_frequency: u32,
@@ -147,8 +147,18 @@ impl CPUInfo {
 
         ret.obtain_core_info();
 
-        ret.total_max_frequency = ret.cores.iter().map(|c| c.max_frequency).max().unwrap();
-        ret.total_min_frequency = ret.cores.iter().map(|c| c.min_frequency).min().unwrap();
+        ret.total_max_frequency = ret
+            .cores
+            .iter()
+            .map(|c| c.total_max_frequency)
+            .max()
+            .unwrap();
+        ret.total_min_frequency = ret
+            .cores
+            .iter()
+            .map(|c| c.total_min_frequency)
+            .min()
+            .unwrap();
 
         ret
     }
@@ -259,8 +269,8 @@ impl CPUInfo {
                     base_frequency,
                     current_frequency,
 
-                    min_frequency,
-                    max_frequency,
+                    total_min_frequency: min_frequency,
+                    total_max_frequency: max_frequency,
 
                     scaling_min_frequency,
                     scaling_max_frequency,

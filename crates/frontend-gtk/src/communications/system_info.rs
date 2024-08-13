@@ -40,7 +40,7 @@ pub fn start_system_info_sync_routine() {
                 let (duration, sync_type) = receiver.recv().await.unwrap();
                 syncing_state = SyncingState::Syncing(duration, sync_type);
             } else if let SyncingState::Syncing(ref duration, ref sync_type) = syncing_state {
-                if *sync_type != SystemInfoSyncType::Whole && SYSTEM_INFO.is_none_blocking() {
+                if *sync_type != SystemInfoSyncType::Whole && SYSTEM_INFO.is_none().await {
                     SYSTEM_INFO
                         .set(system_info_client.get_system_info().await.unwrap())
                         .await;
@@ -56,25 +56,25 @@ pub fn start_system_info_sync_routine() {
                     SystemInfoSyncType::CPU => {
                         let updated = system_info_client.get_cpu_info().await.unwrap();
                         SYSTEM_INFO
-                            .set_mut(move |mut v| v.as_mut().unwrap().cpu_info = updated.clone())
+                            .set_mut(move |v| v.as_mut().unwrap().cpu_info = updated.clone())
                             .await
                     }
                     SystemInfoSyncType::PCI => {
                         let updated = system_info_client.get_pci_info().await.unwrap();
                         SYSTEM_INFO
-                            .set_mut(move |mut v| v.as_mut().unwrap().pci_info = updated.clone())
+                            .set_mut(move |v| v.as_mut().unwrap().pci_info = updated.clone())
                             .await
                     }
                     SystemInfoSyncType::USB => {
                         let updated = system_info_client.get_usb_info().await.unwrap();
                         SYSTEM_INFO
-                            .set_mut(move |mut v| v.as_mut().unwrap().usb_info = updated.clone())
+                            .set_mut(move |v| v.as_mut().unwrap().usb_info = updated.clone())
                             .await
                     }
                     SystemInfoSyncType::SATA => {
                         let updated = system_info_client.get_sata_info().await.unwrap();
                         SYSTEM_INFO
-                            .set_mut(move |mut v| v.as_mut().unwrap().sata_info = updated.clone())
+                            .set_mut(move |v| v.as_mut().unwrap().sata_info = updated.clone())
                             .await
                     }
                 }

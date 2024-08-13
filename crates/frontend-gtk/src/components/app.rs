@@ -16,6 +16,7 @@ use crate::communications;
 pub enum AppInput {
     ApplySettings,
     SetChanged(bool),
+    SetUpdating(bool),
 }
 
 #[derive(Debug, Clone)]
@@ -26,9 +27,14 @@ pub enum AppSyncUpdate {
 }
 
 pub struct App {
-    header: Controller<Header>,
-    cpu_group: Controller<CPUGroup>,
+    updating: bool,
+
     settings_group_stack: gtk::Stack,
+
+    header: Controller<Header>,
+
+    cpu_group: Controller<CPUGroup>,
+    cpu_cores_group: Controller<CPUCoresGroup>,
 }
 
 #[relm4::component(pub, async)]
@@ -41,14 +47,26 @@ impl SimpleAsyncComponent for App {
     view! {
         gtk::ApplicationWindow {
             set_titlebar: Some(model.header.widget()),
-            gtk::Paned {
-                set_position: 200,
-                #[wrap(Some)]
-                set_start_child= &gtk::StackSidebar {
-                    set_stack = &model.settings_group_stack.clone(),
-                },
-                #[wrap(Some)]
-                set_end_child=&model.settings_group_stack.clone(),
+            if model.updating {
+                gtk::Box {
+                    set_align: gtk::Align::Center,
+                    gtk::Label::new(Some("Applying...")),
+                    gtk::Spinner {
+                        set_spinning: true,
+                        set_visible: true,
+                    }
+                }
+            } else {
+                gtk::Paned {
+                    set_position: 200,
+                    #[wrap(Some)]
+                    set_start_child= &gtk::StackSidebar {
+                        set_stack = &model.settings_group_stack.clone(),
+                    },
+                    #[wrap(Some)]
+                    set_end_child=&model.settings_group_stack.clone(),
+                }
+
             }
         }
     }
@@ -61,8 +79,12 @@ impl SimpleAsyncComponent for App {
         let cpu_group = CPUGroup::builder()
             .launch(())
             .forward(sender.input_sender(), identity);
+        let cpu_cores_group = CPUCoresGroup::builder()
+            .launch(())
+            .forward(sender.input_sender(), identity);
 
         let settings_group_stack = gtk::Stack::new();
+        settings_group_stack.set_transition_type(gtk::StackTransitionType::SlideUpDown);
         settings_group_stack.add_titled(
             &gtk::ScrolledWindow::builder()
                 .child(cpu_group.widget())
@@ -70,21 +92,40 @@ impl SimpleAsyncComponent for App {
             Some("CPU"),
             "CPU",
         );
+        settings_group_stack.add_titled(
+            &gtk::ScrolledWindow::builder()
+                .child(cpu_cores_group.widget())
+                .build(),
+            Some("CPU Cores"),
+            "CPU Cores",
+        );
 
         {
             let sender = sender.clone();
-            settings_group_stack.connect_visible_child_notify(move |_| {
+            let cpu_group = cpu_group.sender().clone();
+            let cpu_cores_group = cpu_cores_group.sender().clone();
+            settings_group_stack.connect_visible_child_notify(move |stack| {
                 sender.input(AppInput::SetChanged(false));
+                let name = stack.visible_child_name().unwrap();
+                if name == "CPU" {
+                    cpu_group.send(CPUInput::ConfigureSysinfo).unwrap();
+                } else if name == "CPU Cores" {
+                    cpu_cores_group
+                        .send(CPUCoresInput::ConfigureSysinfo)
+                        .unwrap();
+                }
             });
         }
 
         let model = App {
+            updating: false,
             header: Header::builder()
                 .launch(())
                 .forward(sender.input_sender(), identity),
 
-            cpu_group,
             settings_group_stack,
+            cpu_group,
+            cpu_cores_group,
         };
 
         let widgets = view_output!();
@@ -100,6 +141,11 @@ impl SimpleAsyncComponent for App {
                 if let Some(name) = self.settings_group_stack.visible_child_name() {
                     if name == "CPU" {
                         self.cpu_group.sender().send(CPUInput::Apply).unwrap();
+                    } else if name == "CPU Cores" {
+                        self.cpu_cores_group
+                            .sender()
+                            .send(CPUCoresInput::Apply)
+                            .unwrap();
                     }
                 }
             }
@@ -108,6 +154,9 @@ impl SimpleAsyncComponent for App {
                     .sender()
                     .send(HeaderInput::AllowApplyButton(v))
                     .unwrap();
+            }
+            AppInput::SetUpdating(v) => {
+                self.updating = v;
             }
         }
     }
@@ -118,9 +167,11 @@ impl App {
         let send_to_all = {
             let header_sender = self.header.sender().clone();
             let cpu_sender = self.cpu_group.sender().clone();
+            let cpu_cores_sender = self.cpu_cores_group.sender().clone();
             move |msg: AppSyncUpdate| {
                 header_sender.send(msg.clone().into()).unwrap();
                 cpu_sender.send(msg.clone().into()).unwrap();
+                cpu_cores_sender.send(msg.clone().into()).unwrap();
             }
         };
 

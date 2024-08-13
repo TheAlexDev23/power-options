@@ -199,13 +199,13 @@ impl CPUSettings {
         if let Some(min_frequency) = self.min_freq {
             run_command(&format!(
                 "echo {} > /sys/devices/system/cpu/cpu*/cpufreq/scaling_min_freq",
-                min_frequency
+                min_frequency * 1000
             ));
         }
         if let Some(max_frequency) = self.max_freq {
             run_command(&format!(
                 "echo {} > /sys/devices/system/cpu/cpu*/cpufreq/scaling_max_freq",
-                max_frequency
+                max_frequency * 1000
             ));
         }
 
@@ -298,13 +298,15 @@ impl CoreSetting {
         if let Some(min_frequency) = self.min_frequency {
             run_command(&format!(
                 "echo {} > /sys/devices/system/cpu/cpu{}/cpufreq/scaling_min_freq",
-                min_frequency, self.cpu_id,
+                min_frequency * 1000,
+                self.cpu_id,
             ));
         }
         if let Some(max_frequency) = self.max_frequency {
             run_command(&format!(
                 "echo {} > /sys/devices/system/cpu/cpu{}/cpufreq/scaling_max_freq",
-                max_frequency, self.cpu_id
+                max_frequency * 1000,
+                self.cpu_id
             ));
         }
     }

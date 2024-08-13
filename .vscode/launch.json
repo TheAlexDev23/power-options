@@ -1,0 +1,138 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'power_daemon'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=power-daemon"
+                ],
+                "filter": {
+                    "name": "power_daemon",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'frontend'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=frontend",
+                    "--package=frontend"
+                ],
+                "filter": {
+                    "name": "frontend",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'frontend'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=frontend",
+                    "--package=frontend"
+                ],
+                "filter": {
+                    "name": "frontend",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'power-daemon-mgr'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=power-daemon-mgr",
+                    "--package=power-daemon-mgr"
+                ],
+                "filter": {
+                    "name": "power-daemon-mgr",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'power-daemon-mgr'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=power-daemon-mgr",
+                    "--package=power-daemon-mgr"
+                ],
+                "filter": {
+                    "name": "power-daemon-mgr",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'frontend-gtk'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=frontend-gtk",
+                    "--package=frontend-gtk"
+                ],
+                "filter": {
+                    "name": "frontend-gtk",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'frontend-gtk'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=frontend-gtk",
+                    "--package=frontend-gtk"
+                ],
+                "filter": {
+                    "name": "frontend-gtk",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}
