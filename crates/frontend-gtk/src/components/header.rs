@@ -4,19 +4,19 @@ use relm4::prelude::*;
 
 use crate::communications::daemon_control;
 
-use super::{AppInput, AppSyncUpdate};
+use super::{AppInput, AppSyncUpdate, RootRequest};
 
 #[derive(Debug, Clone)]
 pub enum HeaderInput {
-    Sync(AppSyncUpdate),
+    RootRequest(RootRequest),
     ChangingTo(Option<usize>),
     ResettingFrom(usize),
     AllowApplyButton(bool),
 }
 
-impl From<AppSyncUpdate> for HeaderInput {
-    fn from(value: AppSyncUpdate) -> Self {
-        Self::Sync(value)
+impl From<RootRequest> for HeaderInput {
+    fn from(value: RootRequest) -> Self {
+        Self::RootRequest(value)
     }
 }
 
@@ -61,7 +61,7 @@ impl SimpleComponent for Header {
 
     fn update(&mut self, message: Self::Input, _sender: ComponentSender<Self>) {
         match message {
-            HeaderInput::Sync(message) => {
+            HeaderInput::RootRequest(RootRequest::ReactToUpdate(message)) => {
                 if let AppSyncUpdate::ProfilesInfo(profiles_info) = message {
                     self.profiles_info = (*profiles_info).clone();
                 }
@@ -69,6 +69,7 @@ impl SimpleComponent for Header {
             HeaderInput::ChangingTo(idx) => self.changing_to = idx,
             HeaderInput::ResettingFrom(_) => todo!(),
             HeaderInput::AllowApplyButton(v) => self.enable_apply_button = v,
+            _ => {}
         }
     }
 
@@ -136,7 +137,11 @@ impl SimpleComponent for Header {
                     .sensitive(self.enable_apply_button)
                     .css_classes([relm4::css::SUGGESTED_ACTION])
                     .build();
-                button.connect_clicked(move |_| sender.output(AppInput::ApplySettings).unwrap());
+                button.connect_clicked(move |_| {
+                    sender
+                        .output(AppInput::SendRootRequestToActiveGroup(RootRequest::Apply))
+                        .unwrap()
+                });
 
                 ret.set_end_widget(Some(&button));
 

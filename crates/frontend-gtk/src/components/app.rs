@@ -14,9 +14,17 @@ use crate::communications;
 
 #[derive(Debug)]
 pub enum AppInput {
-    ApplySettings,
+    SendRootRequestToAll(RootRequest),
+    SendRootRequestToActiveGroup(RootRequest),
     SetChanged(bool),
     SetUpdating(bool),
+}
+
+#[derive(Debug, Clone)]
+pub enum RootRequest {
+    ReactToUpdate(AppSyncUpdate),
+    ConfigureSystemInfoSync,
+    Apply,
 }
 
 #[derive(Debug, Clone)]
@@ -113,21 +121,11 @@ impl SimpleAsyncComponent for App {
 
         {
             let sender = sender.clone();
-            let cpu_group = cpu_group.sender().clone();
-            let cpu_cores_group = cpu_cores_group.sender().clone();
-            let radio_group = radio_group.sender().clone();
-            settings_group_stack.connect_visible_child_notify(move |stack| {
+            settings_group_stack.connect_visible_child_notify(move |_| {
                 sender.input(AppInput::SetChanged(false));
-                let name = stack.visible_child_name().unwrap();
-                if name == "CPU" {
-                    cpu_group.send(CPUInput::ConfigureSysinfo).unwrap();
-                } else if name == "CPU Cores" {
-                    cpu_cores_group
-                        .send(CPUCoresInput::ConfigureSysinfo)
-                        .unwrap();
-                } else if name == "Radio" {
-                    radio_group.send(RadioInput::ConfigureSysinfo).unwrap();
-                }
+                sender.input(AppInput::SendRootRequestToActiveGroup(
+                    RootRequest::ConfigureSystemInfoSync,
+                ));
             });
         }
 
@@ -145,26 +143,38 @@ impl SimpleAsyncComponent for App {
 
         let widgets = view_output!();
 
-        model.setup_sync_listeners().await;
+        setup_sync_listeners(sender).await;
 
         AsyncComponentParts { model, widgets }
     }
 
     async fn update(&mut self, message: Self::Input, _sender: AsyncComponentSender<Self>) {
         match message {
-            AppInput::ApplySettings => {
+            AppInput::SendRootRequestToActiveGroup(request) => {
                 if let Some(name) = self.settings_group_stack.visible_child_name() {
                     if name == "CPU" {
-                        self.cpu_group.sender().send(CPUInput::Apply).unwrap();
+                        self.cpu_group.sender().send(request.into()).unwrap();
                     } else if name == "CPU Cores" {
-                        self.cpu_cores_group
-                            .sender()
-                            .send(CPUCoresInput::Apply)
-                            .unwrap();
+                        self.cpu_cores_group.sender().send(request.into()).unwrap();
                     } else if name == "Radio" {
-                        self.radio_group.sender().send(RadioInput::Apply).unwrap()
+                        self.radio_group.sender().send(request.into()).unwrap()
                     }
                 }
+            }
+            AppInput::SendRootRequestToAll(request) => {
+                self.header.sender().send(request.clone().into()).unwrap();
+                self.cpu_group
+                    .sender()
+                    .send(request.clone().into())
+                    .unwrap();
+                self.cpu_cores_group
+                    .sender()
+                    .send(request.clone().into())
+                    .unwrap();
+                self.radio_group
+                    .sender()
+                    .send(request.clone().into())
+                    .unwrap();
             }
             AppInput::SetChanged(v) => {
                 self.header
@@ -179,51 +189,40 @@ impl SimpleAsyncComponent for App {
     }
 }
 
-impl App {
-    async fn setup_sync_listeners(&self) {
-        let send_to_all = {
-            let header_sender = self.header.sender().clone();
-            let cpu_sender = self.cpu_group.sender().clone();
-            let cpu_cores_sender = self.cpu_cores_group.sender().clone();
-            let radio_sender = self.radio_group.sender().clone();
-            move |msg: AppSyncUpdate| {
-                header_sender.send(msg.clone().into()).unwrap();
-                cpu_sender.send(msg.clone().into()).unwrap();
-                cpu_cores_sender.send(msg.clone().into()).unwrap();
-                radio_sender.send(msg.clone().into()).unwrap();
+async fn setup_sync_listeners(sender: AsyncComponentSender<App>) {
+    communications::PROFILES_INFO
+        .listen(clone!(
+            #[strong]
+            sender,
+            move |profiles_info| {
+                sender.input(AppInput::SendRootRequestToAll(RootRequest::ReactToUpdate(
+                    AppSyncUpdate::ProfilesInfo(Arc::from(profiles_info.cloned())),
+                )));
             }
-        };
+        ))
+        .await;
 
-        communications::PROFILES_INFO
-            .listen(clone!(
-                #[strong]
-                send_to_all,
-                move |profiles_info| {
-                    send_to_all(AppSyncUpdate::ProfilesInfo(Arc::from(
-                        profiles_info.cloned(),
-                    )));
-                }
-            ))
-            .await;
+    communications::CONFIG
+        .listen(clone!(
+            #[strong]
+            sender,
+            move |config| {
+                sender.input(AppInput::SendRootRequestToAll(RootRequest::ReactToUpdate(
+                    AppSyncUpdate::Config(Arc::from(config.cloned())),
+                )));
+            }
+        ))
+        .await;
 
-        communications::CONFIG
-            .listen(clone!(
-                #[strong]
-                send_to_all,
-                move |config| {
-                    send_to_all(AppSyncUpdate::Config(Arc::from(config.cloned())));
-                }
-            ))
-            .await;
-
-        communications::SYSTEM_INFO
-            .listen(clone!(
-                #[strong]
-                send_to_all,
-                move |system_info| {
-                    send_to_all(AppSyncUpdate::SystemInfo(Arc::from(system_info.cloned())));
-                }
-            ))
-            .await;
-    }
+    communications::SYSTEM_INFO
+        .listen(clone!(
+            #[strong]
+            sender,
+            move |system_info| {
+                sender.input(AppInput::SendRootRequestToAll(RootRequest::ReactToUpdate(
+                    AppSyncUpdate::SystemInfo(Arc::from(system_info.cloned())),
+                )));
+            }
+        ))
+        .await;
 }

@@ -10,21 +10,18 @@ use relm4::{
 
 use crate::{
     communications::{daemon_control, system_info},
-    AppInput, AppSyncUpdate,
+    AppInput, AppSyncUpdate, RootRequest,
 };
 
 #[derive(Debug, Clone)]
 pub enum RadioInput {
-    Sync(AppSyncUpdate),
-    ReactivityUpdate,
-    ConfigureSysinfo,
+    RootRequest(RootRequest),
     Changed,
-    Apply,
 }
 
-impl From<AppSyncUpdate> for RadioInput {
-    fn from(value: AppSyncUpdate) -> Self {
-        Self::Sync(value)
+impl From<RootRequest> for RadioInput {
+    fn from(value: RootRequest) -> Self {
+        Self::RootRequest(value)
     }
 }
 
@@ -121,7 +118,46 @@ impl SimpleComponent for RadioGroup {
 
     fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>) {
         match message {
-            RadioInput::ReactivityUpdate => {}
+            RadioInput::RootRequest(request) => match request {
+                RootRequest::ReactToUpdate(message) => {
+                    if let AppSyncUpdate::ProfilesInfo(ref profiles_info) = message {
+                        if let Some(profiles_info) = profiles_info.as_ref() {
+                            let profile = profiles_info.get_active_profile();
+                            self.active_profile =
+                                Some((profiles_info.active_profile, profile.clone()));
+                            self.from_radio_settings(&profile.radio_settings);
+                            self.settings_obtained = true;
+                            self.last_radio_settings = Some(self.to_radio_settings());
+                        }
+                    }
+                }
+                RootRequest::ConfigureSystemInfoSync => system_info::set_system_info_sync(
+                    Duration::from_secs_f32(10.0),
+                    system_info::SystemInfoSyncType::None,
+                ),
+                RootRequest::Apply => {
+                    if !(self.settings_obtained && self.active_profile.is_some()) {
+                        return;
+                    }
+
+                    sender.output(AppInput::SetUpdating(true)).unwrap();
+
+                    let mut active_profile = self.active_profile.clone().unwrap();
+                    active_profile.1.radio_settings = self.to_radio_settings();
+
+                    tokio::spawn(async move {
+                        daemon_control::set_reduced_update(power_daemon::ReducedUpdate::Radio)
+                            .await;
+
+                        daemon_control::update_profile(active_profile.0 as u32, active_profile.1)
+                            .await;
+
+                        daemon_control::get_profiles_info().await;
+
+                        sender.output(AppInput::SetUpdating(false)).unwrap();
+                    });
+                }
+            },
             RadioInput::Changed => {
                 if let Some(ref last_settings) = self.last_radio_settings {
                     sender
@@ -131,41 +167,6 @@ impl SimpleComponent for RadioGroup {
                         .unwrap()
                 }
             }
-            RadioInput::Sync(message) => {
-                if let AppSyncUpdate::ProfilesInfo(ref profiles_info) = message {
-                    if let Some(profiles_info) = profiles_info.as_ref() {
-                        let profile = profiles_info.get_active_profile();
-                        self.active_profile = Some((profiles_info.active_profile, profile.clone()));
-                        self.from_radio_settings(&profile.radio_settings);
-                        self.settings_obtained = true;
-                        self.last_radio_settings = Some(self.to_radio_settings());
-                    }
-                }
-            }
-            RadioInput::Apply => {
-                if !(self.settings_obtained && self.active_profile.is_some()) {
-                    return;
-                }
-
-                sender.output(AppInput::SetUpdating(true)).unwrap();
-
-                let mut active_profile = self.active_profile.clone().unwrap();
-                active_profile.1.radio_settings = self.to_radio_settings();
-
-                tokio::spawn(async move {
-                    daemon_control::set_reduced_update(power_daemon::ReducedUpdate::Radio).await;
-
-                    daemon_control::update_profile(active_profile.0 as u32, active_profile.1).await;
-
-                    daemon_control::get_profiles_info().await;
-
-                    sender.output(AppInput::SetUpdating(false)).unwrap();
-                });
-            }
-            RadioInput::ConfigureSysinfo => system_info::set_system_info_sync(
-                Duration::from_secs_f32(10.0),
-                system_info::SystemInfoSyncType::None,
-            ),
         }
     }
 }

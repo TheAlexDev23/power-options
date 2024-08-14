@@ -9,7 +9,7 @@ use relm4::prelude::*;
 use super::{CPU_EPPS, CPU_GOVERNORS_ACTIVE, CPU_GOVERNORS_PASSIVE};
 use crate::{
     communications::{daemon_control, system_info},
-    AppInput, AppSyncUpdate,
+    AppInput, AppSyncUpdate, RootRequest,
 };
 
 const CPU_IDX: u32 = 0;
@@ -23,9 +23,7 @@ const TOTAL_MAX_IDX: u32 = 7;
 
 #[derive(Debug, Clone)]
 pub enum CPUCoresInput {
-    Sync(AppSyncUpdate),
-    ConfigureSysinfo,
-    ReactivityUpdate,
+    RootRequest(RootRequest),
     OnlineChanged(gtk::TreePath, bool),
     GovChanged(gtk::TreePath, gtk::glib::Value),
     EppChanged(gtk::TreePath, gtk::glib::Value),
@@ -33,14 +31,13 @@ pub enum CPUCoresInput {
     /// converted to an integer, the value won't be changed.
     FreqLimChanged(bool, gtk::TreePath, String),
     Reset,
-    Apply,
 }
 
 unsafe impl Send for CPUCoresInput {}
 
-impl From<AppSyncUpdate> for CPUCoresInput {
-    fn from(value: AppSyncUpdate) -> Self {
-        Self::Sync(value)
+impl From<RootRequest> for CPUCoresInput {
+    fn from(value: RootRequest) -> Self {
+        Self::RootRequest(value)
     }
 }
 
@@ -327,46 +324,50 @@ impl SimpleComponent for CPUCoresGroup {
 
     fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>) {
         match &message {
-            CPUCoresInput::ReactivityUpdate => {}
-            CPUCoresInput::Sync(message) => {
-                if let AppSyncUpdate::ProfilesInfo(ref profiles_info) = message {
-                    if let Some(profiles_info) = profiles_info.as_ref() {
-                        let profile = profiles_info.get_active_profile();
-                        self.active_profile = Some((profiles_info.active_profile, profile.clone()));
+            CPUCoresInput::RootRequest(message) => match message {
+                RootRequest::ReactToUpdate(message) => {
+                    if let AppSyncUpdate::ProfilesInfo(ref profiles_info) = message {
+                        if let Some(profiles_info) = profiles_info.as_ref() {
+                            let profile = profiles_info.get_active_profile();
+                            self.active_profile =
+                                Some((profiles_info.active_profile, profile.clone()));
+                            sender.input(CPUCoresInput::Reset);
+                        }
+                    }
+
+                    if let AppSyncUpdate::SystemInfo(ref system_info) = message {
+                        if let Some(system_info) = system_info.as_ref() {
+                            self.info_obtained = true;
+                            self.from_cpu_info(&system_info.cpu_info);
+                            self.last_settings = Some(self.to_core_settings());
+                        }
+                    }
+                }
+                RootRequest::ConfigureSystemInfoSync => fetch_cpu_info_once(),
+                RootRequest::Apply => {
+                    if !(self.info_obtained && self.active_profile.is_some()) {
+                        return;
+                    }
+
+                    sender.output(AppInput::SetUpdating(true)).unwrap();
+
+                    let mut active_profile = self.active_profile.clone().unwrap();
+                    active_profile.1.cpu_core_settings = self.to_core_settings();
+
+                    let sender = sender.clone();
+                    tokio::spawn(async move {
+                        daemon_control::set_reduced_update(power_daemon::ReducedUpdate::CPUCores)
+                            .await;
+
+                        daemon_control::update_profile(active_profile.0 as u32, active_profile.1)
+                            .await;
+
                         sender.input(CPUCoresInput::Reset);
-                    }
+                        sender.output(AppInput::SetUpdating(false)).unwrap();
+                        sender.output(AppInput::SetChanged(false)).unwrap();
+                    });
                 }
-
-                if let AppSyncUpdate::SystemInfo(ref system_info) = message {
-                    if let Some(system_info) = system_info.as_ref() {
-                        self.info_obtained = true;
-                        self.from_cpu_info(&system_info.cpu_info);
-                        self.last_settings = Some(self.to_core_settings());
-                    }
-                }
-            }
-            CPUCoresInput::Apply => {
-                if !(self.info_obtained && self.active_profile.is_some()) {
-                    return;
-                }
-
-                sender.output(AppInput::SetUpdating(true)).unwrap();
-
-                let mut active_profile = self.active_profile.clone().unwrap();
-                active_profile.1.cpu_core_settings = self.to_core_settings();
-
-                let sender = sender.clone();
-                tokio::spawn(async move {
-                    daemon_control::set_reduced_update(power_daemon::ReducedUpdate::CPUCores).await;
-
-                    daemon_control::update_profile(active_profile.0 as u32, active_profile.1).await;
-
-                    sender.input(CPUCoresInput::Reset);
-                    sender.output(AppInput::SetUpdating(false)).unwrap();
-                    sender.output(AppInput::SetChanged(false)).unwrap();
-                });
-            }
-            CPUCoresInput::ConfigureSysinfo => fetch_cpu_info_once(),
+            },
             CPUCoresInput::FreqLimChanged(min, path, v) => {
                 let min = *min;
                 let iter = self.cores.iter(&path).unwrap();
@@ -413,11 +414,7 @@ impl SimpleComponent for CPUCoresGroup {
         }
 
         match &message {
-            CPUCoresInput::Sync(_)
-            | CPUCoresInput::ConfigureSysinfo
-            | CPUCoresInput::ReactivityUpdate
-            | CPUCoresInput::Apply
-            | CPUCoresInput::Reset => {}
+            CPUCoresInput::RootRequest(_) | CPUCoresInput::Reset => {}
 
             CPUCoresInput::GovChanged(_, _)
             | CPUCoresInput::EppChanged(_, _)

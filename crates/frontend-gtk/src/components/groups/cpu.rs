@@ -13,21 +13,18 @@ use super::{CPU_EPPS, CPU_GOVERNORS_ACTIVE, CPU_GOVERNORS_PASSIVE};
 use crate::{
     communications::{daemon_control, system_info},
     helpers::extra_bindings::{AdjustmentBinding, StringListBinding},
-    AppInput, AppSyncUpdate,
+    AppInput, AppSyncUpdate, RootRequest,
 };
 
 #[derive(Debug, Clone)]
 pub enum CPUInput {
-    Sync(AppSyncUpdate),
-    ReactivityUpdate,
-    ConfigureSysinfo,
+    RootRequest(RootRequest),
     Changed,
-    Apply,
 }
 
-impl From<AppSyncUpdate> for CPUInput {
-    fn from(value: AppSyncUpdate) -> Self {
-        Self::Sync(value)
+impl From<RootRequest> for CPUInput {
+    fn from(value: RootRequest) -> Self {
+        Self::RootRequest(value)
     }
 }
 
@@ -273,7 +270,6 @@ impl SimpleComponent for CPUGroup {
                             set_title: "Scaling governor",
                             add_binding: (&model.available_governors, "model"),
                             add_binding: (&model.governor, "selected"),
-                            connect_selected_item_notify => CPUInput::ReactivityUpdate,
                             connect_selected_item_notify => CPUInput::Changed,
                         }
                     },
@@ -372,7 +368,51 @@ impl SimpleComponent for CPUGroup {
         self.reset();
 
         match message {
-            CPUInput::ReactivityUpdate => {}
+            CPUInput::RootRequest(request) => match request {
+                RootRequest::Apply => {
+                    if !(self.info_obtained && self.active_profile.is_some()) {
+                        return;
+                    }
+
+                    sender.output(AppInput::SetUpdating(true)).unwrap();
+
+                    let mut active_profile = self.active_profile.clone().unwrap();
+                    active_profile.1.cpu_settings = self.to_cpu_settings();
+
+                    tokio::spawn(async move {
+                        daemon_control::set_reduced_update(power_daemon::ReducedUpdate::CPU).await;
+
+                        daemon_control::update_profile(active_profile.0 as u32, active_profile.1)
+                            .await;
+
+                        daemon_control::get_profiles_info().await;
+
+                        sender.output(AppInput::SetUpdating(false)).unwrap();
+                    });
+                }
+                RootRequest::ConfigureSystemInfoSync => system_info::set_system_info_sync(
+                    Duration::from_secs_f32(5.0),
+                    system_info::SystemInfoSyncType::CPU,
+                ),
+                RootRequest::ReactToUpdate(message) => {
+                    if let AppSyncUpdate::ProfilesInfo(ref profiles_info) = message {
+                        if let Some(profiles_info) = profiles_info.as_ref() {
+                            let profile = profiles_info.get_active_profile();
+                            self.active_profile =
+                                Some((profiles_info.active_profile, profile.clone()));
+                            self.from_cpu_settings(&profile.cpu_settings);
+                            self.last_cpu_settings = Some(self.to_cpu_settings());
+                        }
+                    }
+
+                    if let AppSyncUpdate::SystemInfo(ref system_info) = message {
+                        if let Some(system_info) = system_info.as_ref() {
+                            self.info_obtained = true;
+                            self.from_cpu_info(&system_info.cpu_info);
+                        }
+                    }
+                }
+            },
             CPUInput::Changed => {
                 if let Some(ref last_settings) = self.last_cpu_settings {
                     sender
@@ -382,47 +422,6 @@ impl SimpleComponent for CPUGroup {
                         .unwrap()
                 }
             }
-            CPUInput::Sync(message) => {
-                if let AppSyncUpdate::ProfilesInfo(ref profiles_info) = message {
-                    if let Some(profiles_info) = profiles_info.as_ref() {
-                        let profile = profiles_info.get_active_profile();
-                        self.active_profile = Some((profiles_info.active_profile, profile.clone()));
-                        self.from_cpu_settings(&profile.cpu_settings);
-                        self.last_cpu_settings = Some(self.to_cpu_settings());
-                    }
-                }
-
-                if let AppSyncUpdate::SystemInfo(ref system_info) = message {
-                    if let Some(system_info) = system_info.as_ref() {
-                        self.info_obtained = true;
-                        self.from_cpu_info(&system_info.cpu_info);
-                    }
-                }
-            }
-            CPUInput::Apply => {
-                if !(self.info_obtained && self.active_profile.is_some()) {
-                    return;
-                }
-
-                sender.output(AppInput::SetUpdating(true)).unwrap();
-
-                let mut active_profile = self.active_profile.clone().unwrap();
-                active_profile.1.cpu_settings = self.to_cpu_settings();
-
-                tokio::spawn(async move {
-                    daemon_control::set_reduced_update(power_daemon::ReducedUpdate::CPU).await;
-
-                    daemon_control::update_profile(active_profile.0 as u32, active_profile.1).await;
-
-                    daemon_control::get_profiles_info().await;
-
-                    sender.output(AppInput::SetUpdating(false)).unwrap();
-                });
-            }
-            CPUInput::ConfigureSysinfo => system_info::set_system_info_sync(
-                Duration::from_secs_f32(5.0),
-                system_info::SystemInfoSyncType::CPU,
-            ),
         }
     }
 }
