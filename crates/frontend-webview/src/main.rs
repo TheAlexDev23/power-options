@@ -60,9 +60,9 @@ fn App() -> Element {
     let current_settings_tab = use_signal(|| 0);
 
     rsx! {
-        link { rel: "stylesheet", href: "main.css" }
-        link { rel: "stylesheet", href: "color.css" }
-        link { rel: "stylesheet", href: "custom-elements.css" }
+        link { rel: "stylesheet", href: "assets/main.css" }
+        link { rel: "stylesheet", href: "assets/color.css" }
+        link { rel: "stylesheet", href: "assets/custom-elements.css" }
 
         script { src: "helpers.js" }
 
@@ -189,7 +189,7 @@ fn PowerProfilesNav(
                                                     control_routine
                                                         .send((ControlAction::GetProfileOverride, Some(waiting_override_remove)));
                                                 },
-                                                img { src: "icons/cross.svg" }
+                                                img { src: "assets/icons/cross.svg" }
                                             }
                                         }
                                     }
@@ -224,14 +224,14 @@ fn ManageProfilesButton(settings_opened: Signal<bool>) -> Element {
 #[component]
 fn SettingGroupsNav(current_tab: Signal<u8>) -> Element {
     let setting_groups = vec![
-        ("icons/navbar-cpu.svg", "CPU"),
-        ("icons/navbar-screen.svg", "Screen"),
-        ("icons/navbar-radio.svg", "Radio devices"),
-        ("icons/navbar-network.svg", "Network"),
-        ("icons/navbar-aspm.svg", "PCI"),
-        ("icons/navbar-usb.svg", "USB"),
-        ("icons/navbar-sata.svg", "SATA"),
-        ("icons/linux-tux.svg", "Kernel"),
+        ("assets/icons/navbar-cpu.svg", "CPU"),
+        ("assets/icons/navbar-screen.svg", "Screen"),
+        ("assets/icons/navbar-radio.svg", "Radio devices"),
+        ("assets/icons/navbar-network.svg", "Network"),
+        ("assets/icons/navbar-aspm.svg", "PCI"),
+        ("assets/icons/navbar-usb.svg", "USB"),
+        ("assets/icons/navbar-sata.svg", "SATA"),
+        ("assets/icons/linux-tux.svg", "Kernel"),
     ];
 
     rsx! {

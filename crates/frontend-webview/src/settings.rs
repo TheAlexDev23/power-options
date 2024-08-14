@@ -101,7 +101,7 @@ pub fn SettingsMenu(
             onclick: move |_| {
                 settings_opened.set(false);
             },
-            img { src: "icons/cross.svg" }
+            img { src: "assets/icons/cross.svg" }
         }
 
         div {
@@ -144,7 +144,7 @@ pub fn SettingsMenu(
                                             form.profiles.write().swap(idx, idx + 1);
                                             changed.set(true);
                                         },
-                                        img { src: "icons/icon-down.svg" }
+                                        img { src: "assets/icons/icon-down.svg" }
                                     }
                                 }
                             } else {
@@ -159,7 +159,7 @@ pub fn SettingsMenu(
                                             form.profiles.write().swap(idx, idx - 1);
                                             changed.set(true);
                                         },
-                                        img { src: "icons/icon-up.svg" }
+                                        img { src: "assets/icons/icon-up.svg" }
                                     }
                                 }
                             } else {
