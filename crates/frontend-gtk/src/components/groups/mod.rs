@@ -1,8 +1,10 @@
 pub mod cpu;
 pub mod cpu_cores;
+pub mod radio;
 
 pub use cpu::*;
 pub use cpu_cores::*;
+pub use radio::*;
 
 lazy_static::lazy_static! {
     pub static ref CPU_MODES: Vec<&'static str> = vec!["active", "passive"];

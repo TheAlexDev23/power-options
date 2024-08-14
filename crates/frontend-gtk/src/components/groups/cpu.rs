@@ -35,7 +35,6 @@ impl From<AppSyncUpdate> for CPUInput {
 #[derive(Debug, Default)]
 pub struct CPUGroup {
     info_obtained: bool,
-    settings_obtained: bool,
 
     can_change_modes: bool,
     can_change_epps: bool,

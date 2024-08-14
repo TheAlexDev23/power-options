@@ -35,6 +35,7 @@ pub struct App {
 
     cpu_group: Controller<CPUGroup>,
     cpu_cores_group: Controller<CPUCoresGroup>,
+    radio_group: Controller<RadioGroup>,
 }
 
 #[relm4::component(pub, async)]
@@ -82,6 +83,9 @@ impl SimpleAsyncComponent for App {
         let cpu_cores_group = CPUCoresGroup::builder()
             .launch(())
             .forward(sender.input_sender(), identity);
+        let radio_group = RadioGroup::builder()
+            .launch(())
+            .forward(sender.input_sender(), identity);
 
         let settings_group_stack = gtk::Stack::new();
         settings_group_stack.set_transition_type(gtk::StackTransitionType::SlideUpDown);
@@ -99,11 +103,19 @@ impl SimpleAsyncComponent for App {
             Some("CPU Cores"),
             "CPU Cores",
         );
+        settings_group_stack.add_titled(
+            &gtk::ScrolledWindow::builder()
+                .child(radio_group.widget())
+                .build(),
+            Some("Radio"),
+            "Radio",
+        );
 
         {
             let sender = sender.clone();
             let cpu_group = cpu_group.sender().clone();
             let cpu_cores_group = cpu_cores_group.sender().clone();
+            let radio_group = radio_group.sender().clone();
             settings_group_stack.connect_visible_child_notify(move |stack| {
                 sender.input(AppInput::SetChanged(false));
                 let name = stack.visible_child_name().unwrap();
@@ -113,6 +125,8 @@ impl SimpleAsyncComponent for App {
                     cpu_cores_group
                         .send(CPUCoresInput::ConfigureSysinfo)
                         .unwrap();
+                } else if name == "Radio" {
+                    radio_group.send(RadioInput::ConfigureSysinfo).unwrap();
                 }
             });
         }
@@ -126,6 +140,7 @@ impl SimpleAsyncComponent for App {
             settings_group_stack,
             cpu_group,
             cpu_cores_group,
+            radio_group,
         };
 
         let widgets = view_output!();
@@ -146,6 +161,8 @@ impl SimpleAsyncComponent for App {
                             .sender()
                             .send(CPUCoresInput::Apply)
                             .unwrap();
+                    } else if name == "Radio" {
+                        self.radio_group.sender().send(RadioInput::Apply).unwrap()
                     }
                 }
             }
@@ -168,10 +185,12 @@ impl App {
             let header_sender = self.header.sender().clone();
             let cpu_sender = self.cpu_group.sender().clone();
             let cpu_cores_sender = self.cpu_cores_group.sender().clone();
+            let radio_sender = self.radio_group.sender().clone();
             move |msg: AppSyncUpdate| {
                 header_sender.send(msg.clone().into()).unwrap();
                 cpu_sender.send(msg.clone().into()).unwrap();
                 cpu_cores_sender.send(msg.clone().into()).unwrap();
+                radio_sender.send(msg.clone().into()).unwrap();
             }
         };
 
