@@ -90,6 +90,13 @@ pub fn start_system_info_sync_routine() {
     });
 }
 
+pub async fn obtain_full_info_once() {
+    let system_info_client = SystemInfoClient::new().await.unwrap();
+    SYSTEM_INFO
+        .set(system_info_client.get_system_info().await.unwrap())
+        .await;
+}
+
 pub fn set_system_info_sync(duration: Duration, sync_type: SystemInfoSyncType) {
     if let Some(ref sender) = SYSINFO_SYNC.lock().unwrap().as_ref() {
         sender.send((duration, sync_type)).unwrap();

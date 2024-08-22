@@ -39,9 +39,9 @@ pub struct RadioGroup {
 
 impl RadioGroup {
     fn from_radio_settings(&mut self, radio_settings: &RadioSettings) {
-        *self.block_wifi.guard() = radio_settings.block_wifi.unwrap_or_default();
-        *self.block_nfc.guard() = radio_settings.block_nfc.unwrap_or_default();
-        *self.block_bt.guard() = radio_settings.block_bt.unwrap_or_default();
+        *self.block_wifi.guard() = radio_settings.block_wifi.unwrap();
+        *self.block_nfc.guard() = radio_settings.block_nfc.unwrap();
+        *self.block_bt.guard() = radio_settings.block_bt.unwrap();
     }
 
     fn to_radio_settings(&self) -> RadioSettings {

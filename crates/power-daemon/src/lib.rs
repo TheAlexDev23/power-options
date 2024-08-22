@@ -221,7 +221,9 @@ impl Instance {
         // We actually need to update the underlying files
         serialize_profiles(&self.profiles_info.profiles, &self.profiles_path);
 
-        self.update();
+        if idx == self.profiles_info.active_profile {
+            self.update();
+        }
     }
 
     fn update_without_reduced(&mut self) {

@@ -41,11 +41,6 @@ pub struct CPUGroup {
     has_hwp_dyn_boost: bool,
 
     #[do_not_track]
-    /// If .0 is true, means min frequency needs to be set to the lowest, if .1
-    /// true, max freq needs to be set to highest
-    pending_frequencies_update: (bool, bool),
-
-    #[do_not_track]
     min_freq: AdjustmentBinding,
     #[do_not_track]
     max_freq: AdjustmentBinding,
@@ -121,16 +116,12 @@ impl CPUGroup {
             self.max_freq.guard().set_upper(f64::MAX);
         }
 
-        if let Some(min) = cpu_settings.min_freq {
-            self.min_freq.guard().set_value(min as f64);
-        } else {
-            self.pending_frequencies_update.0 = true;
-        }
-        if let Some(max) = cpu_settings.max_freq {
-            self.max_freq.guard().set_value(max as f64);
-        } else {
-            self.pending_frequencies_update.1 = true;
-        }
+        self.min_freq
+            .guard()
+            .set_value(cpu_settings.min_freq.unwrap() as f64);
+        self.max_freq
+            .guard()
+            .set_value(cpu_settings.max_freq.unwrap() as f64);
 
         let set_perf_ranges = |guard: BindingGuard<AdjustmentBinding>| {
             guard.set_step_increment(5.0);
@@ -142,10 +133,10 @@ impl CPUGroup {
 
         self.min_perf
             .guard()
-            .set_value(cpu_settings.min_perf_pct.unwrap_or(0) as f64);
+            .set_value(cpu_settings.min_perf_pct.unwrap() as f64);
         self.max_perf
             .guard()
-            .set_value(cpu_settings.max_perf_pct.unwrap_or(100) as f64);
+            .set_value(cpu_settings.max_perf_pct.unwrap() as f64);
 
         *self.boost.guard() = cpu_settings.boost.unwrap_or_default();
         *self.hwp_dyn_boost.guard() = cpu_settings.hwp_dyn_boost.unwrap_or_default();
@@ -164,17 +155,6 @@ impl CPUGroup {
         set_freq_ranges(self.min_freq.guard());
         set_freq_ranges(self.max_freq.guard());
 
-        if self.pending_frequencies_update.0 {
-            self.min_freq
-                .guard()
-                .set_value(cpu_info.total_min_frequency as f64);
-        }
-        if self.pending_frequencies_update.1 {
-            self.max_freq
-                .guard()
-                .set_value(cpu_info.total_max_frequency as f64);
-        }
-
         self.set_has_boost(cpu_info.boost.is_some());
         self.set_has_hwp_dyn_boost(cpu_info.hwp_dynamic_boost.is_some());
     }
@@ -185,7 +165,11 @@ impl CPUGroup {
         let epp = self.epp.value() as usize;
 
         CPUSettings {
-            mode: Some(if active { "active" } else { "passive" }.to_string()),
+            mode: if self.can_change_modes {
+                Some(if active { "active" } else { "passive" }.to_string())
+            } else {
+                None
+            },
             governor: Some(
                 if active {
                     CPU_GOVERNORS_ACTIVE[gov]
@@ -194,13 +178,33 @@ impl CPUGroup {
                 }
                 .to_string(),
             ),
-            epp: Some(CPU_EPPS[epp].to_string()),
+            epp: if *self.get_can_change_epps() {
+                Some(CPU_EPPS[epp].to_string())
+            } else {
+                None
+            },
             min_freq: Some(self.min_freq.value().value() as u32),
             max_freq: Some(self.max_freq.value().value() as u32),
-            min_perf_pct: Some(self.min_perf.value().value() as u8),
-            max_perf_pct: Some(self.max_perf.value().value() as u8),
-            boost: Some(self.boost.value()),
-            hwp_dyn_boost: Some(self.hwp_dyn_boost.value()),
+            min_perf_pct: if *self.get_has_perf_pct() {
+                Some(self.min_perf.value().value() as u8)
+            } else {
+                None
+            },
+            max_perf_pct: if *self.get_has_perf_pct() {
+                Some(self.max_perf.value().value() as u8)
+            } else {
+                None
+            },
+            boost: if *self.get_has_boost() {
+                Some(self.boost.value())
+            } else {
+                None
+            },
+            hwp_dyn_boost: if *self.get_has_hwp_dyn_boost() {
+                Some(self.hwp_dyn_boost.value())
+            } else {
+                None
+            },
         }
     }
 }
