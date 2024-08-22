@@ -12,9 +12,36 @@ use super::Header;
 use super::HeaderInput;
 use crate::communications;
 
+#[derive(Debug, Clone, Copy)]
+pub enum SettingsGroup {
+    CPU,
+    CPUCores,
+    Radio,
+}
+
+impl SettingsGroup {
+    pub fn from_string(string: &str) -> SettingsGroup {
+        match string {
+            "CPU" => SettingsGroup::CPU,
+            "CPU Cores" => SettingsGroup::CPUCores,
+            "Radio" => SettingsGroup::Radio,
+            _ => panic!("Unkown settings group"),
+        }
+    }
+
+    pub fn to_string(&self) -> String {
+        String::from(match self {
+            SettingsGroup::CPU => "CPU",
+            SettingsGroup::CPUCores => "CPU Cores",
+            SettingsGroup::Radio => "Radio",
+        })
+    }
+}
+
 #[derive(Debug)]
 pub enum AppInput {
     SendRootRequestToAll(RootRequest),
+    SendRootRequestToGroup(SettingsGroup, RootRequest),
     SendRootRequestToActiveGroup(RootRequest),
     SetChanged(bool),
     SetUpdating(bool),
@@ -49,7 +76,7 @@ pub struct App {
 #[relm4::component(pub, async)]
 impl SimpleAsyncComponent for App {
     type Input = AppInput;
-    type Output = AppSyncUpdate;
+    type Output = ();
 
     type Init = ();
 
@@ -148,19 +175,23 @@ impl SimpleAsyncComponent for App {
         AsyncComponentParts { model, widgets }
     }
 
-    async fn update(&mut self, message: Self::Input, _sender: AsyncComponentSender<Self>) {
+    async fn update(&mut self, message: Self::Input, sender: AsyncComponentSender<Self>) {
         match message {
             AppInput::SendRootRequestToActiveGroup(request) => {
                 if let Some(name) = self.settings_group_stack.visible_child_name() {
-                    if name == "CPU" {
-                        self.cpu_group.sender().send(request.into()).unwrap();
-                    } else if name == "CPU Cores" {
-                        self.cpu_cores_group.sender().send(request.into()).unwrap();
-                    } else if name == "Radio" {
-                        self.radio_group.sender().send(request.into()).unwrap()
-                    }
+                    sender.input(AppInput::SendRootRequestToGroup(
+                        SettingsGroup::from_string(&name),
+                        request,
+                    ))
                 }
             }
+            AppInput::SendRootRequestToGroup(group, request) => match group {
+                SettingsGroup::CPU => self.cpu_group.sender().send(request.into()).unwrap(),
+                SettingsGroup::CPUCores => {
+                    self.cpu_cores_group.sender().send(request.into()).unwrap()
+                }
+                SettingsGroup::Radio => self.radio_group.sender().send(request.into()).unwrap(),
+            },
             AppInput::SendRootRequestToAll(request) => {
                 self.header.sender().send(request.clone().into()).unwrap();
                 self.cpu_group

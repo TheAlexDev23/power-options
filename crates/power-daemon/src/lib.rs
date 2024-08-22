@@ -65,7 +65,7 @@ impl Instance {
 
     pub fn set_profile_override(&mut self, name: String) {
         self.temporary_override = Some(name);
-        self.update();
+        self.update_without_reduced();
     }
     pub fn try_set_profile_override(&mut self, name: String) {
         if self

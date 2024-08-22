@@ -122,12 +122,12 @@ impl CPUGroup {
         }
 
         if let Some(min) = cpu_settings.min_freq {
-            self.min_freq.guard().set_value(min as f64 / 1000.0);
+            self.min_freq.guard().set_value(min as f64);
         } else {
             self.pending_frequencies_update.0 = true;
         }
         if let Some(max) = cpu_settings.max_freq {
-            self.max_freq.guard().set_value(max as f64 / 1000.0);
+            self.max_freq.guard().set_value(max as f64);
         } else {
             self.pending_frequencies_update.1 = true;
         }
@@ -168,13 +168,11 @@ impl CPUGroup {
             self.min_freq
                 .guard()
                 .set_value(cpu_info.total_min_frequency as f64);
-            self.pending_frequencies_update.0 = false;
         }
         if self.pending_frequencies_update.1 {
             self.max_freq
                 .guard()
                 .set_value(cpu_info.total_max_frequency as f64);
-            self.pending_frequencies_update.1 = false;
         }
 
         self.set_has_boost(cpu_info.boost.is_some());
@@ -398,9 +396,14 @@ impl SimpleComponent for CPUGroup {
                     if let AppSyncUpdate::ProfilesInfo(ref profiles_info) = message {
                         if let Some(profiles_info) = profiles_info.as_ref() {
                             let profile = profiles_info.get_active_profile();
+
+                            self.info_obtained = false;
+                            fetch_info_once();
+
                             self.active_profile =
                                 Some((profiles_info.active_profile, profile.clone()));
                             self.from_cpu_settings(&profile.cpu_settings);
+
                             self.last_cpu_settings = Some(self.to_cpu_settings());
                         }
                     }
@@ -424,4 +427,15 @@ impl SimpleComponent for CPUGroup {
             }
         }
     }
+}
+
+fn fetch_info_once() {
+    system_info::set_system_info_sync(
+        Duration::from_secs_f32(15.0),
+        system_info::SystemInfoSyncType::CPU,
+    );
+    system_info::set_system_info_sync(
+        Duration::from_secs_f32(15.0),
+        system_info::SystemInfoSyncType::None,
+    );
 }

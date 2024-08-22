@@ -414,12 +414,13 @@ impl SimpleComponent for CPUCoresGroup {
         }
 
         match &message {
-            CPUCoresInput::RootRequest(_) | CPUCoresInput::Reset => {}
+            CPUCoresInput::RootRequest(_) => {}
 
             CPUCoresInput::GovChanged(_, _)
             | CPUCoresInput::EppChanged(_, _)
             | CPUCoresInput::FreqLimChanged(_, _, _)
-            | CPUCoresInput::OnlineChanged(_, _) => {
+            | CPUCoresInput::OnlineChanged(_, _)
+            | CPUCoresInput::Reset => {
                 if let Some(ref last_settings) = self.last_settings {
                     sender
                         .output(AppInput::SetChanged(
