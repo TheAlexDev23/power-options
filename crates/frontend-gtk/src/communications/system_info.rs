@@ -1,6 +1,7 @@
 use std::{sync::Mutex, time::Duration};
 
 use lazy_static::lazy_static;
+use log::{debug, trace};
 use power_daemon::communication::client::SystemInfoClient;
 use tokio::sync::mpsc;
 
@@ -11,7 +12,7 @@ lazy_static! {
         None.into();
 }
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Debug)]
 pub enum SystemInfoSyncType {
     None,
     Whole,
@@ -21,13 +22,14 @@ pub enum SystemInfoSyncType {
     SATA,
 }
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Debug)]
 enum SyncingState {
     NotSyncing,
     Syncing(Duration, SystemInfoSyncType),
 }
 
 pub fn start_system_info_sync_routine() {
+    debug!("Initializing system info synchronization routine");
     let (sender, mut receiver) = mpsc::unbounded_channel();
     *SYSINFO_SYNC.lock().unwrap() = Some(sender);
     tokio::spawn(async move {
@@ -37,14 +39,18 @@ pub fn start_system_info_sync_routine() {
 
         loop {
             if syncing_state == SyncingState::NotSyncing {
+                trace!("Waiting on first system info sync request");
                 let (duration, sync_type) = receiver.recv().await.unwrap();
                 syncing_state = SyncingState::Syncing(duration, sync_type);
             } else if let SyncingState::Syncing(ref duration, ref sync_type) = syncing_state {
                 if *sync_type != SystemInfoSyncType::Whole && SYSTEM_INFO.is_none().await {
+                    trace!("Obtaining partial system info without obtaining full system info first. Obtaining full system info.");
                     SYSTEM_INFO
                         .set(system_info_client.get_system_info().await.unwrap())
                         .await;
                 }
+
+                debug!("Syncing system info: {sync_type:?}");
 
                 match sync_type {
                     SystemInfoSyncType::None => {}
@@ -82,6 +88,7 @@ pub fn start_system_info_sync_routine() {
                 tokio::select! {
                     (duration, sync_type) = crate::helpers::recv_different(&mut receiver, (duration.clone(), sync_type.clone())) => {
                         syncing_state = SyncingState::Syncing(duration, sync_type);
+                        trace!("Updating sync state: {syncing_state:?}");
                     },
                     _ = tokio::time::sleep(*duration) => {},
                 }
@@ -91,6 +98,7 @@ pub fn start_system_info_sync_routine() {
 }
 
 pub async fn obtain_full_info_once() {
+    debug!("Obtaining full system info once");
     let system_info_client = SystemInfoClient::new().await.unwrap();
     SYSTEM_INFO
         .set(system_info_client.get_system_info().await.unwrap())
@@ -98,6 +106,7 @@ pub async fn obtain_full_info_once() {
 }
 
 pub fn set_system_info_sync(duration: Duration, sync_type: SystemInfoSyncType) {
+    debug!("Updating system info synchronization: {sync_type:?} every {duration:?}");
     if let Some(ref sender) = SYSINFO_SYNC.lock().unwrap().as_ref() {
         sender.send((duration, sync_type)).unwrap();
     }

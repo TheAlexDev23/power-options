@@ -1,15 +1,18 @@
+use std::fmt::Debug;
+
+use log::trace;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::sync::Mutex;
 
 pub mod extra_bindings;
 
-pub struct SyncedValue<T: PartialEq + Clone> {
+pub struct SyncedValue<T: PartialEq + Clone + Debug> {
     value: Mutex<Option<T>>,
 
     listeners: Mutex<Vec<Box<dyn Fn(Option<&T>) + Send>>>,
 }
 
-impl<T: PartialEq + Clone> SyncedValue<T> {
+impl<T: PartialEq + Clone + Debug> SyncedValue<T> {
     pub fn new() -> SyncedValue<T> {
         SyncedValue {
             value: Mutex::new(None),
@@ -26,6 +29,11 @@ impl<T: PartialEq + Clone> SyncedValue<T> {
     }
 
     pub async fn set(&self, new_value: T) {
+        trace!(
+            target: std::any::type_name::<Self>(),
+            "Setting value: {new_value:#?}",
+        );
+
         let mut value = self.value.lock().await;
         let old = value.clone();
 
@@ -35,6 +43,11 @@ impl<T: PartialEq + Clone> SyncedValue<T> {
     }
 
     pub async fn set_mut(&self, closure: impl Fn(&mut Option<T>)) {
+        trace!(
+            target: std::any::type_name::<Self>(),
+            "Setting value with predicate",
+        );
+
         let mut value = self.value.lock().await;
         let old = value.clone();
         closure(&mut value);
@@ -43,6 +56,11 @@ impl<T: PartialEq + Clone> SyncedValue<T> {
     }
 
     async fn invoke_listeners(&self, old_value: Option<T>) {
+        trace!(
+            target: std::any::type_name::<Self>(),
+            "Notifying listeners of change",
+        );
+
         let value = self.value.lock().await;
         if *value != old_value {
             for listener in self.listeners.lock().await.iter() {
@@ -55,6 +73,11 @@ impl<T: PartialEq + Clone> SyncedValue<T> {
     where
         F: 'static + Fn(Option<&T>) + Send,
     {
+        trace!(
+            target: std::any::type_name::<Self>(),
+            "Subscribing to changes",
+        );
+
         let mut listeners = self.listeners.lock().await;
         callback(self.value.lock().await.as_ref());
         listeners.push(Box::from(callback));

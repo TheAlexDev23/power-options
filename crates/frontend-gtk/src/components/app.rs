@@ -4,6 +4,7 @@ use std::sync::Arc;
 use enumflags2::BitFlags;
 use gtk::glib::clone;
 use gtk::prelude::*;
+use log::info;
 use power_daemon::{CPUInfo, CPUSettings, RadioSettings};
 use power_daemon::{Config, ProfilesInfo, SystemInfo};
 use relm4::loading_widgets::LoadingWidgets;
@@ -299,6 +300,8 @@ async fn setup_sync_listeners(sender: AsyncComponentSender<App>) {
 /// Iterates through all profiles and removes all possible None options. Except
 /// for those that the system does not support and need to be set to None.
 async fn remove_all_none_options() {
+    info!("The GTK frontend does not support configurations with ignored settings (unless those settings are unsupported by the system). Updating profiles if neccessary now.");
+
     assert!(!communications::SYSTEM_INFO.is_none().await);
     assert!(!communications::PROFILES_INFO.is_none().await);
 
