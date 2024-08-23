@@ -93,18 +93,21 @@ pub fn PCIAndASPMGroup(
         };
 
         control_routine.send((
-            ControlAction::SetReducedUpdate(ReducedUpdate::PCI),
+            ControlAction::UpdateProfileReduced(
+                active_profile_idx as u32,
+                active_profile.clone(),
+                ReducedUpdate::PCI,
+            ),
             Some(awaiting_completion),
         ));
         control_routine.send((
-            ControlAction::UpdateProfile(active_profile_idx as u32, active_profile),
+            ControlAction::UpdateProfileReduced(
+                active_profile_idx as u32,
+                active_profile,
+                ReducedUpdate::ASPM,
+            ),
             Some(awaiting_completion),
         ));
-        control_routine.send((
-            ControlAction::SetReducedUpdate(ReducedUpdate::ASPM),
-            Some(awaiting_completion),
-        ));
-        control_routine.send((ControlAction::Update, Some(awaiting_completion)));
         control_routine.send((ControlAction::GetProfilesInfo, Some(awaiting_completion)));
     };
 

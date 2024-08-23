@@ -122,10 +122,6 @@ fn PowerProfilesNav(
             buttons.push((idx, profile_name.clone(), move |_| {
                 future_override_idx.set(idx);
                 control_routine.send((
-                    ControlAction::ResetReducedUpdate,
-                    Some(waiting_override_set),
-                ));
-                control_routine.send((
                     ControlAction::SetProfileOverride(profile_name.clone()),
                     Some(waiting_override_set),
                 ));
@@ -180,8 +176,6 @@ fn PowerProfilesNav(
                                                     if waiting_override_remove() || waiting_override_set() {
                                                         return;
                                                     }
-                                                    control_routine
-                                                        .send((ControlAction::ResetReducedUpdate, Some(waiting_override_remove)));
                                                     control_routine
                                                         .send((ControlAction::RemoveProfileOverride, Some(waiting_override_remove)));
                                                     control_routine

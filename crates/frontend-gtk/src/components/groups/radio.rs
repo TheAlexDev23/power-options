@@ -146,11 +146,12 @@ impl SimpleComponent for RadioGroup {
                     active_profile.1.radio_settings = self.to_radio_settings();
 
                     tokio::spawn(async move {
-                        daemon_control::set_reduced_update(power_daemon::ReducedUpdate::Radio)
-                            .await;
-
-                        daemon_control::update_profile(active_profile.0 as u32, active_profile.1)
-                            .await;
+                        daemon_control::update_profile_reduced(
+                            active_profile.0 as u32,
+                            active_profile.1,
+                            power_daemon::ReducedUpdate::Radio,
+                        )
+                        .await;
 
                         daemon_control::get_profiles_info().await;
 

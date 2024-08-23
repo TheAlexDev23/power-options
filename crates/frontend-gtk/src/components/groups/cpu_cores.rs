@@ -356,11 +356,12 @@ impl SimpleComponent for CPUCoresGroup {
 
                     let sender = sender.clone();
                     tokio::spawn(async move {
-                        daemon_control::set_reduced_update(power_daemon::ReducedUpdate::CPUCores)
-                            .await;
-
-                        daemon_control::update_profile(active_profile.0 as u32, active_profile.1)
-                            .await;
+                        daemon_control::update_profile_reduced(
+                            active_profile.0 as u32,
+                            active_profile.1,
+                            power_daemon::ReducedUpdate::CPUCores,
+                        )
+                        .await;
 
                         sender.input(CPUCoresInput::Reset);
                         sender.output(AppInput::SetUpdating(false)).unwrap();

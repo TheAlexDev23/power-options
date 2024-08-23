@@ -114,7 +114,7 @@ async fn daemon() {
     let config = power_daemon::parse_config(&config_path);
     let mut handle = Instance::new(config, &config_path, &profiles_path);
 
-    handle.update();
+    handle.update_full();
 
     let _com_server = CommunicationServer::new(handle)
         .await
@@ -139,11 +139,7 @@ async fn refresh_full() {
         .await
         .expect("Could not intialize control client");
     client
-        .reset_reduced_update()
-        .await
-        .expect("Could not reset reduced update");
-    client
-        .update()
+        .update_full()
         .await
         .expect("Could not reset reducedu update");
 }
@@ -153,11 +149,7 @@ async fn refresh_reduced(reduced_update: ReducedUpdate) {
         .await
         .expect("Could not intialize control client");
     client
-        .set_reduced_update(reduced_update)
-        .await
-        .expect("Could not set reduced update");
-    client
-        .update()
+        .update_reduced(reduced_update)
         .await
         .expect("Could not reset reducedu update");
 }

@@ -366,8 +366,7 @@ async fn remove_all_none_options() {
         default_radio_settings(&mut profile.radio_settings);
 
         if initial != profile {
-            daemon_control::reset_reduced_update().await;
-            daemon_control::update_profile(idx as u32, profile).await;
+            daemon_control::update_profile_full(idx as u32, profile).await;
         }
     }
 

@@ -382,10 +382,12 @@ impl SimpleComponent for CPUGroup {
                     active_profile.1.cpu_settings = self.to_cpu_settings();
 
                     tokio::spawn(async move {
-                        daemon_control::set_reduced_update(power_daemon::ReducedUpdate::CPU).await;
-
-                        daemon_control::update_profile(active_profile.0 as u32, active_profile.1)
-                            .await;
+                        daemon_control::update_profile_reduced(
+                            active_profile.0 as u32,
+                            active_profile.1,
+                            power_daemon::ReducedUpdate::CPU,
+                        )
+                        .await;
 
                         daemon_control::get_profiles_info().await;
 
