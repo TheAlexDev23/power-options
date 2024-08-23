@@ -1,5 +1,6 @@
 use std::convert::identity;
 use std::sync::Arc;
+use std::time::Duration;
 
 use enumflags2::BitFlags;
 use gtk::glib::clone;
@@ -14,6 +15,7 @@ use relm4::Controller;
 use super::groups::*;
 use super::Header;
 use super::HeaderInput;
+use crate::communications::system_info::SystemInfoSyncType;
 use crate::communications::{self, daemon_control};
 
 #[derive(Debug, Clone, Copy)]
@@ -66,6 +68,7 @@ pub enum AppSyncUpdate {
     ProfilesInfo(Arc<Option<ProfilesInfo>>),
     SystemInfo(Arc<Option<SystemInfo>>),
     Config(Arc<Option<Config>>),
+    TemporaryOverride(Arc<Option<String>>),
 }
 
 pub struct App {
@@ -140,6 +143,21 @@ impl SimpleAsyncComponent for App {
         root: Self::Root,
         sender: AsyncComponentSender<Self>,
     ) -> AsyncComponentParts<Self> {
+        communications::daemon_control::setup_control_client().await;
+
+        tokio::join!(
+            communications::daemon_control::get_profiles_info(),
+            communications::daemon_control::get_profile_override(),
+            communications::daemon_control::get_config(),
+            communications::daemon_control::get_profile_override(),
+        );
+
+        communications::system_info::start_system_info_sync_routine();
+        communications::system_info::set_system_info_sync(
+            Duration::from_secs_f32(5.0),
+            SystemInfoSyncType::None,
+        );
+
         remove_all_none_options().await;
 
         let cpu_group = CPUGroup::builder()
@@ -295,12 +313,32 @@ async fn setup_sync_listeners(sender: AsyncComponentSender<App>) {
             }
         ))
         .await;
+
+    communications::PROFILE_OVERRIDE
+        .listen(clone!(
+            #[strong]
+            sender,
+            move |temp_override| {
+                //
+                let mut temp_override = temp_override.cloned();
+                if temp_override.is_none() {
+                    temp_override = Some(None);
+                }
+
+                sender.input(AppInput::SendRootRequestToAll(RootRequest::ReactToUpdate(
+                    AppSyncUpdate::TemporaryOverride(Arc::from(temp_override.unwrap())),
+                )));
+            }
+        ))
+        .await;
 }
 
 /// Iterates through all profiles and removes all possible None options. Except
 /// for those that the system does not support and need to be set to None.
 async fn remove_all_none_options() {
     info!("The GTK frontend does not support configurations with ignored settings (unless those settings are unsupported by the system). Updating profiles if neccessary now.");
+
+    communications::system_info::obtain_full_info_once().await;
 
     assert!(!communications::SYSTEM_INFO.is_none().await);
     assert!(!communications::PROFILES_INFO.is_none().await);

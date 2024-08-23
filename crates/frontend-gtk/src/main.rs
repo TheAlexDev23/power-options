@@ -4,15 +4,12 @@ pub mod communications;
 pub mod components;
 pub mod helpers;
 
-use std::time::Duration;
-
 use clap::{command, Parser};
 use clap_verbosity_flag::{InfoLevel, Verbosity};
 use colored::Colorize;
 use log::{Level, Log, Metadata, Record};
 use relm4::prelude::*;
 
-use communications::system_info::SystemInfoSyncType;
 use components::*;
 
 static LOGGER: StdoutLogger = StdoutLogger;
@@ -59,22 +56,6 @@ async fn main() {
 
     log::set_logger(&LOGGER).expect("Could not set logger");
     log::set_max_level(args.verbose.log_level_filter());
-
-    communications::daemon_control::setup_control_client().await;
-
-    tokio::join!(
-        communications::daemon_control::get_profiles_info(),
-        communications::daemon_control::get_profile_override(),
-        communications::daemon_control::get_config(),
-    );
-
-    communications::system_info::start_system_info_sync_routine();
-    communications::system_info::set_system_info_sync(
-        Duration::from_secs_f32(5.0),
-        SystemInfoSyncType::None,
-    );
-
-    communications::system_info::obtain_full_info_once().await;
 
     RelmApp::new("io.github.thealexdev23.power-options.frontend")
         .with_args(Vec::new())

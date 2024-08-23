@@ -10,8 +10,8 @@ use super::{AppInput, AppSyncUpdate, RootRequest};
 pub enum HeaderInput {
     RootRequest(RootRequest),
     ChangingTo(Option<usize>),
-    ResettingFrom(usize),
     AllowApplyButton(bool),
+    UpdateTempOverrideResetBtn(TempOverrideResetButtonStatus),
 }
 
 impl From<RootRequest> for HeaderInput {
@@ -20,11 +20,20 @@ impl From<RootRequest> for HeaderInput {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Default)]
+pub enum TempOverrideResetButtonStatus {
+    #[default]
+    Disabled,
+    Loading,
+    Enabled(String),
+}
+
 #[derive(Debug, Default)]
 pub struct Header {
     profiles_info: Option<ProfilesInfo>,
     changing_to: Option<usize>,
     enable_apply_button: bool,
+    reset_temp_override_btn_status: TempOverrideResetButtonStatus,
 }
 
 #[derive(Debug)]
@@ -62,14 +71,23 @@ impl SimpleComponent for Header {
     fn update(&mut self, message: Self::Input, _sender: ComponentSender<Self>) {
         match message {
             HeaderInput::RootRequest(RootRequest::ReactToUpdate(message)) => {
-                if let AppSyncUpdate::ProfilesInfo(profiles_info) = message {
-                    self.profiles_info = (*profiles_info).clone();
+                if let AppSyncUpdate::ProfilesInfo(ref profiles_info) = message {
+                    self.profiles_info = (**profiles_info).clone();
+                }
+                if let AppSyncUpdate::TemporaryOverride(ref temporary_override) = message {
+                    if let Some(profile_name) = temporary_override.as_ref() {
+                        self.reset_temp_override_btn_status =
+                            TempOverrideResetButtonStatus::Enabled(profile_name.clone())
+                    } else {
+                        self.reset_temp_override_btn_status =
+                            TempOverrideResetButtonStatus::Disabled;
+                    }
                 }
             }
+            HeaderInput::RootRequest(_) => {}
             HeaderInput::ChangingTo(idx) => self.changing_to = idx,
-            HeaderInput::ResettingFrom(_) => todo!(),
             HeaderInput::AllowApplyButton(v) => self.enable_apply_button = v,
-            _ => {}
+            HeaderInput::UpdateTempOverrideResetBtn(v) => self.reset_temp_override_btn_status = v,
         }
     }
 
@@ -122,6 +140,7 @@ impl SimpleComponent for Header {
 
                                 daemon_control::set_profile_override(profile_name.clone()).await;
                                 daemon_control::get_profiles_info().await;
+                                daemon_control::get_profile_override().await;
 
                                 sender.input(HeaderInput::ChangingTo(None));
                             });
@@ -132,18 +151,62 @@ impl SimpleComponent for Header {
                 }
                 ret.set_center_widget(Some(&profiles_list));
 
-                let button = gtk::Button::builder()
+                let apply_button = gtk::Button::builder()
                     .label("Apply")
                     .sensitive(self.enable_apply_button)
                     .css_classes([relm4::css::SUGGESTED_ACTION])
                     .build();
-                button.connect_clicked(move |_| {
-                    sender
-                        .output(AppInput::SendRootRequestToActiveGroup(RootRequest::Apply))
-                        .unwrap()
-                });
 
-                ret.set_end_widget(Some(&button));
+                apply_button.connect_clicked(clone!(
+                    #[strong]
+                    sender,
+                    move |_| {
+                        sender
+                            .output(AppInput::SendRootRequestToActiveGroup(RootRequest::Apply))
+                            .unwrap()
+                    }
+                ));
+
+                ret.set_end_widget(Some(&apply_button));
+
+                if let TempOverrideResetButtonStatus::Enabled(ref profile_name) =
+                    self.reset_temp_override_btn_status
+                {
+                    let reset_temporary_override_button = gtk::Button::builder()
+                        .label("Reset Override")
+                        .tooltip_text(format!("The current profile is currently locked to \"{}\" until next restart. Note that this is not the same as the persistent override found in daemon settings.", profile_name))
+                        .build();
+
+                    reset_temporary_override_button.connect_clicked(clone!(
+                        #[strong]
+                        sender,
+                        move |_| {
+                            let sender = sender.clone();
+                            tokio::spawn(async move {
+                                sender.input(HeaderInput::UpdateTempOverrideResetBtn(
+                                    TempOverrideResetButtonStatus::Loading,
+                                ));
+
+                                daemon_control::remove_profile_override().await;
+                                daemon_control::get_profiles_info().await;
+                                daemon_control::get_profile_override().await;
+
+                                sender.input(HeaderInput::UpdateTempOverrideResetBtn(
+                                    TempOverrideResetButtonStatus::Disabled,
+                                ));
+                            });
+                        }
+                    ));
+
+                    ret.set_start_widget(Some(&reset_temporary_override_button));
+                } else if self.reset_temp_override_btn_status
+                    == TempOverrideResetButtonStatus::Loading
+                {
+                    let spinner = gtk::Spinner::builder().spinning(true).build();
+                    ret.set_start_widget(Some(&spinner));
+                } else {
+                    ret.set_start_widget(None as Option<&gtk::Button>);
+                }
 
                 ret
             } else {
