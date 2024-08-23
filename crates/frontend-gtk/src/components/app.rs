@@ -1,6 +1,7 @@
 use std::convert::identity;
 use std::sync::Arc;
 
+use enumflags2::BitFlags;
 use gtk::glib::clone;
 use gtk::prelude::*;
 use power_daemon::{CPUInfo, CPUSettings, RadioSettings};
@@ -15,6 +16,8 @@ use super::HeaderInput;
 use crate::communications::{self, daemon_control};
 
 #[derive(Debug, Clone, Copy)]
+#[enumflags2::bitflags]
+#[repr(u8)]
 pub enum SettingsGroup {
     CPU,
     CPUCores,
@@ -45,7 +48,8 @@ pub enum AppInput {
     SendRootRequestToAll(RootRequest),
     SendRootRequestToGroup(SettingsGroup, RootRequest),
     SendRootRequestToActiveGroup(RootRequest),
-    SetChanged(bool),
+    SetChanged(bool, SettingsGroup),
+    UpdateApplyButton,
     SetUpdating(bool),
 }
 
@@ -65,6 +69,7 @@ pub enum AppSyncUpdate {
 
 pub struct App {
     updating: bool,
+    changed_groups: BitFlags<SettingsGroup>,
 
     settings_group_stack: gtk::Stack,
 
@@ -73,6 +78,12 @@ pub struct App {
     cpu_group: Controller<CPUGroup>,
     cpu_cores_group: Controller<CPUCoresGroup>,
     radio_group: Controller<RadioGroup>,
+}
+
+impl App {
+    pub fn get_current_active_group(&self) -> SettingsGroup {
+        SettingsGroup::from_string(&self.settings_group_stack.visible_child_name().unwrap())
+    }
 }
 
 #[relm4::component(pub, async)]
@@ -167,15 +178,16 @@ impl SimpleAsyncComponent for App {
         {
             let sender = sender.clone();
             settings_group_stack.connect_visible_child_notify(move |_| {
-                sender.input(AppInput::SetChanged(false));
                 sender.input(AppInput::SendRootRequestToActiveGroup(
                     RootRequest::ConfigureSystemInfoSync,
                 ));
+                sender.input(AppInput::UpdateApplyButton);
             });
         }
 
         let model = App {
             updating: false,
+            changed_groups: BitFlags::empty(),
             header: Header::builder()
                 .launch(())
                 .forward(sender.input_sender(), identity),
@@ -196,12 +208,10 @@ impl SimpleAsyncComponent for App {
     async fn update(&mut self, message: Self::Input, sender: AsyncComponentSender<Self>) {
         match message {
             AppInput::SendRootRequestToActiveGroup(request) => {
-                if let Some(name) = self.settings_group_stack.visible_child_name() {
-                    sender.input(AppInput::SendRootRequestToGroup(
-                        SettingsGroup::from_string(&name),
-                        request,
-                    ))
-                }
+                sender.input(AppInput::SendRootRequestToGroup(
+                    self.get_current_active_group(),
+                    request,
+                ));
             }
             AppInput::SendRootRequestToGroup(group, request) => match group {
                 SettingsGroup::CPU => self.cpu_group.sender().send(request.into()).unwrap(),
@@ -225,15 +235,25 @@ impl SimpleAsyncComponent for App {
                     .send(request.clone().into())
                     .unwrap();
             }
-            AppInput::SetChanged(v) => {
-                self.header
-                    .sender()
-                    .send(HeaderInput::AllowApplyButton(v))
-                    .unwrap();
+            AppInput::SetChanged(v, group) => {
+                if v {
+                    self.changed_groups.insert(group);
+                } else {
+                    self.changed_groups.remove(group);
+                }
+                sender.input(AppInput::UpdateApplyButton);
             }
             AppInput::SetUpdating(v) => {
                 self.updating = v;
             }
+            AppInput::UpdateApplyButton => self
+                .header
+                .sender()
+                .send(HeaderInput::AllowApplyButton(
+                    self.changed_groups
+                        .contains(self.get_current_active_group()),
+                ))
+                .unwrap(),
         }
     }
 }

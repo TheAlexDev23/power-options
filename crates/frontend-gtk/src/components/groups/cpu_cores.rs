@@ -364,7 +364,6 @@ impl SimpleComponent for CPUCoresGroup {
 
                         sender.input(CPUCoresInput::Reset);
                         sender.output(AppInput::SetUpdating(false)).unwrap();
-                        sender.output(AppInput::SetChanged(false)).unwrap();
                     });
                 }
             },
@@ -425,6 +424,7 @@ impl SimpleComponent for CPUCoresGroup {
                     sender
                         .output(AppInput::SetChanged(
                             *last_settings != self.to_core_settings(),
+                            crate::SettingsGroup::CPUCores,
                         ))
                         .unwrap()
                 }

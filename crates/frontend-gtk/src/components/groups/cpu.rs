@@ -416,6 +416,13 @@ impl SimpleComponent for CPUGroup {
                         if let Some(system_info) = system_info.as_ref() {
                             self.info_obtained = true;
                             self.from_cpu_info(&system_info.cpu_info);
+                            // The reason we can't get away from updating just
+                            // once during profile obtention is because we
+                            // access system info values for conditional profile
+                            // updating based on the system's features. And
+                            // proper reactivity requires us to synchronize the
+                            // newest settings
+                            self.last_cpu_settings = Some(self.to_cpu_settings());
                         }
                     }
                 }
@@ -425,6 +432,7 @@ impl SimpleComponent for CPUGroup {
                     sender
                         .output(AppInput::SetChanged(
                             *last_settings != self.to_cpu_settings(),
+                            crate::SettingsGroup::CPU,
                         ))
                         .unwrap()
                 }

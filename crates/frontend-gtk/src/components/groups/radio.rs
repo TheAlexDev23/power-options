@@ -163,6 +163,7 @@ impl SimpleComponent for RadioGroup {
                     sender
                         .output(AppInput::SetChanged(
                             *last_settings != self.to_radio_settings(),
+                            crate::SettingsGroup::Radio,
                         ))
                         .unwrap()
                 }
