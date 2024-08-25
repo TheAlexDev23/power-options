@@ -124,9 +124,6 @@ impl SimpleComponent for RadioGroup {
                             self.from_radio_settings(&profile.radio_settings);
                             self.settings_obtained = true;
                             self.last_radio_settings = Some(self.to_radio_settings());
-                            sender
-                                .output(AppInput::SetChanged(false, crate::SettingsGroup::Radio))
-                                .unwrap();
                         }
                     }
                 }

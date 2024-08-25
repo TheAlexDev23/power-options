@@ -411,9 +411,6 @@ impl SimpleComponent for CPUGroup {
                             self.from_cpu_settings(&profile.cpu_settings);
 
                             self.last_cpu_settings = Some(self.to_cpu_settings());
-                            sender
-                                .output(AppInput::SetChanged(false, crate::SettingsGroup::CPU))
-                                .unwrap();
                         }
                     }
 

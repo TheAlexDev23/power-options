@@ -184,9 +184,6 @@ impl SimpleComponent for NetworkGroup {
                             self.from_network_settings(&profile.network_settings);
                             self.settings_obtained = true;
                             self.last_network_settings = Some(self.to_network_settings());
-                            sender
-                                .output(AppInput::SetChanged(false, crate::SettingsGroup::Network))
-                                .unwrap();
                         }
                     }
                 }

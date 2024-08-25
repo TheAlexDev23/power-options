@@ -142,6 +142,7 @@ impl SimpleComponent for Header {
                                 daemon_control::get_profiles_info().await;
                                 daemon_control::get_profile_override().await;
 
+                                sender.output(AppInput::ResetAllChanged).unwrap();
                                 sender.input(HeaderInput::ChangingTo(None));
                             });
                         }
@@ -190,6 +191,8 @@ impl SimpleComponent for Header {
                                 daemon_control::remove_profile_override().await;
                                 daemon_control::get_profiles_info().await;
                                 daemon_control::get_profile_override().await;
+
+                                sender.output(AppInput::ResetAllChanged).unwrap();
 
                                 sender.input(HeaderInput::UpdateTempOverrideResetBtn(
                                     TempOverrideResetButtonStatus::Disabled,

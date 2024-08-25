@@ -332,9 +332,6 @@ impl SimpleComponent for CPUCoresGroup {
                             self.active_profile =
                                 Some((profiles_info.active_profile, profile.clone()));
                             sender.input(CPUCoresInput::Reset);
-                            sender
-                                .output(AppInput::SetChanged(false, crate::SettingsGroup::CPUCores))
-                                .unwrap();
                         }
                     }
 

@@ -56,6 +56,7 @@ pub enum AppInput {
     SendRootRequestToGroup(SettingsGroup, RootRequest),
     SendRootRequestToActiveGroup(RootRequest),
     SetChanged(bool, SettingsGroup),
+    ResetAllChanged,
     UpdateApplyButton,
     SetUpdating(bool),
 }
@@ -281,6 +282,10 @@ impl SimpleAsyncComponent for App {
                 } else {
                     self.changed_groups.remove(group);
                 }
+                sender.input(AppInput::UpdateApplyButton);
+            }
+            AppInput::ResetAllChanged => {
+                self.changed_groups = BitFlags::empty();
                 sender.input(AppInput::UpdateApplyButton);
             }
             AppInput::SetUpdating(v) => {
