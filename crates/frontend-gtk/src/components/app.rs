@@ -6,7 +6,8 @@ use enumflags2::BitFlags;
 use gtk::glib::clone;
 use gtk::prelude::*;
 use log::info;
-use power_daemon::{CPUInfo, CPUSettings, RadioSettings};
+use network::NetworkGroup;
+use power_daemon::{CPUInfo, CPUSettings, NetworkSettings, RadioSettings};
 use power_daemon::{Config, ProfilesInfo, SystemInfo};
 use relm4::loading_widgets::LoadingWidgets;
 use relm4::prelude::*;
@@ -25,6 +26,7 @@ pub enum SettingsGroup {
     CPU,
     CPUCores,
     Radio,
+    Network,
 }
 
 impl SettingsGroup {
@@ -33,6 +35,7 @@ impl SettingsGroup {
             "CPU" => SettingsGroup::CPU,
             "CPU Cores" => SettingsGroup::CPUCores,
             "Radio" => SettingsGroup::Radio,
+            "Network" => SettingsGroup::Network,
             _ => panic!("Unkown settings group"),
         }
     }
@@ -42,6 +45,7 @@ impl SettingsGroup {
             SettingsGroup::CPU => "CPU",
             SettingsGroup::CPUCores => "CPU Cores",
             SettingsGroup::Radio => "Radio",
+            SettingsGroup::Network => "Network",
         })
     }
 }
@@ -82,6 +86,7 @@ pub struct App {
     cpu_group: Controller<CPUGroup>,
     cpu_cores_group: Controller<CPUCoresGroup>,
     radio_group: Controller<RadioGroup>,
+    network_group: Controller<NetworkGroup>,
 }
 
 impl App {
@@ -169,6 +174,9 @@ impl SimpleAsyncComponent for App {
         let radio_group = RadioGroup::builder()
             .launch(())
             .forward(sender.input_sender(), identity);
+        let network_group = NetworkGroup::builder()
+            .launch(())
+            .forward(sender.input_sender(), identity);
 
         let settings_group_stack = gtk::Stack::new();
         settings_group_stack.set_transition_type(gtk::StackTransitionType::SlideUpDown);
@@ -193,6 +201,13 @@ impl SimpleAsyncComponent for App {
             Some("Radio"),
             "Radio",
         );
+        settings_group_stack.add_titled(
+            &gtk::ScrolledWindow::builder()
+                .child(network_group.widget())
+                .build(),
+            Some("Network"),
+            "Network",
+        );
 
         {
             let sender = sender.clone();
@@ -215,6 +230,7 @@ impl SimpleAsyncComponent for App {
             cpu_group,
             cpu_cores_group,
             radio_group,
+            network_group,
         };
 
         let widgets = view_output!();
@@ -238,6 +254,7 @@ impl SimpleAsyncComponent for App {
                     self.cpu_cores_group.sender().send(request.into()).unwrap()
                 }
                 SettingsGroup::Radio => self.radio_group.sender().send(request.into()).unwrap(),
+                SettingsGroup::Network => self.network_group.sender().send(request.into()).unwrap(),
             },
             AppInput::SendRootRequestToAll(request) => {
                 self.header.sender().send(request.clone().into()).unwrap();
@@ -250,6 +267,10 @@ impl SimpleAsyncComponent for App {
                     .send(request.clone().into())
                     .unwrap();
                 self.radio_group
+                    .sender()
+                    .send(request.clone().into())
+                    .unwrap();
+                self.network_group
                     .sender()
                     .send(request.clone().into())
                     .unwrap();
@@ -364,6 +385,7 @@ async fn remove_all_none_options() {
         // those will be updated on demand by the component.
 
         default_radio_settings(&mut profile.radio_settings);
+        default_network_settings(&mut profile.network_settings);
 
         if initial != profile {
             daemon_control::update_profile_full(idx as u32, profile).await;
@@ -419,5 +441,32 @@ fn default_radio_settings(settings: &mut RadioSettings) {
     }
     if settings.block_nfc.is_none() {
         settings.block_nfc = Some(false);
+    }
+}
+
+fn default_network_settings(settings: &mut NetworkSettings) {
+    if settings.disable_ethernet.is_none() {
+        settings.disable_ethernet = false.into();
+    }
+    if settings.disable_wifi_7.is_none() {
+        settings.disable_wifi_7 = false.into();
+    }
+    if settings.disable_wifi_6.is_none() {
+        settings.disable_wifi_6 = false.into();
+    }
+    if settings.disable_wifi_5.is_none() {
+        settings.disable_wifi_5 = false.into();
+    }
+    if settings.enable_power_save.is_none() {
+        settings.enable_power_save = false.into();
+    }
+    if settings.enable_uapsd.is_none() {
+        settings.enable_uapsd = false.into();
+    }
+    if settings.power_level.is_none() {
+        settings.power_level = 2.into();
+    }
+    if settings.power_scheme.is_none() {
+        settings.power_scheme = 2.into();
     }
 }

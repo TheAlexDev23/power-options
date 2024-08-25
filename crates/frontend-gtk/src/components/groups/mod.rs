@@ -1,5 +1,6 @@
 pub mod cpu;
 pub mod cpu_cores;
+pub mod network;
 pub mod radio;
 
 pub use cpu::*;

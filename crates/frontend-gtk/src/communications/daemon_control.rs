@@ -24,7 +24,7 @@ pub async fn get_config() {
         .await
 }
 pub async fn get_profiles_info() {
-    debug!("Obtaining config");
+    debug!("Obtaining profiles info");
     PROFILES_INFO
         .set(get_client().await.get_profiles_info().await.unwrap())
         .await
@@ -57,7 +57,7 @@ pub async fn update_profile_reduced(idx: u32, updated: Profile, reduced_update: 
 
     get_client()
         .await
-        .update_profile_full(idx, updated)
+        .update_profile_reduced(idx, updated, reduced_update)
         .await
         .unwrap();
 }

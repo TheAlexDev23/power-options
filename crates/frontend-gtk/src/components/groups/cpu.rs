@@ -411,11 +411,15 @@ impl SimpleComponent for CPUGroup {
                             self.from_cpu_settings(&profile.cpu_settings);
 
                             self.last_cpu_settings = Some(self.to_cpu_settings());
+                            sender
+                                .output(AppInput::SetChanged(false, crate::SettingsGroup::CPU))
+                                .unwrap();
                         }
                     }
 
                     if let AppSyncUpdate::SystemInfo(ref system_info) = message {
                         if let Some(system_info) = system_info.as_ref() {
+                            let info_obtained = self.info_obtained;
                             self.info_obtained = true;
                             self.from_cpu_info(&system_info.cpu_info);
                             // The reason we can't get away from updating just
@@ -424,7 +428,9 @@ impl SimpleComponent for CPUGroup {
                             // updating based on the system's features. And
                             // proper reactivity requires us to synchronize the
                             // newest settings
-                            self.last_cpu_settings = Some(self.to_cpu_settings());
+                            if !info_obtained {
+                                self.last_cpu_settings = Some(self.to_cpu_settings());
+                            }
                         }
                     }
                 }

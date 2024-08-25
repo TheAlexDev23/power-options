@@ -84,21 +84,17 @@ impl SimpleComponent for RadioGroup {
                             add_binding: (&model.block_wifi, "active"),
                             connect_active_notify => RadioInput::Changed,
                         },
-                    },
-                    adw::PreferencesGroup {
                         adw::SwitchRow {
                             set_title: "Disable NFC",
                             add_binding: (&model.block_nfc, "active"),
                             connect_active_notify => RadioInput::Changed,
                         },
-                    },
-                    adw::PreferencesGroup {
                         adw::SwitchRow {
                             set_title: "Disable Bluetooth",
                             add_binding: (&model.block_bt, "active"),
                             connect_active_notify => RadioInput::Changed,
                         },
-                    }
+                    },
                 }
             }
         }
@@ -128,6 +124,9 @@ impl SimpleComponent for RadioGroup {
                             self.from_radio_settings(&profile.radio_settings);
                             self.settings_obtained = true;
                             self.last_radio_settings = Some(self.to_radio_settings());
+                            sender
+                                .output(AppInput::SetChanged(false, crate::SettingsGroup::Radio))
+                                .unwrap();
                         }
                     }
                 }
