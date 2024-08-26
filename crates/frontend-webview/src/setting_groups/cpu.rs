@@ -145,8 +145,8 @@ fn CPUSettingsForm(
 
             governor: form.governor.into_base(),
 
-            min_freq: form.min_freq.into_u32().map(|v| v * 1000),
-            max_freq: form.max_freq.into_u32().map(|v| v * 1000),
+            min_freq: form.min_freq.into_u32(),
+            max_freq: form.max_freq.into_u32(),
 
             min_perf_pct: form.min_perf_pct.into_u8(),
             max_perf_pct: form.max_perf_pct.into_u8(),
@@ -160,11 +160,11 @@ fn CPUSettingsForm(
         };
 
         control_routine.send((
-            ControlAction::SetReducedUpdate(ReducedUpdate::CPU),
-            Some(awaiting_completion),
-        ));
-        control_routine.send((
-            ControlAction::UpdateProfile(active_profile_idx as u32, active_profile),
+            ControlAction::UpdateProfileReduced(
+                active_profile_idx as u32,
+                active_profile,
+                ReducedUpdate::CPU,
+            ),
             Some(awaiting_completion),
         ));
         control_routine.send((ControlAction::GetProfilesInfo, Some(awaiting_completion)));
@@ -479,7 +479,7 @@ fn CoreSettings(
                             td { "" }
                         }
 
-                        td { "{core.min_frequency}-{core.max_frequency}" }
+                        td { "{core.total_min_frequency}-{core.total_max_frequency}" }
 
                         td {
                             Dropdown {
@@ -616,11 +616,11 @@ fn update_core_settings<F>(
     }
 
     control_routine.send((
-        ControlAction::SetReducedUpdate(ReducedUpdate::MultipleCPUCores(indices)),
-        Some(awaiting_signal),
-    ));
-    control_routine.send((
-        ControlAction::UpdateProfile(profile_id, profile.clone()),
+        ControlAction::UpdateProfileReduced(
+            profile_id,
+            profile.clone(),
+            ReducedUpdate::MultipleCPUCores(indices),
+        ),
         Some(awaiting_signal),
     ));
     control_routine.send((ControlAction::GetProfilesInfo, Some(awaiting_signal)));

@@ -73,11 +73,11 @@ pub fn KernelGroup(
         };
 
         control_routine.send((
-            ControlAction::SetReducedUpdate(ReducedUpdate::Kernel),
-            Some(awaiting_completion),
-        ));
-        control_routine.send((
-            ControlAction::UpdateProfile(active_profile_idx as u32, active_profile),
+            ControlAction::UpdateProfileReduced(
+                active_profile_idx as u32,
+                active_profile,
+                ReducedUpdate::Kernel,
+            ),
             Some(awaiting_completion),
         ));
         control_routine.send((ControlAction::GetProfilesInfo, Some(awaiting_completion)));

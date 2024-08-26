@@ -70,8 +70,18 @@ impl ControlServer {
         serde_json::to_string(&self.instance.lock().await.profiles_info).unwrap()
     }
 
-    async fn update(&mut self) {
-        self.instance.get_mut().update();
+    async fn update_full(&mut self) {
+        self.instance.get_mut().update_full();
+    }
+    async fn update_reduced(&mut self, reduced_update: String) {
+        let reduced_update = match serde_json::from_str(&reduced_update) {
+            Ok(reduced_update) => reduced_update,
+            Err(error) => {
+                error!("Could not parse reduced update: {error}");
+                return;
+            }
+        };
+        self.instance.get_mut().update_reduced(reduced_update);
     }
 
     async fn update_config(&mut self, updated: String) {
@@ -92,27 +102,39 @@ impl ControlServer {
         self.instance.get_mut().remove_profile(idx as usize);
     }
 
-    async fn update_profile(&mut self, idx: u32, updated: String) {
+    async fn update_profile_full(&mut self, idx: u32, updated: String) {
         match serde_json::from_str(&updated) {
             Ok(profile) => {
                 self.instance
                     .get_mut()
-                    .update_profile(idx as usize, profile);
+                    .update_profile_full(idx as usize, profile);
             }
             Err(error) => {
-                error!("Could not parse new requested config: {error}")
+                error!("Could not parse updated profile: {error}")
             }
         }
     }
+    async fn update_profile_reduced(&mut self, idx: u32, updated: String, reduced_update: String) {
+        let reduced_update = match serde_json::from_str(&reduced_update) {
+            Ok(reduced_update) => reduced_update,
+            Err(error) => {
+                error!("Could not parse reduced update: {error}");
+                return;
+            }
+        };
 
-    async fn set_reduced_update(&mut self, reduced_update: String) {
-        match serde_json::from_str(&reduced_update) {
-            Ok(reduced_update) => self.instance.get_mut().set_reduced_update(reduced_update),
-            Err(error) => error!("Could not set reduced update: {error}"),
+        match serde_json::from_str(&updated) {
+            Ok(profile) => {
+                self.instance.get_mut().update_profile_reduced(
+                    idx as usize,
+                    profile,
+                    reduced_update,
+                );
+            }
+            Err(error) => {
+                error!("Could not parse updated profile: {error}")
+            }
         }
-    }
-    async fn reset_reduced_update(&mut self) {
-        self.instance.get_mut().reset_reduced_update();
     }
 
     async fn get_profile_override(&mut self) -> String {

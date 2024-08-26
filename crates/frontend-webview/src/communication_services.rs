@@ -109,11 +109,11 @@ pub enum ControlAction {
 
     ResetProfile(u32),
     RemoveProfile(u32),
-    UpdateProfile(u32, Profile),
-    Update,
+    UpdateProfileFull(u32, Profile),
+    UpdateProfileReduced(u32, Profile, ReducedUpdate),
 
-    SetReducedUpdate(ReducedUpdate),
-    ResetReducedUpdate,
+    UpdateFull,
+    UpdateReduced(ReducedUpdate),
 
     GetProfileOverride,
     SetProfileOverride(String),
@@ -158,8 +158,12 @@ pub async fn control_service(
                     .update_config(config)
                     .await
                     .expect("Could not update config"),
-                ControlAction::UpdateProfile(idx, updated) => control_client
-                    .update_profile(idx, updated)
+                ControlAction::UpdateProfileFull(idx, updated) => control_client
+                    .update_profile_full(idx, updated)
+                    .await
+                    .expect("Could not update profile"),
+                ControlAction::UpdateProfileReduced(idx, updated, reduced_update) => control_client
+                    .update_profile_reduced(idx, updated, reduced_update)
                     .await
                     .expect("Could not update profile"),
                 ControlAction::ResetProfile(idx) => control_client
@@ -170,18 +174,14 @@ pub async fn control_service(
                     .remove_profile(idx)
                     .await
                     .expect("Could not remove profile"),
-                ControlAction::Update => control_client
-                    .update()
+                ControlAction::UpdateFull => control_client
+                    .update_full()
                     .await
                     .expect("Could not apply current profile"),
-                ControlAction::SetReducedUpdate(reduced_update) => control_client
-                    .set_reduced_update(reduced_update)
+                ControlAction::UpdateReduced(reduced_update) => control_client
+                    .update_reduced(reduced_update)
                     .await
-                    .expect("Could not set reduced update"),
-                ControlAction::ResetReducedUpdate => control_client
-                    .reset_reduced_update()
-                    .await
-                    .expect("Could not reset reduced update"),
+                    .expect("Could not apply current profile"),
                 ControlAction::GetProfileOverride => active_profile_override.set(
                     control_client
                         .get_profile_override()

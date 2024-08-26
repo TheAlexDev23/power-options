@@ -33,6 +33,9 @@ enum OpMode {
         /// Path of the executable for this program
         #[arg(long)]
         program_path: PathBuf,
+        /// Make sure the daemon starts with maximum verbosity
+        #[arg(long, action=clap::ArgAction::SetTrue)]
+        verbose_daemon: bool,
     },
     Daemon,
     RefreshFull,
@@ -76,7 +79,11 @@ async fn main() {
 
     match args.mode {
         OpMode::Daemon => daemon().await,
-        OpMode::GenerateFiles { path, program_path } => generate_files(path, program_path),
+        OpMode::GenerateFiles {
+            path,
+            program_path,
+            verbose_daemon,
+        } => generate_files(path, program_path, verbose_daemon),
         OpMode::RefreshFull => refresh_full().await,
         OpMode::RefreshUSB => refresh_reduced(ReducedUpdate::USB).await,
         OpMode::RefreshPCI => {
@@ -107,7 +114,7 @@ async fn daemon() {
     let config = power_daemon::parse_config(&config_path);
     let mut handle = Instance::new(config, &config_path, &profiles_path);
 
-    handle.update();
+    handle.update_full();
 
     let _com_server = CommunicationServer::new(handle)
         .await
@@ -118,13 +125,13 @@ async fn daemon() {
     }
 }
 
-fn generate_files(path: PathBuf, program_path: PathBuf) {
+fn generate_files(path: PathBuf, program_path: PathBuf, verbose_daemon: bool) {
     generate_config(&path);
     generate_profiles(&path);
     generate_udev_file(&path, &program_path);
     generate_acpi_file(&path, &program_path);
     generate_dbus_file(&path);
-    genereate_systemd_file(&path, &program_path);
+    genereate_systemd_file(&path, &program_path, verbose_daemon);
 }
 
 async fn refresh_full() {
@@ -132,11 +139,7 @@ async fn refresh_full() {
         .await
         .expect("Could not intialize control client");
     client
-        .reset_reduced_update()
-        .await
-        .expect("Could not reset reduced update");
-    client
-        .update()
+        .update_full()
         .await
         .expect("Could not reset reducedu update");
 }
@@ -146,11 +149,7 @@ async fn refresh_reduced(reduced_update: ReducedUpdate) {
         .await
         .expect("Could not intialize control client");
     client
-        .set_reduced_update(reduced_update)
-        .await
-        .expect("Could not set reduced update");
-    client
-        .update()
+        .update_reduced(reduced_update)
         .await
         .expect("Could not reset reducedu update");
 }
@@ -271,7 +270,7 @@ fn generate_dbus_file(path: &PathBuf) {
     fs::write(dir.join("power-daemon.conf"), content).expect("Could not write to file");
 }
 
-fn genereate_systemd_file(path: &PathBuf, program_path: &PathBuf) {
+fn genereate_systemd_file(path: &PathBuf, program_path: &PathBuf, verbose_daemon: bool) {
     debug!("Generating systemd file");
 
     let dir = path.join("lib/systemd/system/");
@@ -289,10 +288,11 @@ After=multi-user.target NetworkManager.service
 Before=shutdown.target
 
 [Service]
-ExecStart={program_path} daemon
+ExecStart={program_path} daemon {}
 
 [Install]
-WantedBy=multi-user.target"#
+WantedBy=multi-user.target"#,
+        if verbose_daemon { "-vvv" } else { "" }
     );
 
     trace!("{content}");

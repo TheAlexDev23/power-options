@@ -10,13 +10,6 @@ use crate::{
     ReducedUpdate, SystemInfo,
 };
 
-pub fn find_profile_index_by_name(vec: &Vec<Profile>, name: &str) -> usize {
-    vec.iter().position(|p| p.profile_name == name).unwrap()
-}
-pub fn try_find_profile_index_by_name(vec: &Vec<Profile>, name: &str) -> Option<usize> {
-    vec.iter().position(|p| p.profile_name == name)
-}
-
 #[derive(Serialize, Deserialize, Default, Clone, Debug, PartialEq)]
 pub struct ProfilesInfo {
     pub active_profile: usize,
@@ -26,6 +19,15 @@ pub struct ProfilesInfo {
 impl ProfilesInfo {
     pub fn get_active_profile(&self) -> &Profile {
         &self.profiles[self.active_profile]
+    }
+    pub fn find_profile_index_by_name(&self, name: &str) -> usize {
+        self.profiles
+            .iter()
+            .position(|p| p.profile_name == name)
+            .unwrap()
+    }
+    pub fn try_find_profile_index_by_name(&self, name: &str) -> Option<usize> {
+        self.profiles.iter().position(|p| p.profile_name == name)
     }
 }
 
@@ -197,13 +199,13 @@ impl CPUSettings {
         if let Some(min_frequency) = self.min_freq {
             run_command(&format!(
                 "echo {} > /sys/devices/system/cpu/cpu*/cpufreq/scaling_min_freq",
-                min_frequency
+                min_frequency * 1000
             ));
         }
         if let Some(max_frequency) = self.max_freq {
             run_command(&format!(
                 "echo {} > /sys/devices/system/cpu/cpu*/cpufreq/scaling_max_freq",
-                max_frequency
+                max_frequency * 1000
             ));
         }
 
@@ -296,13 +298,15 @@ impl CoreSetting {
         if let Some(min_frequency) = self.min_frequency {
             run_command(&format!(
                 "echo {} > /sys/devices/system/cpu/cpu{}/cpufreq/scaling_min_freq",
-                min_frequency, self.cpu_id,
+                min_frequency * 1000,
+                self.cpu_id,
             ));
         }
         if let Some(max_frequency) = self.max_frequency {
             run_command(&format!(
                 "echo {} > /sys/devices/system/cpu/cpu{}/cpufreq/scaling_max_freq",
-                max_frequency, self.cpu_id
+                max_frequency * 1000,
+                self.cpu_id
             ));
         }
     }

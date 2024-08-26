@@ -98,11 +98,11 @@ pub fn NetworkGroup(
         };
 
         control_routine.send((
-            ControlAction::SetReducedUpdate(ReducedUpdate::Network),
-            Some(awaiting_completion),
-        ));
-        control_routine.send((
-            ControlAction::UpdateProfile(active_profile_idx as u32, active_profile),
+            ControlAction::UpdateProfileReduced(
+                active_profile_idx as u32,
+                active_profile,
+                ReducedUpdate::Network,
+            ),
             Some(awaiting_completion),
         ));
         control_routine.send((ControlAction::GetProfilesInfo, Some(awaiting_completion)));

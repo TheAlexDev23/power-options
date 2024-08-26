@@ -43,7 +43,6 @@ pub struct Instance {
     config_path: PathBuf,
     config: Config,
     profiles_info: ProfilesInfo,
-    reduced_update: Option<ReducedUpdate>,
     temporary_override: Option<String>,
 }
 
@@ -58,17 +57,20 @@ impl Instance {
                 profiles,
                 ..Default::default()
             },
-            reduced_update: None,
             temporary_override: None,
         }
     }
 
     pub fn set_profile_override(&mut self, name: String) {
         self.temporary_override = Some(name);
-        self.update();
+        self.update_full();
     }
     pub fn try_set_profile_override(&mut self, name: String) {
-        if try_find_profile_index_by_name(&self.profiles_info.profiles, &name).is_none() {
+        if self
+            .profiles_info
+            .try_find_profile_index_by_name(&name)
+            .is_none()
+        {
             debug!("Not updating profile override because profile name does not match with any existing profiles");
         } else {
             self.set_profile_override(name);
@@ -77,40 +79,39 @@ impl Instance {
 
     pub fn remove_profile_override(&mut self) {
         self.temporary_override = None;
-        self.update();
+        self.update_full();
     }
 
-    pub fn set_reduced_update(&mut self, reduced_update: ReducedUpdate) {
-        self.reduced_update = Some(reduced_update);
-    }
-    pub fn reset_reduced_update(&mut self) {
-        self.reduced_update = None;
+    pub fn update_full(&mut self) {
+        self.profiles_info.active_profile = self.pick_profile();
+
+        self.profiles_info.get_active_profile().apply_all();
     }
 
-    pub fn update(&mut self) {
-        let profiles = &self.profiles_info.profiles;
-        let active_profile = if let Some(ref temporary_override) = self.temporary_override {
+    pub fn update_reduced(&mut self, reduced_update: ReducedUpdate) {
+        self.profiles_info.active_profile = self.pick_profile();
+        self.profiles_info
+            .get_active_profile()
+            .apply_reduced(&reduced_update);
+    }
+
+    pub fn pick_profile(&self) -> usize {
+        if let Some(ref temporary_override) = self.temporary_override {
             debug!("Picking temporary profile override");
-            profile::find_profile_index_by_name(&profiles, &temporary_override)
+            self.profiles_info
+                .find_profile_index_by_name(&temporary_override)
         } else if let Some(ref profile_override) = self.config.profile_override {
             debug!("Picking settings profile override");
-            profile::find_profile_index_by_name(&profiles, profile_override)
+            self.profiles_info
+                .find_profile_index_by_name(profile_override)
         } else if helpers::system_on_ac() {
             debug!("Picking AC profile");
-            profile::find_profile_index_by_name(&profiles, &self.config.ac_profile)
+            self.profiles_info
+                .find_profile_index_by_name(&self.config.ac_profile)
         } else {
             debug!("Picking BAT profile");
-            profile::find_profile_index_by_name(&profiles, &self.config.bat_profile)
-        };
-
-        self.profiles_info.active_profile = active_profile;
-
-        if let Some(ref reduced_update) = self.reduced_update {
             self.profiles_info
-                .get_active_profile()
-                .apply_reduced(reduced_update);
-        } else {
-            self.profiles_info.get_active_profile().apply_all();
+                .find_profile_index_by_name(&self.config.bat_profile)
         }
     }
 
@@ -122,7 +123,7 @@ impl Instance {
         // We might have updated the profiles too in the config, so reloading them is a must
         self.profiles_info.profiles = parse_profiles(&self.config, &self.profiles_path);
 
-        self.update_without_reduced();
+        self.update_full();
     }
 
     pub fn reset_profile(&mut self, idx: usize) {
@@ -133,7 +134,7 @@ impl Instance {
             self.profiles_info.profiles[idx].get_original_values(&system_info);
         serialize_profiles(&self.profiles_info.profiles, &self.profiles_path);
 
-        self.update_without_reduced();
+        self.update_full();
     }
 
     pub fn remove_profile(&mut self, idx: usize) {
@@ -202,28 +203,36 @@ impl Instance {
         write_config(&self.config, &self.config_path);
 
         if should_update {
-            self.update_without_reduced();
+            self.update_full();
         }
     }
 
-    pub fn update_profile(&mut self, idx: usize, profile: Profile) {
+    pub fn update_profile_full(&mut self, idx: usize, profile: Profile) {
+        self.update_profile(idx, profile);
+
+        if idx == self.profiles_info.active_profile {
+            self.update_full();
+        }
+    }
+    pub fn update_profile_reduced(
+        &mut self,
+        idx: usize,
+        profile: Profile,
+        reduced_update: ReducedUpdate,
+    ) {
+        self.update_profile(idx, profile);
+
+        if idx == self.profiles_info.active_profile {
+            self.update_reduced(reduced_update);
+        }
+    }
+    fn update_profile(&mut self, idx: usize, profile: Profile) {
         debug!("Updating profile No {idx}");
         trace!("New profile: {profile:#?}");
 
         self.profiles_info.profiles[idx] = profile;
         // We actually need to update the underlying files
         serialize_profiles(&self.profiles_info.profiles, &self.profiles_path);
-
-        self.update();
-    }
-
-    fn update_without_reduced(&mut self) {
-        let reduced_update = self.reduced_update.clone();
-        self.reset_reduced_update();
-        self.update();
-        if let Some(reduced_update) = reduced_update {
-            self.set_reduced_update(reduced_update);
-        }
     }
 }
 
