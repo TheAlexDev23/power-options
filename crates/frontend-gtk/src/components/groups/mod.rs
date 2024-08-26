@@ -3,6 +3,7 @@ pub mod cpu_cores;
 pub mod network;
 pub mod pci;
 pub mod radio;
+pub mod usb;
 
 pub use cpu::*;
 pub use cpu_cores::*;

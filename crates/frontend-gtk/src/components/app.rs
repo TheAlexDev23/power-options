@@ -10,11 +10,13 @@ use network::NetworkGroup;
 use pci::PCIGroup;
 use power_daemon::{
     ASPMInfo, ASPMSettings, CPUInfo, CPUSettings, NetworkSettings, PCISettings, RadioSettings,
+    USBSettings,
 };
 use power_daemon::{Config, ProfilesInfo, SystemInfo};
 use relm4::loading_widgets::LoadingWidgets;
 use relm4::prelude::*;
 use relm4::Controller;
+use usb::USBGroup;
 
 use super::groups::*;
 use super::Header;
@@ -31,6 +33,7 @@ pub enum SettingsGroup {
     Radio,
     Network,
     PCI,
+    USB,
 }
 
 impl SettingsGroup {
@@ -41,6 +44,7 @@ impl SettingsGroup {
             "Radio" => SettingsGroup::Radio,
             "Network" => SettingsGroup::Network,
             "PCI" => SettingsGroup::PCI,
+            "USB" => SettingsGroup::USB,
             _ => panic!("Unkown settings group"),
         }
     }
@@ -52,6 +56,7 @@ impl SettingsGroup {
             SettingsGroup::Radio => "Radio",
             SettingsGroup::Network => "Network",
             SettingsGroup::PCI => "PCI",
+            SettingsGroup::USB => "USB",
         })
     }
 }
@@ -95,6 +100,7 @@ pub struct App {
     radio_group: Controller<RadioGroup>,
     network_group: Controller<NetworkGroup>,
     pci_group: Controller<PCIGroup>,
+    usb_group: Controller<USBGroup>,
 }
 
 impl App {
@@ -188,6 +194,9 @@ impl SimpleAsyncComponent for App {
         let pci_group = PCIGroup::builder()
             .launch(())
             .forward(sender.input_sender(), identity);
+        let usb_group = USBGroup::builder()
+            .launch(())
+            .forward(sender.input_sender(), identity);
 
         let settings_group_stack = gtk::Stack::new();
         settings_group_stack.set_transition_type(gtk::StackTransitionType::SlideUpDown);
@@ -226,6 +235,13 @@ impl SimpleAsyncComponent for App {
             Some("PCI"),
             "PCI",
         );
+        settings_group_stack.add_titled(
+            &gtk::ScrolledWindow::builder()
+                .child(usb_group.widget())
+                .build(),
+            Some("USB"),
+            "USB",
+        );
 
         {
             let sender = sender.clone();
@@ -250,6 +266,7 @@ impl SimpleAsyncComponent for App {
             radio_group,
             network_group,
             pci_group,
+            usb_group,
         };
 
         let widgets = view_output!();
@@ -275,6 +292,7 @@ impl SimpleAsyncComponent for App {
                 SettingsGroup::Radio => self.radio_group.sender().send(request.into()).unwrap(),
                 SettingsGroup::Network => self.network_group.sender().send(request.into()).unwrap(),
                 SettingsGroup::PCI => self.pci_group.sender().send(request.into()).unwrap(),
+                SettingsGroup::USB => self.usb_group.sender().send(request.into()).unwrap(),
             },
             AppInput::SendRootRequestToAll(request) => {
                 self.header.sender().send(request.clone().into()).unwrap();
@@ -295,6 +313,10 @@ impl SimpleAsyncComponent for App {
                     .send(request.clone().into())
                     .unwrap();
                 self.pci_group
+                    .sender()
+                    .send(request.clone().into())
+                    .unwrap();
+                self.usb_group
                     .sender()
                     .send(request.clone().into())
                     .unwrap();
@@ -416,6 +438,7 @@ async fn remove_all_none_options() {
         default_network_settings(&mut profile.network_settings);
         default_pci_settings(&mut profile.pci_settings);
         default_aspm_settings(&mut profile.aspm_settings, &info.pci_info.aspm_info);
+        default_usb_settings(&mut profile.usb_settings);
 
         if initial != profile {
             daemon_control::update_profile_full(idx as u32, profile).await;
@@ -516,5 +539,20 @@ fn default_pci_settings(settings: &mut PCISettings) {
 fn default_aspm_settings(settings: &mut ASPMSettings, info: &ASPMInfo) {
     if settings.mode.is_none() && info.supported_modes.is_some() {
         settings.mode = Some(info.supported_modes.as_ref().unwrap()[0].clone());
+    }
+}
+
+fn default_usb_settings(settings: &mut USBSettings) {
+    if settings.enable_pm.is_none() {
+        settings.enable_pm = Some(false);
+    }
+    if settings.autosuspend_delay_ms.is_none() {
+        settings.autosuspend_delay_ms = Some(10000);
+    }
+    if settings.whiteblacklist.is_none() {
+        settings.whiteblacklist = Some(power_daemon::WhiteBlackList {
+            items: Vec::new(),
+            list_type: power_daemon::WhiteBlackListType::Blacklist,
+        })
     }
 }
