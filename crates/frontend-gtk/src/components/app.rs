@@ -5,12 +5,13 @@ use std::time::Duration;
 use enumflags2::BitFlags;
 use gtk::glib::clone;
 use gtk::prelude::*;
+use kernel::KernelGroup;
 use log::info;
 use network::NetworkGroup;
 use pci::PCIGroup;
 use power_daemon::{
-    ASPMInfo, ASPMSettings, CPUInfo, CPUSettings, NetworkSettings, PCISettings, RadioSettings,
-    SATASettings, USBSettings,
+    ASPMInfo, ASPMSettings, CPUInfo, CPUSettings, KernelSettings, NetworkSettings, PCISettings,
+    RadioSettings, SATASettings, USBSettings,
 };
 use power_daemon::{Config, ProfilesInfo, SystemInfo};
 use relm4::loading_widgets::LoadingWidgets;
@@ -36,6 +37,7 @@ pub enum SettingsGroup {
     PCI,
     USB,
     SATA,
+    Kernel,
 }
 
 impl SettingsGroup {
@@ -48,6 +50,7 @@ impl SettingsGroup {
             "PCI" => SettingsGroup::PCI,
             "USB" => SettingsGroup::USB,
             "SATA" => SettingsGroup::SATA,
+            "Kernel" => SettingsGroup::Kernel,
             _ => panic!("Unkown settings group"),
         }
     }
@@ -61,6 +64,7 @@ impl SettingsGroup {
             SettingsGroup::PCI => "PCI",
             SettingsGroup::USB => "USB",
             SettingsGroup::SATA => "SATA",
+            SettingsGroup::Kernel => "Kernel",
         })
     }
 }
@@ -107,6 +111,7 @@ pub struct App {
     pci_group: Controller<PCIGroup>,
     usb_group: Controller<USBGroup>,
     sata_group: Controller<SATAGroup>,
+    kernel_group: Controller<KernelGroup>,
 }
 
 impl App {
@@ -206,6 +211,9 @@ impl SimpleAsyncComponent for App {
         let sata_group = SATAGroup::builder()
             .launch(())
             .forward(sender.input_sender(), identity);
+        let kernel_group = KernelGroup::builder()
+            .launch(())
+            .forward(sender.input_sender(), identity);
 
         let settings_group_stack = gtk::Stack::new();
         settings_group_stack.set_transition_type(gtk::StackTransitionType::SlideUpDown);
@@ -258,6 +266,13 @@ impl SimpleAsyncComponent for App {
             Some("SATA"),
             "SATA",
         );
+        settings_group_stack.add_titled(
+            &gtk::ScrolledWindow::builder()
+                .child(kernel_group.widget())
+                .build(),
+            Some("Kernel"),
+            "Kernel",
+        );
 
         {
             let sender = sender.clone();
@@ -284,6 +299,7 @@ impl SimpleAsyncComponent for App {
             pci_group,
             usb_group,
             sata_group,
+            kernel_group,
         };
 
         let widgets = view_output!();
@@ -311,6 +327,7 @@ impl SimpleAsyncComponent for App {
                 SettingsGroup::PCI => self.pci_group.sender().send(request.into()).unwrap(),
                 SettingsGroup::USB => self.usb_group.sender().send(request.into()).unwrap(),
                 SettingsGroup::SATA => self.sata_group.sender().send(request.into()).unwrap(),
+                SettingsGroup::Kernel => self.kernel_group.sender().send(request.into()).unwrap(),
             },
             AppInput::SendRootRequestToAll(request) => {
                 self.header.sender().send(request.clone().into()).unwrap();
@@ -339,6 +356,10 @@ impl SimpleAsyncComponent for App {
                     .send(request.clone().into())
                     .unwrap();
                 self.sata_group
+                    .sender()
+                    .send(request.clone().into())
+                    .unwrap();
+                self.kernel_group
                     .sender()
                     .send(request.clone().into())
                     .unwrap();
@@ -464,6 +485,7 @@ async fn remove_all_none_options() {
         default_aspm_settings(&mut profile.aspm_settings, &info.pci_info.aspm_info);
         default_usb_settings(&mut profile.usb_settings);
         default_sata_settings(&mut profile.sata_settings);
+        default_kernel_settings(&mut profile.kernel_settings);
 
         if initial != profile {
             daemon_control::update_profile_full(idx as u32, profile).await;
@@ -585,5 +607,17 @@ fn default_usb_settings(settings: &mut USBSettings) {
 fn default_sata_settings(settings: &mut SATASettings) {
     if settings.active_link_pm_policy.is_none() {
         settings.active_link_pm_policy = Some("med_power_with_dipm".to_string());
+    }
+}
+
+fn default_kernel_settings(settings: &mut KernelSettings) {
+    if settings.disable_nmi_watchdog.is_none() {
+        settings.disable_nmi_watchdog = Some(true);
+    }
+    if settings.vm_writeback.is_none() {
+        settings.vm_writeback = Some(10);
+    }
+    if settings.laptop_mode.is_none() {
+        settings.laptop_mode = Some(5);
     }
 }
