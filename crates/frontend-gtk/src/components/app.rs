@@ -7,7 +7,10 @@ use gtk::glib::clone;
 use gtk::prelude::*;
 use log::info;
 use network::NetworkGroup;
-use power_daemon::{CPUInfo, CPUSettings, NetworkSettings, RadioSettings};
+use pci::PCIGroup;
+use power_daemon::{
+    ASPMInfo, ASPMSettings, CPUInfo, CPUSettings, NetworkSettings, PCISettings, RadioSettings,
+};
 use power_daemon::{Config, ProfilesInfo, SystemInfo};
 use relm4::loading_widgets::LoadingWidgets;
 use relm4::prelude::*;
@@ -27,6 +30,7 @@ pub enum SettingsGroup {
     CPUCores,
     Radio,
     Network,
+    PCI,
 }
 
 impl SettingsGroup {
@@ -36,6 +40,7 @@ impl SettingsGroup {
             "CPU Cores" => SettingsGroup::CPUCores,
             "Radio" => SettingsGroup::Radio,
             "Network" => SettingsGroup::Network,
+            "PCI" => SettingsGroup::PCI,
             _ => panic!("Unkown settings group"),
         }
     }
@@ -46,6 +51,7 @@ impl SettingsGroup {
             SettingsGroup::CPUCores => "CPU Cores",
             SettingsGroup::Radio => "Radio",
             SettingsGroup::Network => "Network",
+            SettingsGroup::PCI => "PCI",
         })
     }
 }
@@ -88,6 +94,7 @@ pub struct App {
     cpu_cores_group: Controller<CPUCoresGroup>,
     radio_group: Controller<RadioGroup>,
     network_group: Controller<NetworkGroup>,
+    pci_group: Controller<PCIGroup>,
 }
 
 impl App {
@@ -178,6 +185,9 @@ impl SimpleAsyncComponent for App {
         let network_group = NetworkGroup::builder()
             .launch(())
             .forward(sender.input_sender(), identity);
+        let pci_group = PCIGroup::builder()
+            .launch(())
+            .forward(sender.input_sender(), identity);
 
         let settings_group_stack = gtk::Stack::new();
         settings_group_stack.set_transition_type(gtk::StackTransitionType::SlideUpDown);
@@ -209,6 +219,13 @@ impl SimpleAsyncComponent for App {
             Some("Network"),
             "Network",
         );
+        settings_group_stack.add_titled(
+            &gtk::ScrolledWindow::builder()
+                .child(pci_group.widget())
+                .build(),
+            Some("PCI"),
+            "PCI",
+        );
 
         {
             let sender = sender.clone();
@@ -232,6 +249,7 @@ impl SimpleAsyncComponent for App {
             cpu_cores_group,
             radio_group,
             network_group,
+            pci_group,
         };
 
         let widgets = view_output!();
@@ -256,6 +274,7 @@ impl SimpleAsyncComponent for App {
                 }
                 SettingsGroup::Radio => self.radio_group.sender().send(request.into()).unwrap(),
                 SettingsGroup::Network => self.network_group.sender().send(request.into()).unwrap(),
+                SettingsGroup::PCI => self.pci_group.sender().send(request.into()).unwrap(),
             },
             AppInput::SendRootRequestToAll(request) => {
                 self.header.sender().send(request.clone().into()).unwrap();
@@ -272,6 +291,10 @@ impl SimpleAsyncComponent for App {
                     .send(request.clone().into())
                     .unwrap();
                 self.network_group
+                    .sender()
+                    .send(request.clone().into())
+                    .unwrap();
+                self.pci_group
                     .sender()
                     .send(request.clone().into())
                     .unwrap();
@@ -391,6 +414,8 @@ async fn remove_all_none_options() {
 
         default_radio_settings(&mut profile.radio_settings);
         default_network_settings(&mut profile.network_settings);
+        default_pci_settings(&mut profile.pci_settings);
+        default_aspm_settings(&mut profile.aspm_settings, &info.pci_info.aspm_info);
 
         if initial != profile {
             daemon_control::update_profile_full(idx as u32, profile).await;
@@ -473,5 +498,23 @@ fn default_network_settings(settings: &mut NetworkSettings) {
     }
     if settings.power_scheme.is_none() {
         settings.power_scheme = 2.into();
+    }
+}
+
+fn default_pci_settings(settings: &mut PCISettings) {
+    if settings.enable_power_management.is_none() {
+        settings.enable_power_management = Some(false);
+    }
+    if settings.whiteblacklist.is_none() {
+        settings.whiteblacklist = Some(power_daemon::WhiteBlackList {
+            items: Vec::new(),
+            list_type: power_daemon::WhiteBlackListType::Blacklist,
+        })
+    }
+}
+
+fn default_aspm_settings(settings: &mut ASPMSettings, info: &ASPMInfo) {
+    if settings.mode.is_none() && info.supported_modes.is_some() {
+        settings.mode = Some(info.supported_modes.as_ref().unwrap()[0].clone());
     }
 }
