@@ -10,12 +10,13 @@ use network::NetworkGroup;
 use pci::PCIGroup;
 use power_daemon::{
     ASPMInfo, ASPMSettings, CPUInfo, CPUSettings, NetworkSettings, PCISettings, RadioSettings,
-    USBSettings,
+    SATASettings, USBSettings,
 };
 use power_daemon::{Config, ProfilesInfo, SystemInfo};
 use relm4::loading_widgets::LoadingWidgets;
 use relm4::prelude::*;
 use relm4::Controller;
+use sata::SATAGroup;
 use usb::USBGroup;
 
 use super::groups::*;
@@ -34,6 +35,7 @@ pub enum SettingsGroup {
     Network,
     PCI,
     USB,
+    SATA,
 }
 
 impl SettingsGroup {
@@ -45,6 +47,7 @@ impl SettingsGroup {
             "Network" => SettingsGroup::Network,
             "PCI" => SettingsGroup::PCI,
             "USB" => SettingsGroup::USB,
+            "SATA" => SettingsGroup::SATA,
             _ => panic!("Unkown settings group"),
         }
     }
@@ -57,6 +60,7 @@ impl SettingsGroup {
             SettingsGroup::Network => "Network",
             SettingsGroup::PCI => "PCI",
             SettingsGroup::USB => "USB",
+            SettingsGroup::SATA => "SATA",
         })
     }
 }
@@ -101,6 +105,7 @@ pub struct App {
     network_group: Controller<NetworkGroup>,
     pci_group: Controller<PCIGroup>,
     usb_group: Controller<USBGroup>,
+    sata_group: Controller<SATAGroup>,
 }
 
 impl App {
@@ -197,6 +202,9 @@ impl SimpleAsyncComponent for App {
         let usb_group = USBGroup::builder()
             .launch(())
             .forward(sender.input_sender(), identity);
+        let sata_group = SATAGroup::builder()
+            .launch(())
+            .forward(sender.input_sender(), identity);
 
         let settings_group_stack = gtk::Stack::new();
         settings_group_stack.set_transition_type(gtk::StackTransitionType::SlideUpDown);
@@ -242,6 +250,13 @@ impl SimpleAsyncComponent for App {
             Some("USB"),
             "USB",
         );
+        settings_group_stack.add_titled(
+            &gtk::ScrolledWindow::builder()
+                .child(sata_group.widget())
+                .build(),
+            Some("SATA"),
+            "SATA",
+        );
 
         {
             let sender = sender.clone();
@@ -267,6 +282,7 @@ impl SimpleAsyncComponent for App {
             network_group,
             pci_group,
             usb_group,
+            sata_group,
         };
 
         let widgets = view_output!();
@@ -293,6 +309,7 @@ impl SimpleAsyncComponent for App {
                 SettingsGroup::Network => self.network_group.sender().send(request.into()).unwrap(),
                 SettingsGroup::PCI => self.pci_group.sender().send(request.into()).unwrap(),
                 SettingsGroup::USB => self.usb_group.sender().send(request.into()).unwrap(),
+                SettingsGroup::SATA => self.sata_group.sender().send(request.into()).unwrap(),
             },
             AppInput::SendRootRequestToAll(request) => {
                 self.header.sender().send(request.clone().into()).unwrap();
@@ -317,6 +334,10 @@ impl SimpleAsyncComponent for App {
                     .send(request.clone().into())
                     .unwrap();
                 self.usb_group
+                    .sender()
+                    .send(request.clone().into())
+                    .unwrap();
+                self.sata_group
                     .sender()
                     .send(request.clone().into())
                     .unwrap();
@@ -390,7 +411,6 @@ async fn setup_sync_listeners(sender: AsyncComponentSender<App>) {
             #[strong]
             sender,
             move |temp_override| {
-                //
                 let mut temp_override = temp_override.cloned();
                 if temp_override.is_none() {
                     temp_override = Some(None);
@@ -439,6 +459,7 @@ async fn remove_all_none_options() {
         default_pci_settings(&mut profile.pci_settings);
         default_aspm_settings(&mut profile.aspm_settings, &info.pci_info.aspm_info);
         default_usb_settings(&mut profile.usb_settings);
+        default_sata_settings(&mut profile.sata_settings);
 
         if initial != profile {
             daemon_control::update_profile_full(idx as u32, profile).await;
@@ -554,5 +575,11 @@ fn default_usb_settings(settings: &mut USBSettings) {
             items: Vec::new(),
             list_type: power_daemon::WhiteBlackListType::Blacklist,
         })
+    }
+}
+
+fn default_sata_settings(settings: &mut SATASettings) {
+    if settings.active_link_pm_policy.is_none() {
+        settings.active_link_pm_policy = Some("med_power_with_dipm".to_string());
     }
 }
