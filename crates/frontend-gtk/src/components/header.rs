@@ -163,6 +163,9 @@ impl SimpleComponent for Header {
                     sender,
                     move |_| {
                         sender
+                            .output(AppInput::SetActiveGroupChanged(false))
+                            .unwrap();
+                        sender
                             .output(AppInput::SendRootRequestToActiveGroup(RootRequest::Apply))
                             .unwrap()
                     }

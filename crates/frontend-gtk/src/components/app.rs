@@ -70,6 +70,7 @@ pub enum AppInput {
     SendRootRequestToAll(RootRequest),
     SendRootRequestToGroup(SettingsGroup, RootRequest),
     SendRootRequestToActiveGroup(RootRequest),
+    SetActiveGroupChanged(bool),
     SetChanged(bool, SettingsGroup),
     ResetAllChanged,
     UpdateApplyButton,
@@ -341,6 +342,9 @@ impl SimpleAsyncComponent for App {
                     .sender()
                     .send(request.clone().into())
                     .unwrap();
+            }
+            AppInput::SetActiveGroupChanged(v) => {
+                sender.input(AppInput::SetChanged(v, self.get_current_active_group()));
             }
             AppInput::SetChanged(v, group) => {
                 if v {
