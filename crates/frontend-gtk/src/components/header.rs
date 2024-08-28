@@ -152,26 +152,31 @@ impl SimpleComponent for Header {
                 }
                 ret.set_center_widget(Some(&profiles_list));
 
-                let apply_button = gtk::Button::builder()
-                    .label("Apply")
-                    .sensitive(self.enable_apply_button)
-                    .css_classes([relm4::css::SUGGESTED_ACTION])
-                    .build();
-
-                apply_button.connect_clicked(clone!(
-                    #[strong]
-                    sender,
-                    move |_| {
-                        sender
-                            .output(AppInput::SetActiveGroupChanged(false))
-                            .unwrap();
-                        sender
-                            .output(AppInput::SendRootRequestToActiveGroup(RootRequest::Apply))
-                            .unwrap()
+                relm4::view! {
+                    end_widget = gtk::Box::new(gtk::Orientation::Horizontal, 0) {
+                        gtk::Button {
+                            set_label: "Apply",
+                            set_sensitive: self.enable_apply_button,
+                            add_css_class: relm4::css::SUGGESTED_ACTION,
+                            connect_clicked[sender] => move |_| {
+                                sender
+                                    .output(AppInput::SetActiveGroupChanged(false))
+                                    .unwrap();
+                                sender
+                                    .output(AppInput::SendRootRequestToActiveGroup(RootRequest::Apply))
+                                    .unwrap()
+                            }
+                        },
+                        gtk::Button {
+                            set_label: "Daemon settings",
+                            connect_clicked[sender] => move |_| {
+                                sender.output(AppInput::ToggleSettings(true)).unwrap()
+                            }
+                        }
                     }
-                ));
+                }
 
-                ret.set_end_widget(Some(&apply_button));
+                ret.set_end_widget(Some(&end_widget));
 
                 if let TempOverrideResetButtonStatus::Enabled(ref profile_name) =
                     self.reset_temp_override_btn_status

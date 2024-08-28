@@ -41,6 +41,22 @@ pub async fn remove_profile(idx: u32) {
     debug!("Removing profile {idx}");
     get_client().await.remove_profile(idx).await.unwrap();
 }
+pub async fn swap_profiles(idx: u32, new_idx: u32) {
+    debug!("Swapping profile {idx} with {new_idx}");
+    get_client()
+        .await
+        .swap_profiles(idx, new_idx)
+        .await
+        .unwrap();
+}
+pub async fn update_profile_name(idx: u32, new_name: String) {
+    debug!("Updating profile {idx} name to {new_name}");
+    get_client()
+        .await
+        .update_profile_name(idx, new_name)
+        .await
+        .unwrap();
+}
 pub async fn update_profile_full(idx: u32, updated: Profile) {
     debug!("Updating profile {idx} fully");
     trace!("Updated profile: {updated:#?}");

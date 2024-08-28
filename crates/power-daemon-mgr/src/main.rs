@@ -53,7 +53,12 @@ impl Log for StdoutLogger {
     }
 
     fn log(&self, record: &Record) {
-        let msg = format!("[{}] {}", record.level(), record.args());
+        let msg = format!(
+            "{} ==> [{}]: {}",
+            record.level(),
+            record.target(),
+            record.args()
+        );
         let msg = match record.level() {
             Level::Error => msg.red(),
             Level::Warn => msg.yellow(),

@@ -29,10 +29,7 @@ impl<T: PartialEq + Clone + Debug> SyncedValue<T> {
     }
 
     pub async fn set(&self, new_value: T) {
-        trace!(
-            target: std::any::type_name::<Self>(),
-            "Setting value: {new_value:#?}",
-        );
+        trace!("Setting value: {new_value:#?}",);
 
         let mut value = self.value.lock().await;
         let old = value.clone();
@@ -43,10 +40,7 @@ impl<T: PartialEq + Clone + Debug> SyncedValue<T> {
     }
 
     pub async fn set_mut(&self, closure: impl Fn(&mut Option<T>)) {
-        trace!(
-            target: std::any::type_name::<Self>(),
-            "Setting value with predicate",
-        );
+        trace!("Setting value with predicate");
 
         let mut value = self.value.lock().await;
         let old = value.clone();
@@ -56,10 +50,7 @@ impl<T: PartialEq + Clone + Debug> SyncedValue<T> {
     }
 
     async fn invoke_listeners(&self, old_value: Option<T>) {
-        trace!(
-            target: std::any::type_name::<Self>(),
-            "Notifying listeners of change",
-        );
+        trace!("Notifying listeners of change");
 
         let value = self.value.lock().await;
         if *value != old_value {
@@ -73,10 +64,7 @@ impl<T: PartialEq + Clone + Debug> SyncedValue<T> {
     where
         F: 'static + Fn(Option<&T>) + Send,
     {
-        trace!(
-            target: std::any::type_name::<Self>(),
-            "Subscribing to changes",
-        );
+        trace!("Subscribing to changes");
 
         let mut listeners = self.listeners.lock().await;
         callback(self.value.lock().await.as_ref());

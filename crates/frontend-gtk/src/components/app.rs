@@ -6,7 +6,7 @@ use enumflags2::BitFlags;
 use gtk::glib::clone;
 use gtk::prelude::*;
 use kernel::KernelGroup;
-use log::info;
+use log::debug;
 use network::NetworkGroup;
 use pci::PCIGroup;
 use power_daemon::{
@@ -21,10 +21,18 @@ use sata::SATAGroup;
 use usb::USBGroup;
 
 use super::groups::*;
+use super::settings::Settings;
 use super::Header;
 use super::HeaderInput;
 use crate::communications::system_info::SystemInfoSyncType;
-use crate::communications::{self, daemon_control};
+use crate::communications::{self, daemon_control, SYSTEM_INFO};
+
+#[derive(PartialEq)]
+pub enum AppState {
+    Updating,
+    DaemonSettings,
+    SettingGroups,
+}
 
 #[derive(Debug, Clone, Copy)]
 #[enumflags2::bitflags]
@@ -74,8 +82,11 @@ pub enum AppInput {
     SendRootRequestToAll(RootRequest),
     SendRootRequestToGroup(SettingsGroup, RootRequest),
     SendRootRequestToActiveGroup(RootRequest),
+    /// Removes all possible None values. If not needed sends root request.
+    UpdateProfilesOrSend(RootRequest),
     SetActiveGroupChanged(bool),
     SetChanged(bool, SettingsGroup),
+    ToggleSettings(bool),
     ResetAllChanged,
     UpdateApplyButton,
     SetUpdating(bool),
@@ -88,7 +99,7 @@ pub enum RootRequest {
     Apply,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum AppSyncUpdate {
     ProfilesInfo(Arc<Option<ProfilesInfo>>),
     SystemInfo(Arc<Option<SystemInfo>>),
@@ -97,12 +108,15 @@ pub enum AppSyncUpdate {
 }
 
 pub struct App {
-    updating: bool,
+    app_state: AppState,
+
     changed_groups: BitFlags<SettingsGroup>,
 
     settings_group_stack: gtk::Stack,
 
     header: Controller<Header>,
+
+    settings_menu: AsyncController<Settings>,
 
     cpu_group: Controller<CPUGroup>,
     cpu_cores_group: Controller<CPUCoresGroup>,
@@ -128,29 +142,37 @@ impl SimpleAsyncComponent for App {
     type Init = ();
 
     view! {
+        #[root]
         gtk::ApplicationWindow {
             set_titlebar: Some(model.header.widget()),
-            if model.updating {
-                gtk::Box {
-                    set_align: gtk::Align::Center,
-                    gtk::Label::new(Some("Applying...")),
-                    gtk::Spinner {
-                        set_spinning: true,
-                        set_visible: true,
+            match model.app_state {
+                AppState::Updating => {
+                    gtk::Box {
+                        set_align: gtk::Align::Center,
+                        gtk::Label::new(Some("Applying...")),
+                        gtk::Spinner {
+                            set_spinning: true,
+                            set_visible: true,
+                        }
                     }
                 }
-            } else {
-                gtk::Paned {
-                    set_position: 200,
-                    #[wrap(Some)]
-                    set_start_child= &gtk::StackSidebar {
-                        set_stack = &model.settings_group_stack.clone(),
-                    },
-                    #[wrap(Some)]
-                    set_end_child=&model.settings_group_stack.clone(),
+                AppState::SettingGroups => {
+                    gtk::Paned {
+                        set_position: 200,
+                        #[wrap(Some)]
+                        set_start_child= &gtk::StackSidebar {
+                            set_stack = &model.settings_group_stack.clone(),
+                        },
+                        #[wrap(Some)]
+                        set_end_child=&model.settings_group_stack.clone(),
+                    }
                 }
-
-            }
+                AppState::DaemonSettings => {
+                    gtk::Box {
+                        container_add: model.settings_menu.widget()
+                    }
+                }
+            },
         }
     }
 
@@ -187,8 +209,6 @@ impl SimpleAsyncComponent for App {
             Duration::from_secs_f32(5.0),
             SystemInfoSyncType::None,
         );
-
-        remove_all_none_options().await;
 
         let cpu_group = CPUGroup::builder()
             .launch(())
@@ -284,14 +304,19 @@ impl SimpleAsyncComponent for App {
             });
         }
 
+        let settings_menu = Settings::builder()
+            .launch(())
+            .forward(sender.input_sender(), identity);
+
         let model = App {
-            updating: false,
+            app_state: AppState::SettingGroups,
             changed_groups: BitFlags::empty(),
             header: Header::builder()
                 .launch(())
                 .forward(sender.input_sender(), identity),
 
             settings_group_stack,
+            settings_menu,
             cpu_group,
             cpu_cores_group,
             radio_group,
@@ -363,6 +388,15 @@ impl SimpleAsyncComponent for App {
                     .sender()
                     .send(request.clone().into())
                     .unwrap();
+                self.settings_menu
+                    .sender()
+                    .send(request.clone().into())
+                    .unwrap();
+            }
+            AppInput::UpdateProfilesOrSend(request) => {
+                if !remove_all_none_options().await {
+                    sender.input(AppInput::SendRootRequestToAll(request));
+                }
             }
             AppInput::SetActiveGroupChanged(v) => {
                 sender.input(AppInput::SetChanged(v, self.get_current_active_group()));
@@ -379,8 +413,23 @@ impl SimpleAsyncComponent for App {
                 self.changed_groups = BitFlags::empty();
                 sender.input(AppInput::UpdateApplyButton);
             }
+            AppInput::ToggleSettings(v) => {
+                if v {
+                    if self.app_state == AppState::SettingGroups {
+                        self.app_state = AppState::DaemonSettings;
+                    }
+                } else {
+                    self.app_state = AppState::SettingGroups;
+                }
+            }
             AppInput::SetUpdating(v) => {
-                self.updating = v;
+                if v {
+                    if self.app_state == AppState::SettingGroups {
+                        self.app_state = AppState::Updating;
+                    }
+                } else {
+                    self.app_state = AppState::SettingGroups;
+                }
             }
             AppInput::UpdateApplyButton => self
                 .header
@@ -400,7 +449,7 @@ async fn setup_sync_listeners(sender: AsyncComponentSender<App>) {
             #[strong]
             sender,
             move |profiles_info| {
-                sender.input(AppInput::SendRootRequestToAll(RootRequest::ReactToUpdate(
+                sender.input(AppInput::UpdateProfilesOrSend(RootRequest::ReactToUpdate(
                     AppSyncUpdate::ProfilesInfo(Arc::from(profiles_info.cloned())),
                 )));
             }
@@ -451,15 +500,19 @@ async fn setup_sync_listeners(sender: AsyncComponentSender<App>) {
 
 /// Iterates through all profiles and removes all possible None options. Except
 /// for those that the system does not support and need to be set to None.
-async fn remove_all_none_options() {
-    info!("The GTK frontend does not support configurations with ignored settings (unless those settings are unsupported by the system). Updating profiles if neccessary now.");
+pub async fn remove_all_none_options() -> bool {
+    debug!("Updating profiles to not have None values, unless those settings are unsupported.");
 
-    communications::system_info::obtain_full_info_once().await;
+    if SYSTEM_INFO.is_none().await {
+        communications::system_info::obtain_full_info_once().await;
+    }
 
     assert!(!communications::SYSTEM_INFO.is_none().await);
     assert!(!communications::PROFILES_INFO.is_none().await);
 
     let info = communications::SYSTEM_INFO.get().await.clone().unwrap();
+
+    let mut changed_any = false;
 
     for (idx, mut profile) in communications::PROFILES_INFO
         .get()
@@ -488,11 +541,16 @@ async fn remove_all_none_options() {
         default_kernel_settings(&mut profile.kernel_settings);
 
         if initial != profile {
+            changed_any = true;
             daemon_control::update_profile_full(idx as u32, profile).await;
         }
     }
 
-    daemon_control::get_profiles_info().await;
+    if changed_any {
+        daemon_control::get_profiles_info().await;
+    }
+
+    changed_any
 }
 
 fn default_cpu_settings(settings: &mut CPUSettings, cpu_info: &CPUInfo) {

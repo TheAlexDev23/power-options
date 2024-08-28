@@ -73,6 +73,7 @@ impl Profile {
         debug!("Applying reduced amount of settings: {reduced_update:?}");
 
         match reduced_update {
+            ReducedUpdate::None => {}
             ReducedUpdate::CPU => self.cpu_settings.apply(),
             ReducedUpdate::CPUCores => self.cpu_core_settings.apply(),
             ReducedUpdate::SingleCPUCore(idx) => {

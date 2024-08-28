@@ -24,6 +24,7 @@ use log::{debug, error, trace};
 
 #[derive(Clone, Deserialize, Serialize, PartialEq, Debug)]
 pub enum ReducedUpdate {
+    None,
     CPU,
     CPUCores,
     SingleCPUCore(u32),
@@ -120,6 +121,8 @@ impl Instance {
         trace!("New config: {config:#?}");
 
         self.config = config;
+        serialize_config(&self.config, &self.config_path);
+
         // We might have updated the profiles too in the config, so reloading them is a must
         self.profiles_info.profiles = parse_profiles(&self.config, &self.profiles_path);
 
@@ -139,11 +142,13 @@ impl Instance {
 
     pub fn remove_profile(&mut self, idx: usize) {
         if self.profiles_info.profiles.len() <= 1 {
-            error!("There's only 1 or less avaiable profiles. Cannot remove remaining. Ignoring..");
+            error!(
+                "There's only 1 or less available profiles. Cannot remove remaining. Ignoring.."
+            );
             return;
         }
-        if idx >= self.profiles_info.profiles.len() {
-            error!("Profile index out of bounds. Ignoring..");
+
+        if self.verify_index_ranges(idx) {
             return;
         }
 
@@ -200,11 +205,59 @@ impl Instance {
 
         self.profiles_info.profiles.remove(idx);
 
-        write_config(&self.config, &self.config_path);
+        serialize_config(&self.config, &self.config_path);
 
         if should_update {
             self.update_full();
         }
+    }
+
+    pub fn update_profile_name(&mut self, idx: usize, new_name: String) {
+        if self.verify_index_ranges(idx) {
+            return;
+        }
+
+        let old_name = self.config.profiles[idx].clone();
+
+        self.config.profiles[idx] = new_name.clone();
+        self.profiles_info.profiles[idx].profile_name = new_name.clone();
+        if self.config.ac_profile == old_name {
+            self.config.ac_profile = new_name.clone();
+        }
+        if self.config.bat_profile == old_name {
+            self.config.bat_profile = new_name.clone();
+        }
+        if let Some(ref profile_override) = self.config.profile_override {
+            if *profile_override == old_name {
+                self.config.profile_override = Some(new_name.clone());
+            }
+        }
+        if let Some(ref profile_override) = self.temporary_override {
+            if *profile_override == old_name {
+                self.temporary_override = Some(new_name.clone());
+            }
+        }
+
+        serialize_config(&self.config, &self.config_path);
+        serialize_profiles(&self.profiles_info.profiles, &self.profiles_path);
+    }
+
+    pub fn swap_profile_order(&mut self, idx: usize, new_idx: usize) {
+        if self.verify_index_ranges(idx) || self.verify_index_ranges(idx) {
+            return;
+        }
+
+        if self.profiles_info.active_profile == idx {
+            self.profiles_info.active_profile = new_idx;
+        } else if self.profiles_info.active_profile == new_idx {
+            self.profiles_info.active_profile = idx;
+        }
+
+        let tmp = self.config.profiles[idx].clone();
+        self.config.profiles[idx] = self.config.profiles[new_idx].clone();
+        self.config.profiles[new_idx] = tmp;
+        serialize_config(&self.config, &self.config_path);
+        self.profiles_info.profiles = parse_profiles(&self.config, &self.profiles_path);
     }
 
     pub fn update_profile_full(&mut self, idx: usize, profile: Profile) {
@@ -227,6 +280,10 @@ impl Instance {
         }
     }
     fn update_profile(&mut self, idx: usize, profile: Profile) {
+        if self.verify_index_ranges(idx) {
+            return;
+        }
+
         debug!("Updating profile No {idx}");
         trace!("New profile: {profile:#?}");
 
@@ -234,14 +291,15 @@ impl Instance {
         // We actually need to update the underlying files
         serialize_profiles(&self.profiles_info.profiles, &self.profiles_path);
     }
-}
 
-pub fn write_config(config: &Config, path: &Path) {
-    fs::write(
-        path,
-        toml::to_string_pretty(config).expect("Could not serialize config"),
-    )
-    .expect("Could not write to config");
+    fn verify_index_ranges(&self, idx: usize) -> bool {
+        if idx >= self.config.profiles.len() || idx >= self.profiles_info.profiles.len() {
+            error!("Profile with requested index is outside of bounds, ignoring...");
+            true
+        } else {
+            false
+        }
+    }
 }
 
 pub fn parse_config(path: &Path) -> Config {
@@ -264,6 +322,14 @@ fn parse_profiles(config: &Config, path: &Path) -> Vec<Profile> {
     }
 
     profiles
+}
+
+pub fn serialize_config(config: &Config, path: &Path) {
+    fs::write(
+        path,
+        toml::to_string_pretty(config).expect("Could not serialize config"),
+    )
+    .expect("Could not write to config");
 }
 
 fn serialize_profiles(profiles: &Vec<Profile>, path: &Path) {
