@@ -262,7 +262,9 @@ impl Instance {
         }
 
         serialize_config(&self.config, &self.config_path);
-        serialize_profiles(&self.profiles_info.profiles, &self.profiles_path);
+        // Renamign a profile could cause a previous file with the same name
+        // left behind. Therefore we need to clear the directory first and then serialize
+        serialize_profiles_clean(&self.profiles_info.profiles, &self.profiles_path);
     }
 
     pub fn swap_profile_order(&mut self, idx: usize, new_idx: usize) {
@@ -353,6 +355,21 @@ pub fn serialize_config(config: &Config, path: &Path) {
         toml::to_string_pretty(config).expect("Could not serialize config"),
     )
     .expect("Could not write to config");
+}
+
+fn serialize_profiles_clean(profiles: &Vec<Profile>, path: &Path) {
+    for entry in fs::read_dir(path).unwrap() {
+        let entry = entry.unwrap();
+        let path = entry.path();
+
+        if path.is_dir() {
+            fs::remove_dir_all(&path).unwrap();
+        } else {
+            fs::remove_file(&path).unwrap();
+        }
+    }
+
+    serialize_profiles(profiles, path);
 }
 
 fn serialize_profiles(profiles: &Vec<Profile>, path: &Path) {
