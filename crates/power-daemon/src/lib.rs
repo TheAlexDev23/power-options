@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 pub use config::*;
 pub use helpers::{WhiteBlackList, WhiteBlackListType};
 pub use profile::*;
+pub use profiles_generator::DefaultProfileType;
 pub use systeminfo::*;
 
 use std::{
@@ -127,6 +128,28 @@ impl Instance {
         self.profiles_info.profiles = parse_profiles(&self.config, &self.profiles_path);
 
         self.update_full();
+    }
+
+    pub fn create_profile(&mut self, profile_type: DefaultProfileType) {
+        debug!("Creating profile of type {profile_type:?}");
+        let base_name = "New Profile";
+        let mut profile_name = base_name.to_string();
+        let mut count = 1;
+        while self.config.profiles.contains(&profile_name) {
+            profile_name = format!("{} #{}", base_name, count);
+            count += 1;
+        }
+
+        profiles_generator::create_profile_file_with_name(
+            profile_name.clone(),
+            self.profiles_path.clone(),
+            profile_type,
+            &SystemInfo::obtain(),
+        );
+
+        self.config.profiles.push(profile_name.clone());
+        serialize_config(&self.config, &self.config_path);
+        self.profiles_info.profiles = parse_profiles(&self.config, &self.profiles_path);
     }
 
     pub fn reset_profile(&mut self, idx: usize) {

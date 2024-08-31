@@ -45,6 +45,17 @@ impl DefaultProfileType {
             DefaultProfileType::Ultraperformance => "Performance++",
         })
     }
+
+    pub fn from_name(name: String) -> Option<Self> {
+        match name.as_str() {
+            "Powersave++" => DefaultProfileType::Superpowersave.into(),
+            "Powersave" => DefaultProfileType::Powersave.into(),
+            "Balanced" => DefaultProfileType::Balanced.into(),
+            "Performance" => DefaultProfileType::Performance.into(),
+            "Performance++" => DefaultProfileType::Ultraperformance.into(),
+            _ => None,
+        }
+    }
 }
 
 pub fn create_profile_file<P: AsRef<Path>>(
@@ -56,7 +67,17 @@ pub fn create_profile_file<P: AsRef<Path>>(
 
     let name = profile_type.get_name();
 
-    let profile = create_default(&name, profile_type, system_info);
+    create_profile_file_with_name(name, directory_path, profile_type, system_info);
+}
+
+pub fn create_profile_file_with_name<P: AsRef<Path>>(
+    name: String,
+    directory_path: P,
+    profile_type: DefaultProfileType,
+    system_info: &SystemInfo,
+) {
+    let mut profile = create_default(&name, profile_type, system_info);
+    profile.profile_name = name.clone();
 
     let path = PathBuf::from(directory_path.as_ref()).join(format!("{name}.toml"));
 

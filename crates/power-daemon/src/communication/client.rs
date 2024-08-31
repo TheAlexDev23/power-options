@@ -1,6 +1,6 @@
 use crate::{
     systeminfo::{CPUInfo, SystemInfo},
-    Config, PCIInfo, Profile, ProfilesInfo, ReducedUpdate, SATAInfo, USBInfo,
+    Config, DefaultProfileType, PCIInfo, Profile, ProfilesInfo, ReducedUpdate, SATAInfo, USBInfo,
 };
 use zbus::proxy;
 
@@ -72,6 +72,7 @@ trait ControlDBus {
 
     async fn update_config(&self, updated: String) -> zbus::Result<()>;
 
+    async fn create_profile(&self, profile_type: String) -> zbus::Result<()>;
     async fn remove_profile(&self, idx: u32) -> zbus::Result<()>;
     async fn reset_profile(&self, idx: u32) -> zbus::Result<()>;
 
@@ -131,6 +132,12 @@ impl ControlClient {
             .await
     }
 
+    pub async fn create_profile(&self, profile_type: DefaultProfileType) -> zbus::Result<()> {
+        self.get_proxy()
+            .await?
+            .create_profile(serde_json::to_string(&profile_type).unwrap())
+            .await
+    }
     pub async fn remove_profile(&self, idx: u32) -> zbus::Result<()> {
         self.get_proxy().await?.remove_profile(idx).await
     }

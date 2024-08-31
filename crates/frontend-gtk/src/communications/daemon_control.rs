@@ -1,6 +1,7 @@
 use lazy_static::lazy_static;
 use log::debug;
 use log::trace;
+use power_daemon::DefaultProfileType;
 use power_daemon::{communication::client::ControlClient, Config, Profile, ReducedUpdate};
 use tokio::sync::MappedMutexGuard;
 use tokio::sync::Mutex;
@@ -32,6 +33,14 @@ pub async fn get_profiles_info() {
 pub async fn update_config(config: Config) {
     debug!("Updating config");
     get_client().await.update_config(config).await.unwrap();
+}
+pub async fn create_profile(profile_type: DefaultProfileType) {
+    debug!("Creating profile of type {profile_type:?}");
+    get_client()
+        .await
+        .create_profile(profile_type)
+        .await
+        .unwrap();
 }
 pub async fn reset_profile(idx: u32) {
     debug!("Resetting profile {idx}");

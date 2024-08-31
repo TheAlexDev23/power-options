@@ -1,9 +1,8 @@
 use std::{collections::HashMap, convert::identity};
 
 use adw::prelude::*;
-use gtk::prelude::*;
 use log::debug;
-use power_daemon::{Config, Profile};
+use power_daemon::{Config, DefaultProfileType, Profile};
 use relm4::{
     binding::{Binding, BoolBinding, U32Binding},
     factory::FactoryVecDeque,
@@ -19,7 +18,7 @@ use super::{dialog::Dialog, AppInput, AppSyncUpdate, RootRequest};
 pub enum SettingsInput {
     RootRequest(RootRequest),
     SetUpdating(bool),
-    ListChange(ProfileListChange),
+    ManageProfiles(ProfileManagementAction),
     Changed(ChangeAction),
     AskAndRemoveProfile(DynamicIndex),
     AskAndResetProfile(DynamicIndex),
@@ -33,7 +32,8 @@ pub enum ChangeAction {
 }
 
 #[derive(Debug, Clone)]
-pub enum ProfileListChange {
+pub enum ProfileManagementAction {
+    CreateProfile,
     MoveProfileUp(DynamicIndex),
     MoveProfileDown(DynamicIndex),
     ChangeProfileName(String, DynamicIndex),
@@ -46,9 +46,9 @@ impl From<RootRequest> for SettingsInput {
         Self::RootRequest(value)
     }
 }
-impl From<ProfileListChange> for SettingsInput {
-    fn from(value: ProfileListChange) -> Self {
-        Self::ListChange(value)
+impl From<ProfileManagementAction> for SettingsInput {
+    fn from(value: ProfileManagementAction) -> Self {
+        Self::ManageProfiles(value)
     }
 }
 
@@ -64,6 +64,10 @@ pub struct Settings {
     available_profiles: StringListBinding,
     selected_bat_profile: U32Binding,
     selected_ac_profile: U32Binding,
+
+    default_profile_types: StringListBinding,
+
+    new_profile_type: U32Binding,
 
     persistent_override_set: BoolBinding,
     selected_persitent_override: U32Binding,
@@ -173,6 +177,18 @@ impl SimpleAsyncComponent for Settings {
                     },
 
                     adw::PreferencesGroup {
+                        adw::ComboRow {
+                            set_title: "New profile type",
+                            add_binding: (&model.available_profiles, "model"),
+                            add_binding: (&model.new_profile_type, "selected"),
+                        },
+                        gtk::Button {
+                            set_label: "Create profile",
+                            connect_clicked => SettingsInput::ManageProfiles(ProfileManagementAction::CreateProfile),
+                        },
+                    },
+
+                    adw::PreferencesGroup {
                         container_add: model.profiles.widget(),
                     }
                 }
@@ -196,6 +212,15 @@ impl SimpleAsyncComponent for Settings {
                 .launch(gtk::Box::new(gtk::Orientation::Vertical, 0))
                 .forward(sender.input_sender(), identity),
 
+            default_profile_types: StringListBinding::new(gtk::StringList::new(&[
+                &DefaultProfileType::Superpowersave.get_name(),
+                &DefaultProfileType::Powersave.get_name(),
+                &DefaultProfileType::Balanced.get_name(),
+                &DefaultProfileType::Performance.get_name(),
+                &DefaultProfileType::Ultraperformance.get_name(),
+            ])),
+
+            new_profile_type: Default::default(),
             available_profiles: Default::default(),
             selected_bat_profile: Default::default(),
             selected_ac_profile: Default::default(),
@@ -229,8 +254,28 @@ impl SimpleAsyncComponent for Settings {
                     }
                 }
             }
-            SettingsInput::ListChange(change) => match change {
-                ProfileListChange::MoveProfileUp(idx) => {
+            SettingsInput::ManageProfiles(change) => match change {
+                ProfileManagementAction::CreateProfile => {
+                    let profile_type = DefaultProfileType::from_name(
+                        self.default_profile_types
+                            .value()
+                            .string(self.new_profile_type.value())
+                            .unwrap()
+                            .to_string(),
+                    )
+                    .unwrap();
+
+                    tokio::spawn(async move {
+                        sender.input(SettingsInput::SetUpdating(true));
+
+                        daemon_control::create_profile(profile_type).await;
+                        daemon_control::get_config().await;
+                        daemon_control::get_profiles_info().await;
+
+                        sender.input(SettingsInput::SetUpdating(false));
+                    });
+                }
+                ProfileManagementAction::MoveProfileUp(idx) => {
                     let idx = idx.current_index();
                     let new_idx = idx + 1;
                     if new_idx < self.profiles.guard().len() {
@@ -246,7 +291,7 @@ impl SimpleAsyncComponent for Settings {
                         });
                     }
                 }
-                ProfileListChange::MoveProfileDown(idx) => {
+                ProfileManagementAction::MoveProfileDown(idx) => {
                     let idx = idx.current_index();
                     if idx > 0 {
                         let new_idx = idx - 1;
@@ -262,7 +307,7 @@ impl SimpleAsyncComponent for Settings {
                         });
                     }
                 }
-                ProfileListChange::ChangeProfileName(name, idx) => {
+                ProfileManagementAction::ChangeProfileName(name, idx) => {
                     let profile_idx = idx.current_index();
                     tokio::spawn(async move {
                         sender.input(SettingsInput::SetUpdating(true));
@@ -276,7 +321,7 @@ impl SimpleAsyncComponent for Settings {
                         sender.input(SettingsInput::SetUpdating(false));
                     });
                 }
-                ProfileListChange::ResetProfile(idx) => {
+                ProfileManagementAction::ResetProfile(idx) => {
                     let idx = idx.current_index() as u32;
                     tokio::spawn(async move {
                         sender.input(SettingsInput::SetUpdating(true));
@@ -287,7 +332,7 @@ impl SimpleAsyncComponent for Settings {
                         sender.input(SettingsInput::SetUpdating(false));
                     });
                 }
-                ProfileListChange::DeleteProfile(idx) => {
+                ProfileManagementAction::DeleteProfile(idx) => {
                     let idx = idx.current_index() as u32;
                     tokio::spawn(async move {
                         sender.input(SettingsInput::SetUpdating(true));
@@ -311,9 +356,9 @@ impl SimpleAsyncComponent for Settings {
                 };
 
                 if dialog.show().await {
-                    sender.input(SettingsInput::ListChange(ProfileListChange::DeleteProfile(
-                        idx,
-                    )))
+                    sender.input(SettingsInput::ManageProfiles(
+                        ProfileManagementAction::DeleteProfile(idx),
+                    ))
                 }
             }
             SettingsInput::AskAndResetProfile(idx) => {
@@ -326,9 +371,9 @@ impl SimpleAsyncComponent for Settings {
                 };
 
                 if dialog.show().await {
-                    sender.input(SettingsInput::ListChange(ProfileListChange::ResetProfile(
-                        idx,
-                    )))
+                    sender.input(SettingsInput::ManageProfiles(
+                        ProfileManagementAction::ResetProfile(idx),
+                    ))
                 }
             }
             SettingsInput::SetUpdating(v) => self.updating = v,
@@ -422,20 +467,20 @@ impl FactoryComponent for ProfileFactoryRenderer {
                 set_text: &self.profile.profile_name,
                 connect_editing_notify[sender, index, old_name = self.profile.profile_name.clone()] => move |v| {
                     if !v.is_editing() && v.text() != old_name {
-                        sender.output(ProfileListChange::ChangeProfileName(v.text().into(), index.clone()).into()).unwrap();
+                        sender.output(ProfileManagementAction::ChangeProfileName(v.text().into(), index.clone()).into()).unwrap();
                     }
                 } @changed_handler
             },
             gtk::Button {
                 set_label: "Up",
                 connect_clicked[sender, index] => move |_| {
-                    sender.output(ProfileListChange::MoveProfileUp(index.clone()).into()).unwrap();
+                    sender.output(ProfileManagementAction::MoveProfileUp(index.clone()).into()).unwrap();
                 }
             },
             gtk::Button {
                 set_label: "Down",
                 connect_clicked[sender, index] => move |_| {
-                    sender.output(ProfileListChange::MoveProfileDown(index.clone()).into()).unwrap();
+                    sender.output(ProfileManagementAction::MoveProfileDown(index.clone()).into()).unwrap();
                 }
             },
             gtk::Button {

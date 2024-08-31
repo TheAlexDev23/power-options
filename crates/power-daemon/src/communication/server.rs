@@ -100,6 +100,15 @@ impl ControlServer {
         }
     }
 
+    async fn create_profile(&mut self, profile_type: String) {
+        debug!(target: "D-BUS", "create_profile: {profile_type}");
+        match serde_json::from_str(&profile_type) {
+            Ok(profile_type) => self.instance.get_mut().create_profile(profile_type),
+            Err(error) => {
+                error!("Could not parse new requested profile type: {error}")
+            }
+        }
+    }
     async fn reset_profile(&mut self, idx: u32) {
         debug!(target: "D-BUS", "reset_profile: {idx}");
         self.instance.get_mut().reset_profile(idx as usize);
