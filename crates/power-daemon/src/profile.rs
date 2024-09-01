@@ -54,8 +54,10 @@ impl Profile {
         info!("Applying profile: {}", self.profile_name);
 
         let settings_functions: Vec<Box<dyn FnOnce() + Send>> = vec![
-            Box::new(|| self.cpu_settings.apply()),
-            Box::new(|| self.cpu_core_settings.apply()),
+            Box::new(|| {
+                self.cpu_settings.apply();
+                self.cpu_core_settings.apply();
+            }),
             Box::new(|| self.screen_settings.apply()),
             Box::new(|| self.radio_settings.apply()),
             Box::new(|| self.network_settings.apply()),
