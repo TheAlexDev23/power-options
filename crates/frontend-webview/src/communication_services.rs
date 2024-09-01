@@ -101,7 +101,7 @@ pub async fn system_info_service(
     }
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum ControlAction {
     GetConfig,
     GetProfilesInfo,

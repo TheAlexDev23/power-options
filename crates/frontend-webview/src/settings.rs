@@ -47,7 +47,9 @@ pub fn SettingsMenu(
     system_info_routine: SystemInfoRoutine,
 ) -> Element {
     system_info_routine.send((Duration::from_secs_f32(15.0), SystemInfoSyncType::None));
-    control_routine.send((ControlAction::GetConfig, None));
+    use_hook(|| {
+        control_routine.send((ControlAction::GetConfig, None));
+    });
 
     if config.as_ref().is_none() || profiles_info.as_ref().is_none() {
         return rsx! { "Obtaining configuration..." };
@@ -72,18 +74,6 @@ pub fn SettingsMenu(
     let awaiting_move_up = use_signal(|| false);
     let awaiting_move_down = use_signal(|| false);
     let awaiting_rename = use_signal(|| false);
-    let mut awaiting_profile_action = use_signal(|| false);
-
-    use_effect(move || {
-        awaiting_profile_action.set(
-            awaiting_reset()
-                || awaiting_remove()
-                || awaiting_move_up()
-                || awaiting_move_down()
-                || awaiting_rename()
-                || awaiting_create(),
-        );
-    });
 
     let mut awaiting_reset_idx = use_signal(|| 0);
     let mut awaiting_remove_idx = use_signal(|| 0);
@@ -112,11 +102,14 @@ pub fn SettingsMenu(
 
             config.profile_override = form.profile_override.into_base();
 
-            control_routine.send((
-                ControlAction::UpdateConfig(config),
+            control_routine_send_multiple(
+                control_routine,
+                &[
+                    ControlAction::UpdateConfig(config),
+                    ControlAction::GetConfig,
+                ],
                 Some(awaiting_completion),
-            ));
-            control_routine.send((ControlAction::GetConfig, Some(awaiting_completion)));
+            );
         }
     };
 
@@ -316,6 +309,7 @@ pub fn SettingsMenu(
                                     div { class: "spinner" }
                                 } else {
                                     button {
+                                        r#type: "button",
                                         onclick: move |_| {
                                             awaiting_reset_idx.set(idx);
                                             control_routine_send_multiple(
@@ -324,7 +318,6 @@ pub fn SettingsMenu(
                                                 Some(awaiting_reset),
                                             );
                                         },
-                                        r#type: "button",
                                         "Reset"
                                     }
                                 }
@@ -337,6 +330,7 @@ pub fn SettingsMenu(
                                     && profiles_info.profiles.len() != 1
                                 {
                                     button {
+                                        r#type: "button",
                                         onclick: move |_| {
                                             awaiting_remove_idx.set(idx);
                                             control_routine_send_multiple(
@@ -350,7 +344,6 @@ pub fn SettingsMenu(
                                                 Some(awaiting_remove),
                                             );
                                         },
-                                        r#type: "button",
                                         "Remove"
                                     }
                                 }
