@@ -4,7 +4,8 @@ use dioxus::prelude::*;
 use power_daemon::{ProfilesInfo, ReducedUpdate, SATASettings, SystemInfo};
 
 use crate::communication_services::{
-    ControlAction, ControlRoutine, SystemInfoRoutine, SystemInfoSyncType,
+    control_routine_send_multiple, ControlAction, ControlRoutine, SystemInfoRoutine,
+    SystemInfoSyncType,
 };
 use crate::helpers::toggleable_components::ToggleableDropdown;
 use crate::helpers::toggleable_types::ToggleableString;
@@ -62,15 +63,18 @@ pub fn SATAGroup(
             active_link_pm_policy: active_link_pm_policty.into_base(),
         };
 
-        control_routine.send((
-            ControlAction::UpdateProfileReduced(
-                active_profile_idx as u32,
-                active_profile,
-                ReducedUpdate::SATA,
-            ),
+        control_routine_send_multiple(
+            control_routine,
+            &[
+                ControlAction::UpdateProfileReduced(
+                    active_profile_idx as u32,
+                    active_profile,
+                    ReducedUpdate::SATA,
+                ),
+                ControlAction::GetProfilesInfo,
+            ],
             Some(awaiting_completion),
-        ));
-        control_routine.send((ControlAction::GetProfilesInfo, Some(awaiting_completion)));
+        );
     };
 
     rsx! {

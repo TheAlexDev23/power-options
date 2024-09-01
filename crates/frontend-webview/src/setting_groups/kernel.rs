@@ -4,7 +4,8 @@ use dioxus::prelude::*;
 use power_daemon::{KernelSettings, ProfilesInfo, ReducedUpdate};
 
 use crate::communication_services::{
-    ControlAction, ControlRoutine, SystemInfoRoutine, SystemInfoSyncType,
+    control_routine_send_multiple, ControlAction, ControlRoutine, SystemInfoRoutine,
+    SystemInfoSyncType,
 };
 use crate::helpers::toggleable_components::{ToggleableNumericField, ToggleableToggle};
 use crate::helpers::toggleable_types::{ToggleableBool, ToggleableInt};
@@ -72,15 +73,18 @@ pub fn KernelGroup(
             laptop_mode: form.laptop_mode.into_u32(),
         };
 
-        control_routine.send((
-            ControlAction::UpdateProfileReduced(
-                active_profile_idx as u32,
-                active_profile,
-                ReducedUpdate::Kernel,
-            ),
+        control_routine_send_multiple(
+            control_routine,
+            &[
+                ControlAction::UpdateProfileReduced(
+                    active_profile_idx as u32,
+                    active_profile,
+                    ReducedUpdate::Kernel,
+                ),
+                ControlAction::GetProfilesInfo,
+            ],
             Some(awaiting_completion),
-        ));
-        control_routine.send((ControlAction::GetProfilesInfo, Some(awaiting_completion)));
+        );
     };
 
     rsx! {

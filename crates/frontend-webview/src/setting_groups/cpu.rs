@@ -9,7 +9,8 @@ use dioxus::prelude::*;
 use power_daemon::{CPUSettings, CoreSetting, Profile, ProfilesInfo, ReducedUpdate, SystemInfo};
 
 use crate::communication_services::{
-    ControlAction, ControlRoutine, SystemInfoRoutine, SystemInfoSyncType,
+    control_routine_send_multiple, ControlAction, ControlRoutine, SystemInfoRoutine,
+    SystemInfoSyncType,
 };
 
 use crate::helpers::{
@@ -159,15 +160,18 @@ fn CPUSettingsForm(
             },
         };
 
-        control_routine.send((
-            ControlAction::UpdateProfileReduced(
-                active_profile_idx as u32,
-                active_profile,
-                ReducedUpdate::CPU,
-            ),
+        control_routine_send_multiple(
+            control_routine,
+            &[
+                ControlAction::UpdateProfileReduced(
+                    active_profile_idx as u32,
+                    active_profile,
+                    ReducedUpdate::CPU,
+                ),
+                ControlAction::GetProfilesInfo,
+            ],
             Some(awaiting_completion),
-        ));
-        control_routine.send((ControlAction::GetProfilesInfo, Some(awaiting_completion)));
+        );
     };
 
     use_effect(move || {
@@ -615,15 +619,18 @@ fn update_core_settings<F>(
         update(core_setting);
     }
 
-    control_routine.send((
-        ControlAction::UpdateProfileReduced(
-            profile_id,
-            profile.clone(),
-            ReducedUpdate::MultipleCPUCores(indices),
-        ),
+    control_routine_send_multiple(
+        control_routine,
+        &[
+            ControlAction::UpdateProfileReduced(
+                profile_id,
+                profile.clone(),
+                ReducedUpdate::MultipleCPUCores(indices),
+            ),
+            ControlAction::GetProfilesInfo,
+        ],
         Some(awaiting_signal),
-    ));
-    control_routine.send((ControlAction::GetProfilesInfo, Some(awaiting_signal)));
+    );
 }
 
 fn get_epps() -> Vec<String> {

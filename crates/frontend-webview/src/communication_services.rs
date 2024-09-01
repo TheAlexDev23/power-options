@@ -209,7 +209,7 @@ pub async fn control_service(
 }
 
 pub fn control_routine_send_multiple(
-    routine: ControlRoutine,
+    control_routine: ControlRoutine,
     actions: &[ControlAction],
     signal: Option<Signal<bool>>,
 ) {
@@ -218,7 +218,7 @@ pub fn control_routine_send_multiple(
     }
     assert!(actions.len() > 1);
     for action in actions.iter().take(actions.len() - 1) {
-        routine.send((action.clone(), None));
+        control_routine.send((action.clone(), None));
     }
-    routine.send((actions.last().unwrap().clone(), signal));
+    control_routine.send((actions.last().unwrap().clone(), signal));
 }

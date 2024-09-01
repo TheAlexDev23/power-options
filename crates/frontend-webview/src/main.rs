@@ -8,7 +8,8 @@ mod settings;
 use std::time::Duration;
 
 use communication_services::{
-    control_service, system_info_service, ControlAction, ControlRoutine, SystemInfoSyncType,
+    control_routine_send_multiple, control_service, system_info_service, ControlAction,
+    ControlRoutine, SystemInfoSyncType,
 };
 use setting_groups::{
     cpu::CPUGroup, kernel::KernelGroup, network::NetworkGroup, pci::PCIAndASPMGroup,
@@ -52,8 +53,14 @@ fn App() -> Element {
         control_service(rx, config, profiles_info, active_profile_override)
     });
 
-    control_routine.send((ControlAction::GetProfilesInfo, None));
-    control_routine.send((ControlAction::GetProfileOverride, None));
+    control_routine_send_multiple(
+        control_routine,
+        &[
+            ControlAction::GetProfilesInfo,
+            ControlAction::GetProfileOverride,
+        ],
+        None,
+    );
 
     let settings_opened = use_signal(|| false);
 
@@ -122,15 +129,15 @@ fn PowerProfilesNav(
             let profile_name = profile.profile_name.clone();
             buttons.push((idx, profile_name.clone(), move |_| {
                 future_override_idx.set(idx);
-                control_routine.send((
-                    ControlAction::SetProfileOverride(profile_name.clone()),
+                control_routine_send_multiple(
+                    control_routine,
+                    &[
+                        ControlAction::SetProfileOverride(profile_name.clone()),
+                        ControlAction::GetProfilesInfo,
+                        ControlAction::GetProfileOverride,
+                    ],
                     Some(waiting_override_set),
-                ));
-                control_routine.send((ControlAction::GetProfilesInfo, Some(waiting_override_set)));
-                control_routine.send((
-                    ControlAction::GetProfileOverride,
-                    Some(waiting_override_set),
-                ));
+                );
             }))
         }
 
@@ -177,12 +184,15 @@ fn PowerProfilesNav(
                                                     if waiting_override_remove() || waiting_override_set() {
                                                         return;
                                                     }
-                                                    control_routine
-                                                        .send((ControlAction::RemoveProfileOverride, Some(waiting_override_remove)));
-                                                    control_routine
-                                                        .send((ControlAction::GetProfilesInfo, Some(waiting_override_remove)));
-                                                    control_routine
-                                                        .send((ControlAction::GetProfileOverride, Some(waiting_override_remove)));
+                                                    control_routine_send_multiple(
+                                                        control_routine,
+                                                        &[
+                                                            ControlAction::RemoveProfileOverride,
+                                                            ControlAction::GetProfilesInfo,
+                                                            ControlAction::GetProfileOverride,
+                                                        ],
+                                                        Some(waiting_override_remove),
+                                                    );
                                                 },
                                                 img { src: "assets/icons/cross.svg" }
                                             }

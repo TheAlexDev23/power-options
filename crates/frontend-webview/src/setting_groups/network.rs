@@ -4,7 +4,8 @@ use dioxus::prelude::*;
 use power_daemon::{NetworkSettings, ProfilesInfo, ReducedUpdate};
 
 use crate::communication_services::{
-    ControlAction, ControlRoutine, SystemInfoRoutine, SystemInfoSyncType,
+    control_routine_send_multiple, ControlAction, ControlRoutine, SystemInfoRoutine,
+    SystemInfoSyncType,
 };
 use crate::helpers::toggleable_components::{ToggleableNumericField, ToggleableToggle};
 use crate::helpers::toggleable_types::{ToggleableBool, ToggleableInt};
@@ -97,15 +98,18 @@ pub fn NetworkGroup(
             power_scheme: form.power_scheme.into_u8(),
         };
 
-        control_routine.send((
-            ControlAction::UpdateProfileReduced(
-                active_profile_idx as u32,
-                active_profile,
-                ReducedUpdate::Network,
-            ),
+        control_routine_send_multiple(
+            control_routine,
+            &[
+                ControlAction::UpdateProfileReduced(
+                    active_profile_idx as u32,
+                    active_profile,
+                    ReducedUpdate::Network,
+                ),
+                ControlAction::GetProfilesInfo,
+            ],
             Some(awaiting_completion),
-        ));
-        control_routine.send((ControlAction::GetProfilesInfo, Some(awaiting_completion)));
+        )
     };
 
     rsx! {

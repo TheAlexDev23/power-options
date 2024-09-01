@@ -4,7 +4,8 @@ use dioxus::prelude::*;
 use power_daemon::{ProfilesInfo, ReducedUpdate, SystemInfo, USBSettings};
 
 use crate::communication_services::{
-    ControlAction, ControlRoutine, SystemInfoRoutine, SystemInfoSyncType,
+    control_routine_send_multiple, ControlAction, ControlRoutine, SystemInfoRoutine,
+    SystemInfoSyncType,
 };
 use crate::helpers::toggleable_components::{
     ToggleableNumericField, ToggleableToggle, ToggleableWhiteBlackListDisplay,
@@ -76,15 +77,18 @@ pub fn USBGroup(
             autosuspend_delay_ms: form.autosuspend_delay_ms.into_u32(),
         };
 
-        control_routine.send((
-            ControlAction::UpdateProfileReduced(
-                active_profile_idx as u32,
-                active_profile,
-                ReducedUpdate::USB,
-            ),
+        control_routine_send_multiple(
+            control_routine,
+            &[
+                ControlAction::UpdateProfileReduced(
+                    active_profile_idx as u32,
+                    active_profile,
+                    ReducedUpdate::USB,
+                ),
+                ControlAction::GetProfilesInfo,
+            ],
             Some(awaiting_completion),
-        ));
-        control_routine.send((ControlAction::GetProfilesInfo, Some(awaiting_completion)));
+        );
     };
 
     rsx! {

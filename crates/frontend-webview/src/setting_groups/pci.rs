@@ -4,7 +4,8 @@ use dioxus::prelude::*;
 use power_daemon::{ASPMSettings, PCISettings, ProfilesInfo, ReducedUpdate, SystemInfo};
 
 use crate::communication_services::{
-    ControlAction, ControlRoutine, SystemInfoRoutine, SystemInfoSyncType,
+    control_routine_send_multiple, ControlAction, ControlRoutine, SystemInfoRoutine,
+    SystemInfoSyncType,
 };
 
 use crate::helpers::toggleable_components::{
@@ -92,23 +93,23 @@ pub fn PCIAndASPMGroup(
             mode: form.aspm.into_base(),
         };
 
-        control_routine.send((
-            ControlAction::UpdateProfileReduced(
-                active_profile_idx as u32,
-                active_profile.clone(),
-                ReducedUpdate::PCI,
-            ),
+        control_routine_send_multiple(
+            control_routine,
+            &[
+                ControlAction::UpdateProfileReduced(
+                    active_profile_idx as u32,
+                    active_profile.clone(),
+                    ReducedUpdate::PCI,
+                ),
+                ControlAction::UpdateProfileReduced(
+                    active_profile_idx as u32,
+                    active_profile,
+                    ReducedUpdate::ASPM,
+                ),
+                ControlAction::GetProfilesInfo,
+            ],
             Some(awaiting_completion),
-        ));
-        control_routine.send((
-            ControlAction::UpdateProfileReduced(
-                active_profile_idx as u32,
-                active_profile,
-                ReducedUpdate::ASPM,
-            ),
-            Some(awaiting_completion),
-        ));
-        control_routine.send((ControlAction::GetProfilesInfo, Some(awaiting_completion)));
+        );
     };
 
     rsx! {
