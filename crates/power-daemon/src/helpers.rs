@@ -168,7 +168,7 @@ pub fn file_content_to_bool<P: AsRef<Path>>(path: P) -> bool {
     content = content.strip_suffix("\n").unwrap_or(&content).to_string();
     content = content.strip_suffix(" ").unwrap_or(&content).to_string();
 
-    if content == "1" {
+    if content == "1" || content == "Y" {
         true
     } else {
         false

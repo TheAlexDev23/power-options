@@ -5,7 +5,7 @@ use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    helpers::{file_content_to_string, run_command, run_command_with_output, WhiteBlackList},
+    helpers::{file_content_to_string, run_command, WhiteBlackList},
     profiles_generator::{self, DefaultProfileType},
     ReducedUpdate, SystemInfo,
 };
@@ -407,13 +407,45 @@ impl NetworkSettings {
             Self::disable_all_ethernet_cards()
         }
 
-        let uses_iwlmvm = if run_command_with_output("lsmod | grep '^iwl.vm'")
-            .0
-            .contains("iwlmvm")
-        {
+        if !self.all_kernel_module_settings_are_none() {
+            self.apply_kernel_module_settings();
+        }
+    }
+
+    fn disable_all_ethernet_cards() {
+        let entries = fs::read_dir("/sys/class/net").expect("Could not read sysfs path");
+        let eth_pattern = regex::Regex::new(r"^(eth|enp|ens|eno)").unwrap();
+
+        for entry in entries {
+            if let Ok(entry) = entry {
+                let name = entry.file_name();
+                let name_str = name.to_string_lossy();
+
+                if eth_pattern.is_match(&name_str) {
+                    run_command(&format!("ifconfig {} down", &name_str))
+                }
+            }
+        }
+    }
+
+    fn all_kernel_module_settings_are_none(&self) -> bool {
+        self.power_scheme.is_none()
+            && self.disable_wifi_7.is_none()
+            && self.disable_wifi_6.is_none()
+            && self.disable_wifi_5.is_none()
+            && self.enable_power_save.is_none()
+            && self.power_level.is_none()
+            && self.enable_uapsd.is_none()
+    }
+
+    fn apply_kernel_module_settings(&self) {
+        let uses_iwlmvm = if fs::metadata("/sys/module/iwlmvm").is_ok() {
             true
-        } else {
+        } else if fs::metadata("/sys/module/iwldvm").is_ok() {
             false
+        } else {
+            error!("Could not identify wifi firmware module. Expected either iwlmvm or iwldvm, neither found. Ignoring network kernel module settings...");
+            return;
         };
 
         let firmware_parameters = if let Some(power_scheme) = self.power_scheme {
@@ -461,22 +493,6 @@ impl NetworkSettings {
         run_command(&format!(
             "modprobe -r {firmware_name} && modprobe -r iwlwifi && modprobe {firmware_name} {} && modprobe iwlwifi {}", firmware_parameters, driver_parameters,
         ));
-    }
-
-    fn disable_all_ethernet_cards() {
-        let entries = fs::read_dir("/sys/class/net").expect("Could not read sysfs path");
-        let eth_pattern = regex::Regex::new(r"^(eth|enp|ens|eno)").unwrap();
-
-        for entry in entries {
-            if let Ok(entry) = entry {
-                let name = entry.file_name();
-                let name_str = name.to_string_lossy();
-
-                if eth_pattern.is_match(&name_str) {
-                    run_command(&format!("ifconfig {} down", &name_str))
-                }
-            }
-        }
     }
 }
 
