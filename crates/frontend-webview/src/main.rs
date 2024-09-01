@@ -70,6 +70,7 @@ fn App() -> Element {
             SettingsMenu {
                 settings_opened,
                 config,
+                profiles_info,
                 control_routine,
                 system_info_routine
             }

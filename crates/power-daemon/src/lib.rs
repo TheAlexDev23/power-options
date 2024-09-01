@@ -166,7 +166,7 @@ impl Instance {
     pub fn remove_profile(&mut self, idx: usize) {
         if self.profiles_info.profiles.len() <= 1 {
             error!(
-                "There's only 1 or less available profiles. Cannot remove remaining. Ignoring.."
+                "There's only 1 or less available profiles. Cannot remove remaining. Ignoring..."
             );
             return;
         }
@@ -175,24 +175,46 @@ impl Instance {
             return;
         }
 
-        let profile = &self.profiles_info.profiles[idx];
+        if self.profiles_info.active_profile == idx {
+            error!("Cannot remove currently active profile, ignoring...");
+            return;
+        }
+
+        if self.profiles_info.active_profile > idx {
+            self.profiles_info.active_profile -= 1;
+        }
+
+        let profile_to_remove = &self.profiles_info.profiles[idx];
+        let profile_to_remove_name = profile_to_remove.profile_name.clone();
 
         let mut should_update = false;
 
         if let Some(ref temporary_override) = self.temporary_override {
-            if *temporary_override == profile.profile_name {
+            if *temporary_override == profile_to_remove.profile_name {
                 self.temporary_override = None;
                 should_update = true;
             }
         }
         if let Some(ref persistent_override) = self.config.profile_override {
-            if *persistent_override == profile.profile_name {
+            if *persistent_override == profile_to_remove.profile_name {
                 self.config.profile_override = None;
                 should_update = true;
             }
         }
 
-        if self.config.bat_profile == profile.profile_name {
+        self.config.profiles.remove(
+            self.config
+                .profiles
+                .iter()
+                .position(|p| *p == profile_to_remove.profile_name)
+                .unwrap(),
+        );
+        self.profiles_info.profiles.remove(idx);
+
+        // This needs to be done fater removign the actual profile from the
+        // list, so that the .first() and .last() values would not point to
+        // profiles that won't exist after deletion
+        if self.config.bat_profile == profile_to_remove_name {
             self.config.bat_profile = self
                 .profiles_info
                 .profiles
@@ -202,7 +224,7 @@ impl Instance {
                 .clone();
             should_update = true;
         }
-        if self.config.ac_profile == profile.profile_name {
+        if self.config.ac_profile == profile_to_remove_name {
             self.config.ac_profile = self
                 .profiles_info
                 .profiles
@@ -213,20 +235,11 @@ impl Instance {
             should_update = true;
         }
 
-        self.config.profiles.remove(
-            self.config
-                .profiles
-                .iter()
-                .position(|p| *p == profile.profile_name)
-                .unwrap(),
-        );
         fs::remove_file(
             self.profiles_path
-                .join(&format!("{}.toml", &profile.profile_name)),
+                .join(&format!("{}.toml", &profile_to_remove_name)),
         )
         .expect("Could not remove profile file");
-
-        self.profiles_info.profiles.remove(idx);
 
         serialize_config(&self.config, &self.config_path);
 

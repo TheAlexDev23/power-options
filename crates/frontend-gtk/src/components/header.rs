@@ -71,10 +71,10 @@ impl SimpleComponent for Header {
     fn update(&mut self, message: Self::Input, _sender: ComponentSender<Self>) {
         match message {
             HeaderInput::RootRequest(RootRequest::ReactToUpdate(message)) => {
-                if let AppSyncUpdate::ProfilesInfo(ref profiles_info) = message {
-                    self.profiles_info = (**profiles_info).clone();
+                if let AppSyncUpdate::ProfilesInfo(profiles_info) = message.clone() {
+                    self.profiles_info = (*profiles_info).clone();
                 }
-                if let AppSyncUpdate::TemporaryOverride(ref temporary_override) = message {
+                if let AppSyncUpdate::TemporaryOverride(temporary_override) = message.clone() {
                     if let Some(profile_name) = temporary_override.as_ref() {
                         self.reset_temp_override_btn_status =
                             TempOverrideResetButtonStatus::Enabled(profile_name.clone())

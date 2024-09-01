@@ -98,4 +98,11 @@ input:checked+.slider:before {
 
 .tooltip-parent:hover .tooltip {
     visibility: visible;
+
+}
+
+.editable-label {
+    background: none;
+    border: none;
+    outline: none;
 }

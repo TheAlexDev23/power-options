@@ -5,6 +5,7 @@ use dioxus::prelude::*;
 use power_daemon::communication::client::ControlClient;
 use power_daemon::systeminfo::SystemInfo;
 use power_daemon::Config;
+use power_daemon::DefaultProfileType;
 use power_daemon::ProfilesInfo;
 use power_daemon::ReducedUpdate;
 use power_daemon::{communication::client::SystemInfoClient, Profile};
@@ -100,20 +101,20 @@ pub async fn system_info_service(
     }
 }
 
-#[derive(PartialEq)]
+#[derive(Clone, PartialEq)]
 pub enum ControlAction {
     GetConfig,
     GetProfilesInfo,
 
     UpdateConfig(Config),
 
+    CreateProfile(DefaultProfileType),
     ResetProfile(u32),
+    RenameProfile(u32, String),
     RemoveProfile(u32),
-    UpdateProfileFull(u32, Profile),
-    UpdateProfileReduced(u32, Profile, ReducedUpdate),
+    SwapProfiles(u32, u32),
 
-    UpdateFull,
-    UpdateReduced(ReducedUpdate),
+    UpdateProfileReduced(u32, Profile, ReducedUpdate),
 
     GetProfileOverride,
     SetProfileOverride(String),
@@ -158,30 +159,30 @@ pub async fn control_service(
                     .update_config(config)
                     .await
                     .expect("Could not update config"),
-                ControlAction::UpdateProfileFull(idx, updated) => control_client
-                    .update_profile_full(idx, updated)
-                    .await
-                    .expect("Could not update profile"),
                 ControlAction::UpdateProfileReduced(idx, updated, reduced_update) => control_client
                     .update_profile_reduced(idx, updated, reduced_update)
                     .await
                     .expect("Could not update profile"),
+                ControlAction::CreateProfile(profile_type) => control_client
+                    .create_profile(profile_type)
+                    .await
+                    .expect("Could not create profile"),
+                ControlAction::SwapProfiles(idx, new_idx) => control_client
+                    .swap_profiles(idx, new_idx)
+                    .await
+                    .expect("Could not create profile"),
                 ControlAction::ResetProfile(idx) => control_client
                     .reset_profile(idx)
+                    .await
+                    .expect("Could not reset profile"),
+                ControlAction::RenameProfile(idx, name) => control_client
+                    .update_profile_name(idx, name)
                     .await
                     .expect("Could not reset profile"),
                 ControlAction::RemoveProfile(idx) => control_client
                     .remove_profile(idx)
                     .await
                     .expect("Could not remove profile"),
-                ControlAction::UpdateFull => control_client
-                    .update_full()
-                    .await
-                    .expect("Could not apply current profile"),
-                ControlAction::UpdateReduced(reduced_update) => control_client
-                    .update_reduced(reduced_update)
-                    .await
-                    .expect("Could not apply current profile"),
                 ControlAction::GetProfileOverride => active_profile_override.set(
                     control_client
                         .get_profile_override()
@@ -205,4 +206,19 @@ pub async fn control_service(
 
         tokio::time::sleep(Duration::from_millis(20)).await
     }
+}
+
+pub fn control_routine_send_multiple(
+    routine: ControlRoutine,
+    actions: &[ControlAction],
+    signal: Option<Signal<bool>>,
+) {
+    if let Some(mut signal) = signal {
+        signal.set(true);
+    }
+    assert!(actions.len() > 1);
+    for action in actions.iter().take(actions.len() - 1) {
+        routine.send((action.clone(), None));
+    }
+    routine.send((actions.last().unwrap().clone(), signal));
 }

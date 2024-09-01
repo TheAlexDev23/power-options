@@ -239,10 +239,18 @@ impl SimpleAsyncComponent for Settings {
                 if let RootRequest::ReactToUpdate(update) = request {
                     if let AppSyncUpdate::ProfilesInfo(profiles_info) = &update {
                         if let Some(profiles_info) = profiles_info.as_ref() {
+                            let one_profile = profiles_info.profiles.len() == 1;
+
                             let mut guard = self.profiles.guard();
                             guard.clear();
-                            for profile in profiles_info.profiles.clone() {
-                                guard.push_back(profile);
+                            for (idx, profile) in
+                                profiles_info.profiles.clone().into_iter().enumerate()
+                            {
+                                guard.push_back(ProfileFactoryRenderer {
+                                    is_active_profile: profiles_info.active_profile == idx,
+                                    only_one_profile: one_profile,
+                                    profile,
+                                });
                             }
                         }
                     }
@@ -444,12 +452,14 @@ impl SimpleAsyncComponent for Settings {
 
 #[derive(Debug, Clone)]
 struct ProfileFactoryRenderer {
+    only_one_profile: bool,
+    is_active_profile: bool,
     profile: Profile,
 }
 
 #[relm4::factory]
 impl FactoryComponent for ProfileFactoryRenderer {
-    type Init = Profile;
+    type Init = ProfileFactoryRenderer;
     type Input = ();
     type Output = SettingsInput;
     type CommandOutput = ();
@@ -491,6 +501,8 @@ impl FactoryComponent for ProfileFactoryRenderer {
             },
             gtk::Button {
                 set_label: "Delete",
+                #[watch]
+                set_sensitive: !self.only_one_profile && !self.is_active_profile,
                 connect_clicked[sender, index] => move |_| {
                     sender.output(SettingsInput::AskAndRemoveProfile(index.clone())).unwrap();
                 }
@@ -499,6 +511,6 @@ impl FactoryComponent for ProfileFactoryRenderer {
     }
 
     fn init_model(value: Self::Init, _index: &DynamicIndex, _sender: FactorySender<Self>) -> Self {
-        Self { profile: value }
+        value
     }
 }
