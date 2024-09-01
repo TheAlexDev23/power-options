@@ -2,37 +2,32 @@ use std::convert::identity;
 use std::sync::Arc;
 use std::time::Duration;
 
-use enumflags2::BitFlags;
 use gtk::glib::clone;
+
+use adw::prelude::*;
 use gtk::prelude::*;
-use kernel::KernelGroup;
+use relm4::loading_widgets::LoadingWidgets;
+use relm4::prelude::*;
+use relm4::Controller;
+
+use enumflags2::BitFlags;
 use log::debug;
-use network::NetworkGroup;
-use pci::PCIGroup;
 use power_daemon::{
     ASPMInfo, ASPMSettings, CPUInfo, CPUSettings, KernelSettings, NetworkSettings, PCISettings,
     RadioSettings, SATASettings, USBSettings,
 };
 use power_daemon::{Config, ProfilesInfo, SystemInfo};
-use relm4::loading_widgets::LoadingWidgets;
-use relm4::prelude::*;
-use relm4::Controller;
-use sata::SATAGroup;
-use usb::USBGroup;
 
-use super::groups::*;
+use super::groups::{
+    cpu::CPUGroup, cpu_cores::CPUCoresGroup, kernel::KernelGroup, network::NetworkGroup,
+    pci::PCIGroup, radio::RadioGroup, sata::SATAGroup, usb::USBGroup,
+};
+
 use super::settings::Settings;
 use super::Header;
 use super::HeaderInput;
 use crate::communications::system_info::SystemInfoSyncType;
 use crate::communications::{self, daemon_control, SYSTEM_INFO};
-
-#[derive(PartialEq)]
-pub enum AppState {
-    Updating,
-    DaemonSettings,
-    SettingGroups,
-}
 
 #[derive(Debug, Clone, Copy)]
 #[enumflags2::bitflags]
@@ -108,7 +103,8 @@ pub enum AppSyncUpdate {
 }
 
 pub struct App {
-    app_state: AppState,
+    updating: bool,
+    root: gtk::ApplicationWindow,
 
     changed_groups: BitFlags<SettingsGroup>,
 
@@ -116,7 +112,7 @@ pub struct App {
 
     header: Controller<Header>,
 
-    settings_menu: AsyncController<Settings>,
+    settings_dialog: Option<AsyncController<Settings>>,
 
     cpu_group: Controller<CPUGroup>,
     cpu_cores_group: Controller<CPUCoresGroup>,
@@ -145,34 +141,26 @@ impl SimpleAsyncComponent for App {
         #[root]
         gtk::ApplicationWindow {
             set_titlebar: Some(model.header.widget()),
-            match model.app_state {
-                AppState::Updating => {
-                    gtk::Box {
-                        set_align: gtk::Align::Center,
-                        gtk::Label::new(Some("Applying...")),
-                        gtk::Spinner {
-                            set_spinning: true,
-                            set_visible: true,
-                        }
+            if model.updating {
+                gtk::Box {
+                    set_align: gtk::Align::Center,
+                    gtk::Label::new(Some("Applying...")),
+                    gtk::Spinner {
+                        set_spinning: true,
+                        set_visible: true,
                     }
                 }
-                AppState::SettingGroups => {
-                    gtk::Paned {
-                        set_position: 200,
-                        #[wrap(Some)]
-                        set_start_child= &gtk::StackSidebar {
-                            set_stack = &model.settings_group_stack.clone(),
-                        },
-                        #[wrap(Some)]
-                        set_end_child=&model.settings_group_stack.clone(),
-                    }
+            } else {
+                gtk::Paned {
+                    set_position: 200,
+                    #[wrap(Some)]
+                    set_start_child= &gtk::StackSidebar {
+                        set_stack = &model.settings_group_stack.clone(),
+                    },
+                    #[wrap(Some)]
+                    set_end_child=&model.settings_group_stack.clone(),
                 }
-                AppState::DaemonSettings => {
-                    gtk::Box {
-                        container_add: model.settings_menu.widget()
-                    }
-                }
-            },
+            }
         }
     }
 
@@ -304,19 +292,16 @@ impl SimpleAsyncComponent for App {
             });
         }
 
-        let settings_menu = Settings::builder()
-            .launch(())
-            .forward(sender.input_sender(), identity);
-
         let model = App {
-            app_state: AppState::SettingGroups,
+            root: root.clone(),
+            updating: false,
             changed_groups: BitFlags::empty(),
             header: Header::builder()
                 .launch(())
                 .forward(sender.input_sender(), identity),
 
             settings_group_stack,
-            settings_menu,
+            settings_dialog: None,
             cpu_group,
             cpu_cores_group,
             radio_group,
@@ -388,10 +373,13 @@ impl SimpleAsyncComponent for App {
                     .sender()
                     .send(request.clone().into())
                     .unwrap();
-                self.settings_menu
-                    .sender()
-                    .send(request.clone().into())
-                    .unwrap();
+
+                if let Some(ref settings_dialog) = self.settings_dialog {
+                    settings_dialog
+                        .sender()
+                        .send(request.clone().into())
+                        .unwrap();
+                }
             }
             AppInput::UpdateProfilesOrSend(request) => {
                 if !remove_all_none_options().await {
@@ -415,21 +403,37 @@ impl SimpleAsyncComponent for App {
             }
             AppInput::ToggleSettings(v) => {
                 if v {
-                    if self.app_state == AppState::SettingGroups {
-                        self.app_state = AppState::DaemonSettings;
-                    }
-                } else {
-                    self.app_state = AppState::SettingGroups;
+                    self.settings_dialog = Settings::builder()
+                        .launch(())
+                        .forward(sender.input_sender(), identity)
+                        .into();
+
+                    let settings_dialog = self.settings_dialog.as_ref().unwrap();
+
+                    settings_dialog
+                        .sender()
+                        .send(
+                            RootRequest::ReactToUpdate(AppSyncUpdate::Config(
+                                communications::CONFIG.get().await.clone().into(),
+                            ))
+                            .into(),
+                        )
+                        .unwrap();
+                    settings_dialog
+                        .sender()
+                        .send(
+                            RootRequest::ReactToUpdate(AppSyncUpdate::ProfilesInfo(
+                                communications::PROFILES_INFO.get().await.clone().into(),
+                            ))
+                            .into(),
+                        )
+                        .unwrap();
+
+                    settings_dialog.widget().present(Some(&self.root));
                 }
             }
             AppInput::SetUpdating(v) => {
-                if v {
-                    if self.app_state == AppState::SettingGroups {
-                        self.app_state = AppState::Updating;
-                    }
-                } else {
-                    self.app_state = AppState::SettingGroups;
-                }
+                self.updating = v;
             }
             AppInput::UpdateApplyButton => self
                 .header

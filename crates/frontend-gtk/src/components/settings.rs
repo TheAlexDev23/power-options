@@ -1,6 +1,7 @@
 use std::{collections::HashMap, convert::identity};
 
 use adw::prelude::*;
+use gtk::prelude::*;
 use log::debug;
 use power_daemon::{Config, DefaultProfileType, Profile};
 use relm4::{
@@ -132,18 +133,67 @@ impl SimpleAsyncComponent for Settings {
     type Init = ();
 
     view! {
-        gtk::Box {
-            if model.updating {
-                gtk::Box {
-                    set_align: gtk::Align::Center,
-                    gtk::Label::new(Some("Applying...")),
-                    gtk::Spinner {
-                        set_spinning: true,
-                        set_visible: true,
-                    }
-                }
+        #[root]
+        adw::PreferencesDialog {
+            add: if model.updating {
+                &settings_widget
             } else {
-                adw::PreferencesPage {
+                &settings_widget
+            }
+        },
+    }
+
+    additional_fields! {
+        updating_widget: adw::PreferencesPage,
+        settings_widget: adw::PreferencesPage,
+    }
+
+    async fn init(
+        _init: Self::Init,
+        root: Self::Root,
+        sender: AsyncComponentSender<Self>,
+    ) -> AsyncComponentParts<Self> {
+        let model = Settings {
+            updating: false,
+
+            supressed_actions: HashMap::new(),
+
+            last_config: None,
+
+            profiles: FactoryVecDeque::builder()
+                .launch(gtk::Box::new(gtk::Orientation::Vertical, 0))
+                .forward(sender.input_sender(), identity),
+
+            default_profile_types: StringListBinding::new(gtk::StringList::new(&[
+                &DefaultProfileType::Superpowersave.get_name(),
+                &DefaultProfileType::Powersave.get_name(),
+                &DefaultProfileType::Balanced.get_name(),
+                &DefaultProfileType::Performance.get_name(),
+                &DefaultProfileType::Ultraperformance.get_name(),
+            ])),
+
+            new_profile_type: Default::default(),
+            available_profiles: Default::default(),
+            selected_bat_profile: Default::default(),
+            selected_ac_profile: Default::default(),
+            persistent_override_set: Default::default(),
+            selected_persitent_override: Default::default(),
+        };
+
+        relm4::view! {
+        updating_widget = adw::PreferencesPage {
+                    adw::PreferencesGroup {
+                        gtk::Box {
+                            set_align: gtk::Align::Center,
+                            gtk::Label::new(Some("Applying...")),
+                            gtk::Spinner {
+                                set_spinning: true,
+                                set_visible: true,
+                            }
+                        }
+                    }
+                },
+        settings_widget = adw::PreferencesPage {
                     set_expand: true,
 
                     adw::PreferencesGroup {
@@ -179,7 +229,7 @@ impl SimpleAsyncComponent for Settings {
                     adw::PreferencesGroup {
                         adw::ComboRow {
                             set_title: "New profile type",
-                            add_binding: (&model.available_profiles, "model"),
+                            add_binding: (&model.default_profile_types, "model"),
                             add_binding: (&model.new_profile_type, "selected"),
                         },
                         gtk::Button {
@@ -192,41 +242,7 @@ impl SimpleAsyncComponent for Settings {
                         container_add: model.profiles.widget(),
                     }
                 }
-            }
         }
-    }
-
-    async fn init(
-        _init: Self::Init,
-        root: Self::Root,
-        sender: AsyncComponentSender<Self>,
-    ) -> AsyncComponentParts<Self> {
-        let model = Settings {
-            updating: false,
-
-            supressed_actions: HashMap::new(),
-
-            last_config: None,
-
-            profiles: FactoryVecDeque::builder()
-                .launch(gtk::Box::new(gtk::Orientation::Vertical, 0))
-                .forward(sender.input_sender(), identity),
-
-            default_profile_types: StringListBinding::new(gtk::StringList::new(&[
-                &DefaultProfileType::Superpowersave.get_name(),
-                &DefaultProfileType::Powersave.get_name(),
-                &DefaultProfileType::Balanced.get_name(),
-                &DefaultProfileType::Performance.get_name(),
-                &DefaultProfileType::Ultraperformance.get_name(),
-            ])),
-
-            new_profile_type: Default::default(),
-            available_profiles: Default::default(),
-            selected_bat_profile: Default::default(),
-            selected_ac_profile: Default::default(),
-            persistent_override_set: Default::default(),
-            selected_persitent_override: Default::default(),
-        };
 
         let widgets = view_output!();
 
@@ -512,5 +528,10 @@ impl FactoryComponent for ProfileFactoryRenderer {
 
     fn init_model(value: Self::Init, _index: &DynamicIndex, _sender: FactorySender<Self>) -> Self {
         value
+    }
+}
+impl Drop for Settings {
+    fn drop(&mut self) {
+        println!("drop");
     }
 }
