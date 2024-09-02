@@ -136,16 +136,12 @@ impl SimpleAsyncComponent for Settings {
         #[root]
         gtk::Dialog {
             if model.updating {
-                adw::PreferencesPage {
-                    adw::PreferencesGroup {
-                        gtk::Box {
-                            set_align: gtk::Align::Center,
-                            gtk::Label::new(Some("Applying...")),
-                            gtk::Spinner {
-                                set_spinning: true,
-                                set_visible: true,
-                            }
-                        }
+                gtk::Box {
+                    set_align: gtk::Align::Center,
+                    gtk::Label::new(Some("Applying...")),
+                    gtk::Spinner {
+                        set_spinning: true,
+                        set_visible: true,
                     }
                 }
             } else {
