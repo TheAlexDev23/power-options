@@ -23,6 +23,7 @@ const TOTAL_MAX_IDX: u32 = 7;
 
 #[derive(Debug, Clone)]
 pub enum CPUCoresInput {
+    Changed,
     RootRequest(RootRequest),
     OnlineChanged(gtk::TreePath, bool),
     GovChanged(gtk::TreePath, gtk::glib::Value),
@@ -338,7 +339,7 @@ impl SimpleComponent for CPUCoresGroup {
                             let profile = profiles_info.get_active_profile();
                             self.active_profile =
                                 Some((profiles_info.active_profile, profile.clone()));
-                            sender.input(CPUCoresInput::Reset);
+                            sender.input(CPUCoresInput::Changed);
                         }
                     }
 
@@ -347,6 +348,7 @@ impl SimpleComponent for CPUCoresGroup {
                             self.info_obtained = true;
                             self.from_cpu_info(&system_info.cpu_info);
                             self.last_settings = Some(self.to_core_settings());
+                            sender.input(CPUCoresInput::Changed);
                         }
                     }
                 }
@@ -376,6 +378,7 @@ impl SimpleComponent for CPUCoresGroup {
                 }
             },
             CPUCoresInput::FreqLimChanged(min, path, v) => {
+                sender.input(CPUCoresInput::Changed);
                 let min = *min;
                 let iter = self.cores.iter(&path).unwrap();
 
@@ -404,30 +407,24 @@ impl SimpleComponent for CPUCoresGroup {
                 }
             }
             CPUCoresInput::OnlineChanged(path, v) => {
+                sender.input(CPUCoresInput::Changed);
                 self.cores
                     .set_value(&self.cores.iter(&path).unwrap(), ONLINE_IDX, &v.to_value())
             }
             CPUCoresInput::EppChanged(path, v) => {
+                sender.input(CPUCoresInput::Changed);
                 self.cores
                     .set_value(&self.cores.iter(&path).unwrap(), EPP_IDX, &v)
             }
             CPUCoresInput::GovChanged(path, v) => {
+                sender.input(CPUCoresInput::Changed);
                 self.cores
                     .set_value(&self.cores.iter(&path).unwrap(), GOV_IDX, &v)
             }
             CPUCoresInput::Reset => {
                 fetch_cpu_info_once();
             }
-        }
-
-        match &message {
-            CPUCoresInput::RootRequest(_) => {}
-
-            CPUCoresInput::GovChanged(_, _)
-            | CPUCoresInput::EppChanged(_, _)
-            | CPUCoresInput::FreqLimChanged(_, _, _)
-            | CPUCoresInput::OnlineChanged(_, _)
-            | CPUCoresInput::Reset => {
+            CPUCoresInput::Changed => {
                 if let Some(ref last_settings) = self.last_settings {
                     sender
                         .output(AppInput::SetChanged(
