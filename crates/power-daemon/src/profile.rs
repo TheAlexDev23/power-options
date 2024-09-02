@@ -1,6 +1,6 @@
 use std::fs;
 
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use serde::{Deserialize, Serialize};
 
@@ -175,10 +175,24 @@ impl CPUSettings {
         }
 
         if let Some(ref epp) = self.epp {
-            run_command(&format!(
-                "echo {} > /sys/devices/system/cpu/cpu*/cpufreq/energy_performance_preference",
-                epp
-            ));
+            if fs::metadata("/sys/devices/system/cpu/cpu0/cpufreq/energy_performance_preference")
+                .is_ok()
+            {
+                run_command(&format!(
+                    "echo {} > /sys/devices/system/cpu/cpu*/cpufreq/energy_performance_preference",
+                    epp
+                ));
+            } else if fs::metadata("/sys/devices/system/cpu/cpu0/power/energy_perf_bias").is_ok() {
+                debug!(
+                    "System does not have EPP but EPB is present, translating and setting EPB..."
+                );
+                run_command(&format!(
+                    "echo {} > /sys/devices/system/cpu/cpu*/power/energy_perf_bias",
+                    Self::translate_epp_to_epb(epp)
+                ));
+            } else {
+                warn!("System does not have EPP or EPB but configuration attempted to set anyways. Ignoring...");
+            }
         }
 
         if let Some(boost) = self.boost {
@@ -232,6 +246,18 @@ impl CPUSettings {
                 error!("Min/Max scaling perf percentage is currently only supported for intel CPUs with intel_pstate");
             }
         }
+    }
+
+    fn translate_epp_to_epb(epp: &str) -> String {
+        match epp {
+            "performance" => "performance",
+            "balance_performance" => "balance-performance",
+            "default" => "normal",
+            "balance_power" => "balance-power",
+            "power" => "power",
+            _ => "normal",
+        }
+        .to_string()
     }
 }
 
@@ -440,8 +466,10 @@ impl NetworkSettings {
 
     fn apply_kernel_module_settings(&self) {
         let uses_iwlmvm = if fs::metadata("/sys/module/iwlmvm").is_ok() {
+            debug!("Identified that the system uses iwlmvm");
             true
         } else if fs::metadata("/sys/module/iwldvm").is_ok() {
+            debug!("Identified that the system uses iwldvm");
             false
         } else {
             error!("Could not identify wifi firmware module. Expected either iwlmvm or iwldvm, neither found. Ignoring network kernel module settings...");
