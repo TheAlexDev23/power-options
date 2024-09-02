@@ -10,6 +10,7 @@ use relm4::{
 };
 
 use super::{CPU_EPPS, CPU_GOVERNORS_ACTIVE, CPU_GOVERNORS_PASSIVE};
+use crate::helpers::extensions::StringListExtension;
 use crate::{
     communications::{daemon_control, system_info},
     helpers::extra_bindings::{AdjustmentBinding, StringListBinding},
@@ -80,6 +81,14 @@ impl CPUGroup {
     }
 
     fn from_cpu_settings(&mut self, cpu_settings: &CPUSettings) {
+        *self.mode.guard() = if cpu_settings.mode.as_ref().unwrap() == "active" {
+            0
+        } else if cpu_settings.mode.as_ref().unwrap() == "passive" {
+            1
+        } else {
+            panic!("Unkown driver opmode");
+        };
+
         let epps = CPU_EPPS.clone();
 
         let governors = if cpu_settings.mode.as_ref().unwrap_or(&"passive".to_string()) == "active"
@@ -210,6 +219,25 @@ impl CPUGroup {
             } else {
                 None
             },
+        }
+    }
+
+    fn modify_values_on_change(&self) {
+        let active = self.mode.value() == 0;
+        let governors = if active {
+            CPU_GOVERNORS_ACTIVE.clone()
+        } else {
+            CPU_GOVERNORS_PASSIVE.clone()
+        };
+
+        let governors_as_string_vec = governors.iter().map(|v| v.to_string()).collect::<Vec<_>>();
+
+        if self.available_governors.value().to_vec() != governors_as_string_vec {
+            *self.available_governors.guard() = gtk::StringList::new(&governors);
+        }
+
+        if self.governor.value() >= governors.len() as u32 {
+            *self.governor.guard() = governors.len() as u32 - 1;
         }
     }
 }
@@ -439,6 +467,8 @@ impl SimpleComponent for CPUGroup {
             },
             CPUInput::Changed => {
                 if let Some(ref last_settings) = self.last_cpu_settings {
+                    self.modify_values_on_change();
+
                     sender
                         .output(AppInput::SetChanged(
                             *last_settings != self.to_cpu_settings(),

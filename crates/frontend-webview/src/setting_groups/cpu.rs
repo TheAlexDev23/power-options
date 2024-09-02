@@ -218,7 +218,7 @@ fn CPUSettingsForm(
                             name: String::from("Energy to Performance Ratio"),
                             items: epps,
                             value: form.epp,
-                            disabled: form.governor.1() == "performance",
+                            disabled: form.mode.1() == "active" && form.governor.1() == "performance",
                             dropdown_tooltip: if form.governor.1() == "performance" {
                                 Some(
                                     "EPP/EPB will be locked to the highest setting by the kernel when the governor is set to performance."
@@ -527,8 +527,11 @@ fn CoreSettings(
                                         CPUSettings::translate_epb_to_epp(&core.epb.clone().unwrap())
                                     },
                                     items: epps.clone(),
-                                    disabled: core.governor == "performance",
-                                    tooltip: if core.governor == "performance" {
+                                    disabled: cpu_info.mode.clone().unwrap_or_default() == "active"
+                                        && core.governor == "performance",
+                                    tooltip: if cpu_info.mode.clone().unwrap_or_default() == "active"
+                                        && core.governor == "performance"
+                                    {
                                         Some((
                                             TooltipDirection::AtTop,
                                             String::from(
