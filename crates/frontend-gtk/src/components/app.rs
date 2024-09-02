@@ -428,8 +428,7 @@ impl SimpleAsyncComponent for App {
                             .into(),
                         )
                         .unwrap();
-
-                    settings_dialog.widget().present(Some(&self.root));
+                    settings_dialog.widget().show();
                 }
             }
             AppInput::SetUpdating(v) => {

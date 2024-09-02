@@ -134,18 +134,72 @@ impl SimpleAsyncComponent for Settings {
 
     view! {
         #[root]
-        adw::PreferencesDialog {
-            add: if model.updating {
-                &settings_widget
+        gtk::Dialog {
+            if model.updating {
+                adw::PreferencesPage {
+                    adw::PreferencesGroup {
+                        gtk::Box {
+                            set_align: gtk::Align::Center,
+                            gtk::Label::new(Some("Applying...")),
+                            gtk::Spinner {
+                                set_spinning: true,
+                                set_visible: true,
+                            }
+                        }
+                    }
+                }
             } else {
-                &settings_widget
+                adw::PreferencesPage {
+                    set_expand: true,
+
+                    adw::PreferencesGroup {
+                        adw::ComboRow {
+                            set_title: "Battery profile",
+                            set_tooltip_text: Some("The profile used for when the system is on battery power"),
+                            add_binding: (&model.available_profiles, "model"),
+                            add_binding: (&model.selected_bat_profile, "selected"),
+                            connect_selected_item_notify => SettingsInput::Changed(ChangeAction::Bat),
+                        },
+                        adw::ComboRow {
+                            set_title: "AC profile",
+                            set_tooltip_text: Some("The profile used for when the system is connected to the wall"),
+                            add_binding: (&model.available_profiles, "model"),
+                            add_binding: (&model.selected_ac_profile, "selected"),
+                            connect_selected_item_notify => SettingsInput::Changed(ChangeAction::AC),
+                        },
+                        adw::SwitchRow {
+                            set_title: "Create a persistent override",
+                            set_tooltip_text: Some("If a profile override is set, the predefined battery and ac profiles will not be selected on demand, and this profile will be prefered. Note that unlike a temporary override selected by pressing the individual profiles in the UI, a persistent override is saved in the configuration and will persist among reboots, however a temporary override is prioritized over persistent overrides."),
+                            add_binding: (&model.persistent_override_set, "active"),
+                            connect_active_notify => SettingsInput::Changed(ChangeAction::PersistentOverride),
+                        },
+                        adw::ComboRow {
+                            set_title: "Persistent override",
+                            add_binding: (&model.available_profiles, "model"),
+                            add_binding: (&model.selected_persitent_override, "selected"),
+                            add_binding: (&model.persistent_override_set, "visible"),
+                            connect_selected_item_notify => SettingsInput::Changed(ChangeAction::PersistentOverride),
+                        },
+                    },
+
+                    adw::PreferencesGroup {
+                        adw::ComboRow {
+                            set_title: "New profile type",
+                            add_binding: (&model.default_profile_types, "model"),
+                            add_binding: (&model.new_profile_type, "selected"),
+                        },
+                        gtk::Button {
+                            set_label: "Create profile",
+                            connect_clicked => SettingsInput::ManageProfiles(ProfileManagementAction::CreateProfile),
+                        },
+                    },
+
+                    adw::PreferencesGroup {
+                        container_add: model.profiles.widget(),
+                    }
+                }
             }
         },
-    }
-
-    additional_fields! {
-        updating_widget: adw::PreferencesPage,
-        settings_widget: adw::PreferencesPage,
     }
 
     async fn init(
@@ -179,70 +233,6 @@ impl SimpleAsyncComponent for Settings {
             persistent_override_set: Default::default(),
             selected_persitent_override: Default::default(),
         };
-
-        relm4::view! {
-        updating_widget = adw::PreferencesPage {
-            adw::PreferencesGroup {
-                gtk::Box {
-                    set_align: gtk::Align::Center,
-                    gtk::Label::new(Some("Applying...")),
-                    gtk::Spinner {
-                        set_spinning: true,
-                        set_visible: true,
-                    }
-                }
-            }
-        },
-        settings_widget = adw::PreferencesPage {
-            set_expand: true,
-
-            adw::PreferencesGroup {
-                adw::ComboRow {
-                    set_title: "Battery profile",
-                    set_tooltip_text: Some("The profile used for when the system is on battery power"),
-                    add_binding: (&model.available_profiles, "model"),
-                    add_binding: (&model.selected_bat_profile, "selected"),
-                    connect_selected_item_notify => SettingsInput::Changed(ChangeAction::Bat),
-                },
-                adw::ComboRow {
-                    set_title: "AC profile",
-                    set_tooltip_text: Some("The profile used for when the system is connected to the wall"),
-                    add_binding: (&model.available_profiles, "model"),
-                    add_binding: (&model.selected_ac_profile, "selected"),
-                    connect_selected_item_notify => SettingsInput::Changed(ChangeAction::AC),
-                },
-                adw::SwitchRow {
-                    set_title: "Create a persistent override",
-                    set_tooltip_text: Some("If a profile override is set, the predefined battery and ac profiles will not be selected on demand, and this profile will be prefered. Note that unlike a temporary override selected by pressing the individual profiles in the UI, a persistent override is saved in the configuration and will persist among reboots, however a temporary override is prioritized over persistent overrides."),
-                    add_binding: (&model.persistent_override_set, "active"),
-                    connect_active_notify => SettingsInput::Changed(ChangeAction::PersistentOverride),
-                },
-                adw::ComboRow {
-                    set_title: "Persistent override",
-                    add_binding: (&model.available_profiles, "model"),
-                    add_binding: (&model.selected_persitent_override, "selected"),
-                    add_binding: (&model.persistent_override_set, "visible"),
-                    connect_selected_item_notify => SettingsInput::Changed(ChangeAction::PersistentOverride),
-                },
-            },
-
-            adw::PreferencesGroup {
-                adw::ComboRow {
-                    set_title: "New profile type",
-                    add_binding: (&model.default_profile_types, "model"),
-                    add_binding: (&model.new_profile_type, "selected"),
-                },
-                gtk::Button {
-                    set_label: "Create profile",
-                    connect_clicked => SettingsInput::ManageProfiles(ProfileManagementAction::CreateProfile),
-                },
-            },
-
-            adw::PreferencesGroup {
-                container_add: model.profiles.widget(),
-            }
-        }
-        }
 
         let widgets = view_output!();
 
