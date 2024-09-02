@@ -34,7 +34,7 @@ pub struct CPUGroup {
     info_obtained: bool,
 
     can_change_modes: bool,
-    can_change_epps: bool,
+    has_epb_or_epp: bool,
 
     has_perf_pct: bool,
     has_boost: bool,
@@ -92,7 +92,12 @@ impl CPUGroup {
         *self.available_epps.guard() = gtk::StringList::new(&epps);
         *self.epp.guard() = epps
             .iter()
-            .position(|v| *v == cpu_settings.epp.as_ref().unwrap_or(&"default".to_string()))
+            .position(|v| {
+                *v == cpu_settings
+                    .energy_perf_ratio
+                    .as_ref()
+                    .unwrap_or(&"default".to_string())
+            })
             .unwrap() as u32;
 
         *self.available_governors.guard() = gtk::StringList::new(&governors);
@@ -144,7 +149,7 @@ impl CPUGroup {
 
     fn from_cpu_info(&mut self, cpu_info: &CPUInfo) {
         self.set_can_change_modes(cpu_info.mode.is_some());
-        self.set_can_change_epps(cpu_info.has_epp);
+        self.set_has_epb_or_epp(cpu_info.has_epp || cpu_info.has_epb);
         self.set_has_perf_pct(cpu_info.has_perf_pct_scaling);
 
         let set_freq_ranges = |guard: BindingGuard<AdjustmentBinding>| {
@@ -178,7 +183,7 @@ impl CPUGroup {
                 }
                 .to_string(),
             ),
-            epp: if *self.get_can_change_epps() {
+            energy_perf_ratio: if *self.get_has_epb_or_epp() {
                 Some(CPU_EPPS[epp].to_string())
             } else {
                 None
@@ -251,17 +256,17 @@ impl SimpleComponent for CPUGroup {
                         },
 
                         adw::ComboRow {
-                            set_title: "Energy Performance Preference",
+                            set_title: "Energy to Performance Ratio",
                             // Watch instead of track can_change_epps because no way to track governor changes
                             #[watch]
-                            set_sensitive: model.can_change_epps && !model.governor_is_performance(),
+                            set_sensitive: model.has_epb_or_epp && !model.governor_is_performance(),
                             #[watch]
-                            set_tooltip_text: if !model.can_change_epps {
-                                Some("EPP options are unavailable in your system")
+                            set_tooltip_text: if !model.has_epb_or_epp {
+                                Some("EPP/EPB options are unavailable in your system")
                             } else if model.governor_is_performance() {
-                                Some("EPP is locked to the highest setting when the governor is set to performance")
+                                Some("EPP/EPB will be locked to the highest setting by the kernel when the governor is set to performance")
                             } else {
-                                None
+                                Some("It was detected that your system has either EPP or EPB, features which allow the user to select a preferable proportion between energy expense and performance.")
                             },
                             add_binding: (&model.available_epps, "model"),
                             add_binding: (&model.epp, "selected"),

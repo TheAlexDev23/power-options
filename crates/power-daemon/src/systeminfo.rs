@@ -43,6 +43,8 @@ pub struct CPUInfo {
     pub mode: Option<String>,
 
     pub has_epp: bool,
+    pub has_epb: bool,
+
     pub has_perf_pct_scaling: bool,
 
     pub hybrid: bool,
@@ -77,8 +79,9 @@ pub struct CoreInfo {
     pub is_performance_core: Option<bool>,
 
     pub governor: String,
-    // None if unsupported
+
     pub epp: Option<String>,
+    pub epb: Option<String>,
 }
 
 impl CPUInfo {
@@ -115,6 +118,8 @@ impl CPUInfo {
                 "/sys/devices/system/cpu/cpu0/cpufreq/energy_performance_available_preferences",
             )
             .is_ok(),
+            has_epb: fs::metadata("/sys/devices/system/cpu/cpu0/power/energy_perf_bias").is_ok(),
+
             // This feature is exclusive to intel
             has_perf_pct_scaling: fs::metadata(&format!(
                 "/sys/devices/system/cpu/intel_pstate/min_perf_pct"
@@ -251,6 +256,13 @@ impl CPUInfo {
                 } else {
                     None
                 };
+                let epb = if self.has_epb {
+                    Some(file_content_to_string(
+                        cpufreq_path.join(entry.path().join("power/energy_perf_bias")),
+                    ))
+                } else {
+                    None
+                };
 
                 let governor = file_content_to_string(cpufreq_path.join("scaling_governor"));
 
@@ -276,6 +288,8 @@ impl CPUInfo {
                     scaling_max_frequency,
 
                     epp,
+                    epb,
+
                     governor,
 
                     // These would be set later

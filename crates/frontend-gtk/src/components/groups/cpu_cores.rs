@@ -1,7 +1,7 @@
 use std::{cell::RefCell, rc::Rc, time::Duration};
 
 use gtk::ListStore;
-use power_daemon::{CPUCoreSettings, CPUInfo, CoreSetting, Profile};
+use power_daemon::{CPUCoreSettings, CPUInfo, CPUSettings, CoreSetting, Profile};
 
 use adw::prelude::*;
 use relm4::prelude::*;
@@ -46,6 +46,7 @@ pub struct CPUCoresGroup {
     info_obtained: bool,
 
     has_epp: Rc<RefCell<bool>>,
+    has_epb: Rc<RefCell<bool>>,
     mode: Rc<RefCell<u8>>,
 
     cores: gtk::ListStore,
@@ -64,6 +65,7 @@ impl Default for CPUCoresGroup {
         Self {
             info_obtained: Default::default(),
             has_epp: Default::default(),
+            has_epb: Default::default(),
             mode: Default::default(),
             cores: gtk::ListStore::new(&[
                 Type::STRING,
@@ -127,7 +129,12 @@ impl CPUCoresGroup {
                     (MAX_IDX, &core_info.scaling_max_frequency),
                     (
                         EPP_IDX,
-                        &core_info.epp.clone().unwrap_or("default".to_string()),
+                        &core_info
+                            .epp
+                            .clone()
+                            .unwrap_or(CPUSettings::translate_epb_to_epp(
+                                &core_info.epb.clone().unwrap_or("normal".to_string()),
+                            )),
                     ),
                     (GOV_IDX, &core_info.governor),
                     (TOTAL_MIN_IDX, &core_info.total_min_frequency),
@@ -171,7 +178,7 @@ impl CPUCoresGroup {
                     min_frequency: Some(self.cores.get::<u32>(&iter, MIN_IDX as i32)).into(),
                     max_frequency: Some(self.cores.get::<u32>(&iter, MAX_IDX as i32)).into(),
                     governor: self.cores.get::<String>(&iter, GOV_IDX as i32).into(),
-                    epp: if *self.has_epp.borrow() {
+                    epp: if *self.has_epp.borrow() || *self.has_epb.borrow() {
                         self.cores.get::<String>(&iter, EPP_IDX as i32).into()
                     } else {
                         None

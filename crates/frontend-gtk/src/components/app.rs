@@ -568,8 +568,8 @@ fn default_cpu_settings(settings: &mut CPUSettings, cpu_info: &CPUInfo) {
         // Available in both passive and active, the safest option
         settings.governor = String::from("powersave").into();
     }
-    if settings.epp.is_none() && cpu_info.has_epp {
-        settings.epp = String::from("default").into();
+    if settings.energy_perf_ratio.is_none() && cpu_info.has_epp {
+        settings.energy_perf_ratio = String::from("default").into();
     }
 
     if settings.min_freq.is_none() {

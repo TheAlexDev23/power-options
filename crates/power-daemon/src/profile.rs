@@ -116,7 +116,12 @@ pub struct CPUSettings {
     pub mode: Option<String>,
 
     pub governor: Option<String>,
-    pub epp: Option<String>,
+
+    /// The CPU EPP value as a string (digits are unsupported), if the system
+    /// does not have EPP the EPB value will be set, however, this property
+    /// needs to be set to the equivalent EPP value. Take a look at the
+    /// [translation function](CPUSettings::translate_epp_to_epb) for more info
+    pub energy_perf_ratio: Option<String>,
 
     pub min_freq: Option<u32>,
     pub max_freq: Option<u32>,
@@ -174,7 +179,7 @@ impl CPUSettings {
             ));
         }
 
-        if let Some(ref epp) = self.epp {
+        if let Some(ref epp) = self.energy_perf_ratio {
             if fs::metadata("/sys/devices/system/cpu/cpu0/cpufreq/energy_performance_preference")
                 .is_ok()
             {
@@ -248,7 +253,7 @@ impl CPUSettings {
         }
     }
 
-    fn translate_epp_to_epb(epp: &str) -> String {
+    pub fn translate_epp_to_epb(epp: &str) -> String {
         match epp {
             "performance" => "performance",
             "balance_performance" => "balance-performance",
@@ -256,6 +261,24 @@ impl CPUSettings {
             "balance_power" => "balance-power",
             "power" => "power",
             _ => "normal",
+        }
+        .to_string()
+    }
+
+    pub fn translate_epb_to_epp(epb: &str) -> String {
+        match epb {
+            "0" => "performance",
+            "4" => "balance_performance",
+            "6" => "default",
+            "8" => "balance_power",
+            "15" => "power",
+
+            "performance" => "performance",
+            "balance-performance" => "balance_performance",
+            "normal" => "default",
+            "balance-power" => "balance_power",
+            "power" => "power",
+            _ => "default",
         }
         .to_string()
     }
@@ -273,6 +296,10 @@ pub struct CoreSetting {
     pub max_frequency: Option<u32>,
     pub min_frequency: Option<u32>,
     pub governor: Option<String>,
+    /// The CPU EPP value as a string (digits are unsupported), if the system
+    /// does not have EPP the EPB value will be set, however, this property
+    /// needs to be set to the equivalent EPP value. Take a look at the
+    /// [translation function](CPUSettings::translate_epp_to_epb) for more info
     pub epp: Option<String>,
 }
 
@@ -311,10 +338,25 @@ impl CoreSetting {
         }
 
         if let Some(ref epp) = self.epp {
-            run_command(&format!(
-                "echo {} > /sys/devices/system/cpu/cpu{}/cpufreq/energy_performance_preference",
-                epp, self.cpu_id,
-            ));
+            if fs::metadata("/sys/devices/system/cpu/cpu0/cpufreq/energy_performance_preference")
+                .is_ok()
+            {
+                run_command(&format!(
+                    "echo {} > /sys/devices/system/cpu/cpu{}/cpufreq/energy_performance_preference",
+                    epp, self.cpu_id,
+                ));
+            } else if fs::metadata("/sys/devices/system/cpu/cpu0/power/energy_perf_bias").is_ok() {
+                debug!(
+                    "System does not have EPP but EPB is present, translating and setting EPB..."
+                );
+                run_command(&format!(
+                    "echo {} > /sys/devices/system/cpu/cpu{}/power/energy_perf_bias",
+                    CPUSettings::translate_epp_to_epb(epp),
+                    self.cpu_id
+                ));
+            } else {
+                warn!("System does not have EPP or EPB but configuration attempted to set anyways. Ignoring...");
+            }
         }
 
         if let Some(ref governor) = self.governor {

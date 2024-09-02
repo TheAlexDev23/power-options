@@ -48,7 +48,7 @@ impl CPUForm {
         self.mode
             .from_or(cpu_settings.mode.clone(), String::from("passive"));
 
-        self.epp.from(cpu_settings.epp.clone());
+        self.epp.from(cpu_settings.energy_perf_ratio.clone());
 
         self.governor.from(cpu_settings.governor.clone());
 
@@ -116,6 +116,7 @@ fn CPUSettingsForm(
 
     let mode_supported = cpu_info.mode.is_some();
     let epp_supported = cpu_info.has_epp;
+    let epb_supported = cpu_info.has_epb;
     let perf_pct_scaling_supported = cpu_info.has_perf_pct_scaling;
     let boost_supported = cpu_info.boost.is_some();
     let hwp_dyn_boost_supported = cpu_info.hwp_dynamic_boost.is_some();
@@ -138,7 +139,7 @@ fn CPUSettingsForm(
                 form.mode.into_base()
             },
 
-            epp: if !epp_supported {
+            energy_perf_ratio: if !epp_supported {
                 None
             } else {
                 form.epp.into_base()
@@ -211,21 +212,23 @@ fn CPUSettingsForm(
             }
 
             div { class: "option-group",
-                if epp_supported {
+                if epp_supported || epb_supported {
                     div { class: "option",
                         ToggleableDropdown {
-                            name: String::from("Energy Performance Preference"),
+                            name: String::from("Energy to Performance Ratio"),
                             items: epps,
                             value: form.epp,
                             disabled: form.governor.1() == "performance",
                             dropdown_tooltip: if form.governor.1() == "performance" {
                                 Some(
-                                    String::from(
-                                        "EPP will be locked to the highest setting when the scaling governor is set to performance.",
-                                    ),
+                                    "EPP/EPB will be locked to the highest setting by the kernel when the governor is set to performance."
+                                        .to_string(),
                                 )
                             } else {
-                                None
+                                Some(
+                                    "It was detected that your system has either EPP or EPB, features which allow the user to select a preferable proportion between energy expense and performance."
+                                        .to_string(),
+                                )
                             }
                         }
                     }
@@ -515,17 +518,21 @@ fn CoreSettings(
                                 }
                             }
                         }
-                        if cpu_info.has_epp {
+                        if cpu_info.has_epp || cpu_info.has_epb {
                             td {
                                 Dropdown {
-                                    selected: "{core.epp.clone().unwrap()}",
+                                    selected: if cpu_info.has_epp {
+                                        core.epp.clone().unwrap()
+                                    } else {
+                                        CPUSettings::translate_epb_to_epp(&core.epb.clone().unwrap())
+                                    },
                                     items: epps.clone(),
                                     disabled: core.governor == "performance",
                                     tooltip: if core.governor == "performance" {
                                         Some((
                                             TooltipDirection::AtTop,
                                             String::from(
-                                                "EPP will be locked to the highest possible value when the governor is set to performance.",
+                                                "EPP/EPB will be locked to the highest possible value when the governor is set to performance.",
                                             ),
                                         ))
                                     } else {

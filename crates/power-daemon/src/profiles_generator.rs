@@ -132,7 +132,7 @@ pub fn cpu_settings_default(
         DefaultProfileType::Superpowersave => CPUSettings {
             mode,
             governor: Some(String::from("powersave")),
-            epp: if widespread_driver {
+            energy_perf_ratio: if widespread_driver {
                 Some(String::from("power"))
             } else {
                 None
@@ -152,7 +152,7 @@ pub fn cpu_settings_default(
                 // Like ondemand but more gradual
                 "conservative"
             })),
-            epp: if widespread_driver {
+            energy_perf_ratio: if widespread_driver {
                 Some(String::from("balance_power"))
             } else {
                 None
@@ -171,7 +171,7 @@ pub fn cpu_settings_default(
             } else {
                 "ondemand"
             })),
-            epp: if widespread_driver {
+            energy_perf_ratio: if widespread_driver {
                 Some(String::from("default"))
             } else {
                 None
@@ -187,7 +187,7 @@ pub fn cpu_settings_default(
             mode,
             // To set EPP balance_performance we cannot set governor to performance. idk why the scaling driver behaves like that
             governor: Some(String::from("powersave")),
-            epp: if widespread_driver {
+            energy_perf_ratio: if widespread_driver {
                 Some(String::from("balance_performance"))
             } else {
                 None
@@ -202,7 +202,7 @@ pub fn cpu_settings_default(
         DefaultProfileType::Ultraperformance => CPUSettings {
             mode,
             governor: Some(String::from("performance")),
-            epp: if widespread_driver {
+            energy_perf_ratio: if widespread_driver {
                 Some(String::from("performance"))
             } else {
                 None
