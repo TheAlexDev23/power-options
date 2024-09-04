@@ -56,6 +56,22 @@ input[type="checkbox"]:checked:disabled {
     background-color: #404040;
 }
 
+input[type="number"] {
+    appearance: none;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: none;
+}
+
+
 form input[type="submit"] {
     background-color: #0860F2;
 }

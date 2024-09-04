@@ -70,7 +70,9 @@ pub fn CPUGroup(
     control_routine: ControlRoutine,
     system_info_routine: SystemInfoRoutine,
 ) -> Element {
-    system_info_routine.send((Duration::from_secs_f32(0.5), SystemInfoSyncType::CPU));
+    use_hook(|| {
+        system_info_routine.send((Duration::from_secs_f32(0.5), SystemInfoSyncType::CPU));
+    });
 
     if profiles_info().is_none() || system_info().is_none() {
         return rsx! { "Connecting to the daemon..." };
@@ -495,6 +497,8 @@ fn CoreSettings(
                             input {
                                 r#type: "number",
                                 value: core.scaling_min_frequency as f64,
+                                min: (core.total_min_frequency) as f64,
+                                max: (core.total_max_frequency.min(core.scaling_max_frequency)) as f64,
                                 onfocusin: move |_| {
                                     system_info_routine
                                         .send((Duration::from_secs_f32(5.0), SystemInfoSyncType::None));
@@ -533,6 +537,8 @@ fn CoreSettings(
                             input {
                                 r#type: "number",
                                 value: core.scaling_max_frequency as f64,
+                                min: (core.total_min_frequency.max(core.scaling_min_frequency)) as f64,
+                                max: (core.total_max_frequency) as f64,
                                 onfocusin: move |_| {
                                     system_info_routine
                                         .send((Duration::from_secs_f32(5.0), SystemInfoSyncType::None));
@@ -668,15 +674,14 @@ fn CoreSettings(
                             td { "{logical_cpu_id}" }
                         }
 
-                        th { "" }
-                        th { "" }
-                        th { "" }
-                        th { "" }
-                        th { "" }
-                        th { "" }
-                        th { "" }
-                        th { "" }
-                        th { "" }
+                        td { "" }
+                        td { "" }
+                        td { "" }
+                        td { "" }
+                        td { "" }
+                        td { "" }
+                        td { "" }
+                        td { "" }
 
                         if cpu_info.has_epp {
                             td { "" }
