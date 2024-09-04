@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
-use dioxus::desktop::tao::event::Event;
 use dioxus::desktop::tao::keyboard::ModifiersState;
 use dioxus::desktop::{use_wry_event_handler, WindowEvent};
+use dioxus::prelude::Event;
 use dioxus::prelude::*;
 
 use power_daemon::{CPUSettings, CoreSetting, Profile, ProfilesInfo, ReducedUpdate, SystemInfo};
@@ -71,6 +71,7 @@ pub fn CPUGroup(
     system_info_routine: SystemInfoRoutine,
 ) -> Element {
     system_info_routine.send((Duration::from_secs_f32(0.5), SystemInfoSyncType::CPU));
+
     if profiles_info().is_none() || system_info().is_none() {
         return rsx! { "Connecting to the daemon..." };
     }
@@ -92,7 +93,8 @@ pub fn CPUGroup(
         CoreSettings {
             system_info: system_info.clone(),
             profiles_info: profiles_info.clone(),
-            control_routine
+            control_routine,
+            system_info_routine
         }
 
         br {}
@@ -317,6 +319,7 @@ fn CPUSettingsForm(
 fn CoreSettings(
     system_info: SystemInfo,
     profiles_info: ProfilesInfo,
+    system_info_routine: SystemInfoRoutine,
     control_routine: ControlRoutine,
 ) -> Element {
     let mut cpu_info = system_info.cpu_info.clone();
@@ -343,7 +346,7 @@ fn CoreSettings(
     let mut shift_pressed = use_signal(|| false);
 
     use_wry_event_handler(move |event, _| {
-        if let Event::WindowEvent {
+        if let dioxus::desktop::tao::event::Event::WindowEvent {
             event: WindowEvent::ModifiersChanged(state),
             ..
         } = event
@@ -373,7 +376,11 @@ fn CoreSettings(
 
                 th { "CPU" }
 
+                th { "Current Min" }
+                th { "Current Max" }
+
                 th { "Base" }
+
                 th { "Current" }
 
                 th { "Range" }
@@ -434,6 +441,7 @@ fn CoreSettings(
                         }
                     }
 
+                    // Online
                     td {
                         if core.online.is_some() {
                             input {
@@ -465,8 +473,10 @@ fn CoreSettings(
                             }
                         }
                     }
+                    // Online
 
                     if core.online.unwrap_or(true) {
+                        // Identification
                         if cpu_info.hybrid && core.is_performance_core.is_some() {
                             td {
                                 if core.is_performance_core.unwrap() {
@@ -478,16 +488,91 @@ fn CoreSettings(
                         } else {
                             td { "{logical_cpu_id}" }
                         }
+                        // Identification
+
+                        // Min frqeuency
+                        td {
+                            input {
+                                r#type: "number",
+                                value: core.scaling_min_frequency as f64,
+                                onfocusin: move |_| {
+                                    system_info_routine
+                                        .send((Duration::from_secs_f32(5.0), SystemInfoSyncType::None));
+                                },
+                                onfocusout: move |_| {
+                                    system_info_routine
+                                        .send((Duration::from_secs_f32(0.5), SystemInfoSyncType::CPU));
+                                },
+                                onchange: {
+                                    let mut current_profile = current_profile.clone();
+                                    let awaiting_signal = *cores_awaiting_update_signals
+                                        .get(&logical_cpu_id)
+                                        .unwrap();
+                                    move |v: Event<FormData>| {
+                                        let v = v.value();
+                                        update_core_settings(
+                                            &mut current_profile,
+                                            profile_id,
+                                            &selected(),
+                                            move |core_settings| {
+                                                if let Ok(v) = v.parse() {
+                                                    core_settings.min_frequency = Some(v);
+                                                }
+                                            },
+                                            control_routine,
+                                            awaiting_signal,
+                                        );
+                                    }
+                                }
+                            }
+                        }
+                        // Min frqeuency
+
+                        // Max frqeuency
+                        td {
+                            input {
+                                r#type: "number",
+                                value: core.scaling_max_frequency as f64,
+                                onfocusin: move |_| {
+                                    system_info_routine
+                                        .send((Duration::from_secs_f32(5.0), SystemInfoSyncType::None));
+                                },
+                                onfocusout: move |_| {
+                                    system_info_routine
+                                        .send((Duration::from_secs_f32(0.5), SystemInfoSyncType::CPU));
+                                },
+                                onchange: {
+                                    let mut current_profile = current_profile.clone();
+                                    let awaiting_signal = *cores_awaiting_update_signals
+                                        .get(&logical_cpu_id)
+                                        .unwrap();
+                                    move |v: Event<FormData>| {
+                                        let v = v.value();
+                                        update_core_settings(
+                                            &mut current_profile,
+                                            profile_id,
+                                            &selected(),
+                                            move |core_settings| {
+                                                if let Ok(v) = v.parse() {
+                                                    core_settings.max_frequency = Some(v);
+                                                }
+                                            },
+                                            control_routine,
+                                            awaiting_signal,
+                                        );
+                                    }
+                                }
+                            }
+                        }
+                        // Max frqeuency
 
                         td { "{core.base_frequency}" }
-                        if core.online.unwrap_or(true) {
-                            td { "{core.current_frequency}" }
-                        } else {
-                            td { "" }
-                        }
+
+                        td { "{core.current_frequency}" }
 
                         td { "{core.total_min_frequency}-{core.total_max_frequency}" }
 
+                        // Gov
                         td {
                             Dropdown {
                                 selected: "{core.governor}",
@@ -518,6 +603,9 @@ fn CoreSettings(
                                 }
                             }
                         }
+                        // Gov
+
+                        // Epp
                         if cpu_info.has_epp || cpu_info.has_epb {
                             td {
                                 Dropdown {
@@ -579,10 +667,17 @@ fn CoreSettings(
                         } else {
                             td { "{logical_cpu_id}" }
                         }
-                        td { "" }
-                        td { "" }
-                        td { "" }
-                        td { "" }
+
+                        th { "" }
+                        th { "" }
+                        th { "" }
+                        th { "" }
+                        th { "" }
+                        th { "" }
+                        th { "" }
+                        th { "" }
+                        th { "" }
+
                         if cpu_info.has_epp {
                             td { "" }
                         }

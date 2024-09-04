@@ -76,7 +76,10 @@ impl Profile {
 
         match reduced_update {
             ReducedUpdate::None => {}
-            ReducedUpdate::CPU => self.cpu_settings.apply(),
+            ReducedUpdate::CPU => {
+                self.cpu_settings.apply();
+                self.cpu_core_settings.apply();
+            }
             ReducedUpdate::CPUCores => self.cpu_core_settings.apply(),
             ReducedUpdate::SingleCPUCore(idx) => {
                 if let Some(ref cores) = self.cpu_core_settings.cores {
