@@ -96,17 +96,20 @@ impl SimpleComponent for KernelGroup {
                     set_title: "Kernel settings",
                     adw::PreferencesGroup {
                         adw::SwitchRow {
-                            set_title: "Disable NMI watchdog",
+                            set_title: labels::DIS_NMI_TITLE,
+                            set_tooltip_text: Some(labels::DIS_NMI_TT),
                             add_binding: (&model.disable_nmi_watchdog, "active"),
                             connect_active_notify => KernelInput::Changed,
                         },
                         adw::SpinRow {
-                            set_title: "VM writeback in seconds",
+                            set_title: labels::VM_WR_TITLE,
+                            set_tooltip_text: Some(labels::VM_WR_TT),
                             add_binding: (&model.vm_writeback, "adjustment"),
                             connect_value_notify => KernelInput::Changed,
                         },
                         adw::SpinRow {
-                            set_title: "Laptop mode",
+                            set_title: labels::LAPTOP_MODE_TITLE,
+                            set_tooltip_text: Some(labels::LAPTOP_MODE_TT),
                             add_binding: (&model.laptop_mode, "adjustment"),
                             connect_value_notify => KernelInput::Changed,
                         },

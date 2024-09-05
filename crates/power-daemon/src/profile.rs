@@ -474,8 +474,8 @@ impl NetworkSettings {
             std::thread::current().id()
         );
 
-        if self.disable_ethernet.unwrap_or_default() {
-            Self::disable_all_ethernet_cards()
+        if let Some(disable_ethernet) = self.disable_ethernet {
+            Self::toggle_all_ethernet_cards(disable_ethernet);
         }
 
         if !self.all_kernel_module_settings_are_none() {
@@ -483,7 +483,7 @@ impl NetworkSettings {
         }
     }
 
-    fn disable_all_ethernet_cards() {
+    fn toggle_all_ethernet_cards(disable: bool) {
         let entries = fs::read_dir("/sys/class/net").expect("Could not read sysfs path");
         let eth_pattern = regex::Regex::new(r"^(eth|enp|ens|eno)").unwrap();
 
@@ -492,7 +492,11 @@ impl NetworkSettings {
             let name_str = name.to_string_lossy();
 
             if eth_pattern.is_match(&name_str) {
-                run_command(&format!("ifconfig {} down", &name_str))
+                run_command(&format!(
+                    "ifconfig {} {}",
+                    &name_str,
+                    if disable { "down" } else { "up" }
+                ))
             }
         }
     }

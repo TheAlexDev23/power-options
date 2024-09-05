@@ -128,7 +128,8 @@ pub fn PCIAndASPMGroup(
                 div { class: "option-group",
                     div { class: "option",
                         ToggleableDropdown {
-                            name: "ASPM operation mode",
+                            name: labels::ASPM_TITLE,
+                            dropdown_tooltip: labels::ASPM_TT,
                             items: pci_info.aspm_info.supported_modes.unwrap(),
                             value: form.aspm
                         }

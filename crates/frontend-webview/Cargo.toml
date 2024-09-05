@@ -14,4 +14,5 @@ dioxus-logger = "0.5.0"
 dioxus = { version = "0.5", features = ["desktop"] }
 
 power-daemon = { path = "../power-daemon", features = ["client"] }
+labels = { path = "../labels" }
 tokio = { version = "1.38.1", features = ["full"] }

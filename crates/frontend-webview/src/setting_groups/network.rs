@@ -123,7 +123,11 @@ pub fn NetworkGroup(
             },
             div { class: "option-group",
                 div { class: "option",
-                    ToggleableToggle { name: "Disable ethernet", value: form.disable_ethernet }
+                    ToggleableToggle {
+                        name: labels::DIS_ETH_TITLE,
+                        toggle_tooltip: labels::DIS_ETH_TT,
+                        value: form.disable_ethernet
+                    }
                 }
             }
 
@@ -141,19 +145,35 @@ pub fn NetworkGroup(
 
             div { class: "option-group",
                 div { class: "option",
-                    ToggleableToggle { name: "Enable power save", value: form.enable_power_save }
+                    ToggleableToggle {
+                        name: labels::IWLWIFI_POWERSAVING_TITLE,
+                        toggle_tooltip: labels::IWLWIFI_POWERSAVING_TT,
+                        value: form.enable_power_save
+                    }
                 }
                 div { class: "option",
-                    ToggleableToggle { name: "Enable U-APSD", value: form.enable_uapsd }
+                    ToggleableToggle {
+                        name: labels::UAPSD_TITLE,
+                        toggle_tooltip: labels::UAPSD_TT,
+                        value: form.enable_uapsd
+                    }
                 }
             }
 
             div { class: "option-group",
                 div { class: "option",
-                    ToggleableNumericField { name: "Power level (0-5)", value: form.power_level }
+                    ToggleableNumericField {
+                        name: labels::WIFI_POWERLEVEL_TITLE,
+                        tooltip: labels::WIFI_POWERLEVEL_TT,
+                        value: form.power_level
+                    }
                 }
                 div { class: "option",
-                    ToggleableNumericField { name: "Power scheme (1-3)", value: form.power_scheme }
+                    ToggleableNumericField {
+                        name: labels::WIFI_POWERSCHEME_TITLE,
+                        tooltip: labels::WIFI_POWERSCHEME_TT,
+                        value: form.power_scheme
+                    }
                 }
             }
 

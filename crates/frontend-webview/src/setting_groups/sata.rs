@@ -92,7 +92,8 @@ pub fn SATAGroup(
             div { class: "option-group",
                 div { class: "option",
                     ToggleableDropdown {
-                        name: "SATA active link power management",
+                        name: labels::SATA_ACTIVE_LINK_TITLE,
+                        dropdown_tooltip: labels::SATA_ACTIVE_LINK_TT,
                         items: vec![
                             "max_performance".to_string(),
                             "medium_power".to_string(),

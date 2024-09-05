@@ -110,7 +110,8 @@ impl SimpleComponent for NetworkGroup {
                     set_title: "Network settings",
                     adw::PreferencesGroup {
                         adw::SwitchRow {
-                            set_title: "Disable Ethernet",
+                            set_title: labels::DIS_ETH_TITLE,
+                            set_tooltip_text: Some(labels::DIS_ETH_TT),
                             add_binding: (&model.disable_ethernet, "active"),
                             connect_active_notify => NetworkInput::Changed,
                         },
@@ -134,24 +135,28 @@ impl SimpleComponent for NetworkGroup {
                     },
                     adw::PreferencesGroup {
                         adw::SwitchRow {
-                            set_title: "Enable WiFi driver powersaving",
+                            set_title: labels::IWLWIFI_POWERSAVING_TITLE,
+                            set_tooltip_text: Some(labels::IWLWIFI_POWERSAVING_TT),
                             add_binding: (&model.enable_power_save, "active"),
                             connect_active_notify => NetworkInput::Changed,
                         },
                         adw::SwitchRow {
-                            set_title: "Enable U-APSD",
+                            set_title: labels::UAPSD_TITLE,
+                            set_tooltip_text: Some(labels::UAPSD_TT),
                             add_binding: (&model.enable_uapsd, "active"),
                             connect_active_notify => NetworkInput::Changed,
                         },
                     },
                     adw::PreferencesGroup {
                         adw::SpinRow {
-                            set_title: "WiFi driver power level",
+                            set_title: labels::WIFI_POWERLEVEL_TITLE,
+                            set_tooltip_text: Some(labels::WIFI_POWERLEVEL_TT),
                             add_binding: (&model.power_level, "adjustment"),
                             connect_value_notify => NetworkInput::Changed,
                         },
                         adw::SpinRow {
-                            set_title: "WiFi firmware driver power scheme",
+                            set_title: labels::WIFI_POWERSCHEME_TITLE,
+                            set_tooltip_text: Some(labels::WIFI_POWERSCHEME_TT),
                             add_binding: (&model.power_scheme, "adjustment"),
                             connect_value_notify => NetworkInput::Changed,
                         }

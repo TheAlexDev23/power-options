@@ -86,7 +86,8 @@ impl SimpleComponent for SATAGroup {
                     set_title: "SATA settings",
                     adw::PreferencesGroup {
                         adw::ComboRow {
-                            set_title: "SATA Active Link PM Policy (min_power can cause data loss)",
+                            set_title: labels::SATA_ACTIVE_LINK_TITLE,
+                            set_tooltip_text: Some(labels::SATA_ACTIVE_LINK_TT),
                             set_model: Some(&gtk::StringList::new(&SATA_POLICIES)),
                             add_binding: (&model.active_link_pm_policy, "selected"),
                             connect_selected_item_notify => SATAInput::Changed,

@@ -8,7 +8,11 @@ use dioxus::prelude::*;
 use power_daemon::WhiteBlackListType;
 
 #[component]
-pub fn ToggleableNumericField(name: String, value: ToggleableInt) -> Element {
+pub fn ToggleableNumericField(
+    name: String,
+    tooltip: Option<String>,
+    value: ToggleableInt,
+) -> Element {
     rsx! {
         div {
             input {
@@ -20,14 +24,23 @@ pub fn ToggleableNumericField(name: String, value: ToggleableInt) -> Element {
             }
             label { "{name}" }
         }
-        input {
-            class: "numeric-input",
-            r#type: "text",
-            onchange: move |v| {
-                value.1.set(v.value().parse().unwrap_or_default());
-            },
-            value: "{value.1}",
-            disabled: !value.0.cloned()
+        div { class: "tooltip-parent",
+            if tooltip.is_some() {
+                span {
+                    class: "tooltip",
+                    class: TooltipDirection::Left.to_class_name(),
+                    "{tooltip.clone().unwrap()}"
+                }
+            }
+            input {
+                class: "numeric-input",
+                r#type: "text",
+                onchange: move |v| {
+                    value.1.set(v.value().parse().unwrap_or_default());
+                },
+                value: "{value.1}",
+                disabled: !value.0.cloned()
+            }
         }
     }
 }
@@ -75,18 +88,16 @@ pub fn ToggleableDropdown(
             }
             label { "{name}" }
         }
-        div { class: "tooltip-parent",
-            Dropdown {
-                selected: value.1(),
-                onchange: move |v: String| {
-                    value.1.set(v);
-                },
-                disabled: !value.0() || disabled.unwrap_or_default(),
-                items,
-                tooltip: dropdown_tooltip
-                    .as_ref()
-                    .map(|dropdown_tooltip| (TooltipDirection::Left, dropdown_tooltip.clone()))
-            }
+        Dropdown {
+            selected: value.1(),
+            onchange: move |v: String| {
+                value.1.set(v);
+            },
+            disabled: !value.0() || disabled.unwrap_or_default(),
+            items,
+            tooltip: dropdown_tooltip
+                .as_ref()
+                .map(|dropdown_tooltip| (TooltipDirection::Left, dropdown_tooltip.clone()))
         }
     }
 }
@@ -111,7 +122,11 @@ pub fn ToggleableToggle(
         }
         div { class: "tooltip-parent",
             if toggle_tooltip.is_some() {
-                span { class: "tooltip tooltip-at-left", "{toggle_tooltip.unwrap()}" }
+                span {
+                    class: "tooltip",
+                    class: TooltipDirection::Left.to_class_name(),
+                    "{toggle_tooltip.unwrap()}"
+                }
             }
 
             input {

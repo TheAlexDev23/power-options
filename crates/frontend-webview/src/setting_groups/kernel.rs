@@ -99,15 +99,27 @@ pub fn KernelGroup(
 
             div { class: "option-group",
                 div { class: "option",
-                    ToggleableToggle { name: "Disable nmi watchdog", value: form.disable_nmi_watchdog }
+                    ToggleableToggle {
+                        name: labels::DIS_NMI_TITLE,
+                        toggle_tooltip: labels::DIS_NMI_TT,
+                        value: form.disable_nmi_watchdog
+                    }
                 }
             }
             div { class: "option-group",
                 div { class: "option",
-                    ToggleableNumericField { name: "VM writeback time", value: form.vm_writeback }
+                    ToggleableNumericField {
+                        name: labels::VM_WR_TITLE,
+                        tooltip: labels::VM_WR_TT,
+                        value: form.vm_writeback
+                    }
                 }
                 div { class: "option",
-                    ToggleableNumericField { name: "Laptop Mode", value: form.laptop_mode }
+                    ToggleableNumericField {
+                        name: labels::LAPTOP_MODE_TITLE,
+                        tooltip: labels::LAPTOP_MODE_TT,
+                        value: form.laptop_mode
+                    }
                 }
             }
 

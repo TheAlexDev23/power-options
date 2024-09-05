@@ -6,6 +6,7 @@ use dioxus::desktop::{use_wry_event_handler, WindowEvent};
 use dioxus::prelude::Event;
 use dioxus::prelude::*;
 
+use labels::DRIVER_OPMODE_TT;
 use power_daemon::{CPUSettings, CoreSetting, Profile, ProfilesInfo, ReducedUpdate, SystemInfo};
 
 use crate::communication_services::{
@@ -207,7 +208,8 @@ fn CPUSettingsForm(
                 div { class: "option-group",
                     div { class: "option",
                         ToggleableDropdown {
-                            name: String::from("Scaling driver operation mode"),
+                            name: labels::DRIVER_OPMODE_TITLE,
+                            dropdown_tooltip: labels::DRIVER_OPMODE_TT,
                             items: vec![String::from("active"), String::from("passive")],
                             value: form.mode
                         }
@@ -219,35 +221,34 @@ fn CPUSettingsForm(
                 if epp_supported || epb_supported {
                     div { class: "option",
                         ToggleableDropdown {
-                            name: String::from("Energy to Performance Ratio"),
+                            name: labels::EPP_TITLE,
                             items: epps,
                             value: form.epp,
                             disabled: form.mode.1() == "active" && form.governor.1() == "performance",
                             dropdown_tooltip: if form.governor.1() == "performance" {
-                                Some(
-                                    "EPP/EPB will be locked to the highest setting by the kernel when the governor is set to performance."
-                                        .to_string(),
-                                )
+                                Some(labels::EPP_GOV_PERF_TT.to_string())
                             } else {
-                                Some(
-                                    "It was detected that your system has either EPP or EPB, features which allow the user to select a preferable proportion between energy expense and performance."
-                                        .to_string(),
-                                )
+                                Some(labels::EPP_TT.to_string())
                             }
                         }
                     }
                 }
                 div { class: "option",
-                    ToggleableDropdown { name: String::from("Governor"), items: governors, value: form.governor }
+                    ToggleableDropdown {
+                        name: labels::GOV_TITLE,
+                        dropdown_tooltip: Some(labels::GOV_TT.to_string()),
+                        items: governors,
+                        value: form.governor
+                    }
                 }
             }
 
             div { class: "option-group",
                 div { class: "option",
-                    ToggleableNumericField { name: String::from("Minimum frequency (MHz)"), value: form.min_freq }
+                    ToggleableNumericField { name: labels::MIN_FREQ_MHZ_TITLE, value: form.min_freq }
                 }
                 div { class: "option",
-                    ToggleableNumericField { name: String::from("Maximum frequency (MHz)"), value: form.max_freq }
+                    ToggleableNumericField { name: labels::MAX_FREQ_MHZ_TITLE, value: form.max_freq }
                 }
             }
 
@@ -255,13 +256,15 @@ fn CPUSettingsForm(
                 div { class: "option-group",
                     div { class: "option",
                         ToggleableNumericField {
-                            name: String::from("Minimum performance percentage"),
+                            name: labels::MIN_PERF_PCT,
+                            tooltip: labels::MIN_PERF_PCT_TT,
                             value: form.min_perf_pct
                         }
                     }
                     div { class: "option",
                         ToggleableNumericField {
-                            name: String::from("Maximum performance percentage"),
+                            name: labels::MAX_PERF_PCT,
+                            tooltip: labels::MAX_PERF_PCT_TT,
                             value: form.max_perf_pct
                         }
                     }
@@ -271,24 +274,24 @@ fn CPUSettingsForm(
             div { class: "option-group",
                 if boost_supported {
                     div { class: "option",
-                        ToggleableToggle { name: String::from("Boost technology"), value: form.boost }
+                        ToggleableToggle {
+                            name: labels::BOOST_TITLE.to_string(),
+                            toggle_tooltip: labels::BOOST_TT.to_string(),
+                            value: form.boost
+                        }
                     }
                 }
 
                 if hwp_dyn_boost_supported {
                     div { class: "option",
                         ToggleableToggle {
-                            name: String::from("HWP Dynamic Boost"),
+                            name: labels::HWP_DYN_BOOST_TITLE,
                             value: form.hwp_dyn_boost,
                             disabled: form.mode.1() != "active",
                             toggle_tooltip: if form.mode.1() != "active" {
-                                Some(
-                                    String::from(
-                                        "Dynamic boost is only supported when the operation mode is set to active.",
-                                    ),
-                                )
+                                labels::HWP_DYN_BOOST_MODE_ACTIVE_TT
                             } else {
-                                None
+                                labels::HWP_DYN_BOOST_TT
                             }
                         }
                     }
@@ -626,12 +629,7 @@ fn CoreSettings(
                                     tooltip: if cpu_info.mode.clone().unwrap_or_default() == "active"
                                         && core.governor == "performance"
                                     {
-                                        Some((
-                                            TooltipDirection::Top,
-                                            String::from(
-                                                "EPP/EPB will be locked to the highest possible value when the governor is set to performance.",
-                                            ),
-                                        ))
+                                        Some((TooltipDirection::Top, labels::EPP_GOV_PERF_TT.to_string()))
                                     } else {
                                         None
                                     },

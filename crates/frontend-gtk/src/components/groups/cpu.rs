@@ -271,14 +271,14 @@ impl SimpleComponent for CPUGroup {
                     set_title: "CPU settings",
                     adw::PreferencesGroup {
                         adw::ComboRow {
-                            set_title: "Scaling driver operation mode",
+                            set_title: labels::DRIVER_OPMODE_TITLE,
                             #[track(model.changed(CPUGroup::can_change_modes()))]
                             set_sensitive: model.can_change_modes,
                             #[track(model.changed(CPUGroup::can_change_modes()))]
                             set_tooltip_text: if !model.can_change_modes {
-                                Some("Your system does not support mode switching")
+                                Some(labels::DRIVER_OPMODE_UNAVAILABLE_TT)
                             } else {
-                                None
+                                Some(labels::DRIVER_OPMODE_TT)
                             },
                             set_model: Some(&gtk::StringList::new(&["active", "passive"])),
                             add_binding: (&model.mode, "selected"),
@@ -286,17 +286,17 @@ impl SimpleComponent for CPUGroup {
                         },
 
                         adw::ComboRow {
-                            set_title: "Energy to Performance Ratio",
+                            set_title: labels::EPP_TITLE,
                             // Watch instead of track can_change_epps because no way to track governor changes
                             #[watch]
                             set_sensitive: model.has_epb_or_epp && !model.governor_is_performance(),
                             #[watch]
                             set_tooltip_text: if !model.has_epb_or_epp {
-                                Some("EPP/EPB options are unavailable in your system")
+                                Some(labels::EPP_UNAVAILABLE_TT)
                             } else if model.governor_is_performance() {
-                                Some("EPP/EPB will be locked to the highest setting by the kernel when the governor is set to performance")
+                                Some(labels::EPP_GOV_PERF_TT)
                             } else {
-                                Some("It was detected that your system has either EPP or EPB, features which allow the user to select a preferable proportion between energy expense and performance.")
+                                Some(labels::EPP_TT)
                             },
                             add_binding: (&model.available_epps, "model"),
                             add_binding: (&model.epp, "selected"),
@@ -304,7 +304,8 @@ impl SimpleComponent for CPUGroup {
                         },
 
                         adw::ComboRow {
-                            set_title: "Scaling governor",
+                            set_title: labels::GOV_TITLE,
+                            set_tooltip_text: Some(labels::GOV_TT),
                             add_binding: (&model.available_governors, "model"),
                             add_binding: (&model.governor, "selected"),
                             connect_selected_item_notify => CPUInput::Changed,
@@ -313,13 +314,13 @@ impl SimpleComponent for CPUGroup {
 
                     adw::PreferencesGroup {
                         adw::SpinRow {
-                            set_title: "Minimum frequency (MHz)",
+                            set_title: labels::MIN_FREQ_MHZ_TITLE,
                             add_binding: (&model.min_freq, "adjustment"),
                             connect_value_notify => CPUInput::Changed,
                         },
 
                         adw::SpinRow {
-                            set_title: "Maximum frequency (MHz)",
+                            set_title: labels::MAX_FREQ_MHZ_TITLE,
                             add_binding: (&model.max_freq, "adjustment"),
                             connect_value_notify => CPUInput::Changed,
                         }
@@ -327,14 +328,14 @@ impl SimpleComponent for CPUGroup {
 
                     adw::PreferencesGroup {
                         adw::SpinRow {
-                            set_title: "Minimum performance percentage",
+                            set_title: labels::MIN_PERF_PCT,
                             #[track(model.changed(CPUGroup::has_perf_pct()))]
                             set_sensitive: model.has_perf_pct,
                             #[track(model.changed(CPUGroup::has_perf_pct()))]
                             set_tooltip_text: if !model.has_perf_pct {
-                                Some("Performance percentage scaling is unavailable in your system")
+                                Some(labels::PERF_PCT_UNAVAILABLE_TT)
                             } else {
-                                None
+                                Some(labels::MIN_PERF_PCT_TT)
                             },
                             add_binding: (&model.min_perf, "adjustment"),
                             connect_value_notify => CPUInput::Changed,
@@ -346,9 +347,9 @@ impl SimpleComponent for CPUGroup {
                             set_sensitive: model.has_perf_pct,
                             #[track(model.changed(CPUGroup::has_perf_pct()))]
                             set_tooltip_text: if !model.has_perf_pct {
-                                Some("Performance percentage scaling is unavailable in your system")
+                                Some(labels::PERF_PCT_UNAVAILABLE_TT)
                             } else {
-                                None
+                                Some(labels::MAX_PERF_PCT_TT)
                             },
                             add_binding: (&model.max_perf, "adjustment"),
                             connect_value_notify => CPUInput::Changed,
@@ -357,28 +358,28 @@ impl SimpleComponent for CPUGroup {
 
                     adw::PreferencesGroup {
                         adw::SwitchRow {
-                            set_title: "Boost technology",
+                            set_title: labels::BOOST_TITLE,
                             #[track(model.changed(CPUGroup::has_boost()))]
                             set_sensitive: model.has_boost,
                             #[track(model.changed(CPUGroup::has_boost()))]
                             set_tooltip_text: if !model.has_boost {
-                                Some("CPU boosting techonologies are unavailable in your system")
+                                Some(labels::BOOST_UNAVAILABLE_TT)
                             } else {
-                                None
+                                Some(labels::BOOST_TT)
                             },
                             add_binding: (&model.boost, "active"),
                             connect_active_notify  => CPUInput::Changed,
                         },
 
                         adw::SwitchRow {
-                            set_title: "HWP dynamic boost",
+                            set_title: labels::HWP_DYN_BOOST_TITLE,
                             #[track(model.changed(CPUGroup::has_hwp_dyn_boost()))]
                             set_sensitive: model.has_hwp_dyn_boost,
                             #[track(model.changed(CPUGroup::has_hwp_dyn_boost()))]
                             set_tooltip_text: if !model.has_hwp_dyn_boost {
-                                Some("HWP Dynamic boost is unsupported in your system")
+                                Some(labels::HWP_DYN_BOOST_UNAVAILABLE_TT)
                             } else {
-                                None
+                                Some(labels::HWP_DYN_BOOST_TT)
                             },
                             add_binding: (&model.hwp_dyn_boost, "active"),
                             connect_active_notify  => CPUInput::Changed,

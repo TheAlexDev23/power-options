@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+labels = { path = "../labels" }
 clap = "4.5.16"
 clap-verbosity-flag = "2.2.1"
 colored = "2.1.0"

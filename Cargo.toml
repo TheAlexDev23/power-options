@@ -4,5 +4,6 @@ members = [
     "crates/frontend-webview",
     "crates/power-daemon-mgr",
     "crates/frontend-gtk",
+    "crates/labels",
 ]
 resolver = "2"

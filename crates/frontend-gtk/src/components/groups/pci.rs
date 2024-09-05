@@ -155,14 +155,14 @@ impl SimpleComponent for PCIGroup {
                         adw::PreferencesGroup {
                             set_title: "PCIe Active State Power Management",
                             adw::ComboRow {
-                                set_title: "ASPM operation mode",
+                                set_title: labels::ASPM_TITLE,
                                 #[watch]
                                 set_sensitive: model.supports_aspm,
                                 #[watch]
                                 set_tooltip_text: if !model.supports_aspm {
-                                    Some("Your system does not PCIe Active State Power Management")
+                                    Some(labels::ASPM_UNSUPPORTED_TT)
                                 } else {
-                                    None
+                                    Some(labels::ASPM_TT)
                                 },
                                 add_binding: (&model.aspm_modes, "model"),
                                 add_binding: (&model.aspm_mode, "selected"),
