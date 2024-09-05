@@ -13,14 +13,14 @@ type BoxedListener<T> = Box<dyn Fn(Option<&T>) + Send>;
 pub struct SyncedValue<T: PartialEq + Clone + Debug> {
     value: Mutex<Option<T>>,
 
-    listeners: Mutex<Vec<BoxedListener<T>>>,
+    listener: Mutex<Option<BoxedListener<T>>>,
 }
 
 impl<T: PartialEq + Clone + Debug> SyncedValue<T> {
     pub fn new() -> SyncedValue<T> {
         SyncedValue {
             value: Mutex::new(None),
-            listeners: Mutex::new(Vec::new()),
+            listener: Mutex::new(None),
         }
     }
 
@@ -58,21 +58,20 @@ impl<T: PartialEq + Clone + Debug> SyncedValue<T> {
 
         let value = self.value.lock().await;
         if *value != old_value {
-            for listener in self.listeners.lock().await.iter() {
+            if let Some(ref listener) = *self.listener.lock().await {
                 listener(value.as_ref());
             }
         }
     }
 
-    pub async fn listen<F>(&self, callback: F)
+    pub async fn set_listener<F>(&self, callback: F)
     where
         F: 'static + Fn(Option<&T>) + Send,
     {
         trace!("Subscribing to changes");
 
-        let mut listeners = self.listeners.lock().await;
         callback(self.value.lock().await.as_ref());
-        listeners.push(Box::from(callback));
+        *self.listener.lock().await = Some(Box::from(callback));
     }
 }
 

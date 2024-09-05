@@ -448,7 +448,7 @@ impl SimpleAsyncComponent for App {
 
 async fn setup_sync_listeners(sender: AsyncComponentSender<App>) {
     communications::PROFILES_INFO
-        .listen(clone!(
+        .set_listener(clone!(
             #[strong]
             sender,
             move |profiles_info| {
@@ -460,7 +460,7 @@ async fn setup_sync_listeners(sender: AsyncComponentSender<App>) {
         .await;
 
     communications::CONFIG
-        .listen(clone!(
+        .set_listener(clone!(
             #[strong]
             sender,
             move |config| {
@@ -472,7 +472,7 @@ async fn setup_sync_listeners(sender: AsyncComponentSender<App>) {
         .await;
 
     communications::SYSTEM_INFO
-        .listen(clone!(
+        .set_listener(clone!(
             #[strong]
             sender,
             move |system_info| {
@@ -484,7 +484,7 @@ async fn setup_sync_listeners(sender: AsyncComponentSender<App>) {
         .await;
 
     communications::PROFILE_OVERRIDE
-        .listen(clone!(
+        .set_listener(clone!(
             #[strong]
             sender,
             move |temp_override| {
