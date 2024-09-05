@@ -116,8 +116,8 @@ async fn daemon() {
     let config_path = Path::new(CONFIG_FILE);
     let profiles_path = Path::new(PROFILES_DIRECTORY);
 
-    let config = power_daemon::parse_config(&config_path);
-    let mut handle = Instance::new(config, &config_path, &profiles_path);
+    let config = power_daemon::parse_config(config_path);
+    let mut handle = Instance::new(config, config_path, profiles_path);
 
     handle.update_full();
 
@@ -159,7 +159,7 @@ async fn refresh_reduced(reduced_update: ReducedUpdate) {
         .expect("Could not reset reducedu update");
 }
 
-fn generate_config(path: &PathBuf) {
+fn generate_config(path: &Path) {
     debug!("Creating default config");
 
     let dir = path.join("etc/power-options/");
@@ -171,7 +171,7 @@ fn generate_config(path: &PathBuf) {
     fs::write(dir.join("config.toml"), content).expect("Could not write to file");
 }
 
-fn generate_profiles(path: &PathBuf) {
+fn generate_profiles(path: &Path) {
     debug!("Creating default profiles");
 
     let dir = path.join("etc/power-options/profiles/");
@@ -207,7 +207,7 @@ fn generate_profiles(path: &PathBuf) {
     );
 }
 
-fn generate_udev_file(path: &PathBuf, program_path: &PathBuf) {
+fn generate_udev_file(path: &Path, program_path: &Path) {
     debug!("Generating udev file");
 
     let dir = path.join("usr/lib/udev/rules.d/");
@@ -225,10 +225,10 @@ ACTION=="add", SUBSYSTEM=="pci", ENV{{DEVTYPE}}=="pci_device", RUN+="{program_pa
 "#
     );
 
-    fs::write(&dir.join("85-power-daemon.rules"), &content).expect("Could not write to file");
+    fs::write(dir.join("85-power-daemon.rules"), &content).expect("Could not write to file");
 }
 
-fn generate_acpi_file(path: &PathBuf, program_path: &PathBuf) {
+fn generate_acpi_file(path: &Path, program_path: &Path) {
     debug!("Generating ACPI file");
 
     let dir = path.join("etc/acpi/events/");
@@ -246,7 +246,7 @@ action={program_path} refresh-full
     fs::write(dir.join("power-options"), content).expect("COuld not write to file");
 }
 
-fn generate_dbus_file(path: &PathBuf) {
+fn generate_dbus_file(path: &Path) {
     debug!("Generating DBUS file");
 
     let dir = path.join("usr/share/dbus-1/system.d/");
@@ -275,7 +275,7 @@ fn generate_dbus_file(path: &PathBuf) {
     fs::write(dir.join("power-daemon.conf"), content).expect("Could not write to file");
 }
 
-fn genereate_systemd_file(path: &PathBuf, program_path: &PathBuf, verbose_daemon: bool) {
+fn genereate_systemd_file(path: &Path, program_path: &Path, verbose_daemon: bool) {
     debug!("Generating systemd file");
 
     let dir = path.join("lib/systemd/system/");

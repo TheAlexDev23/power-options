@@ -1,3 +1,4 @@
+#![allow(clippy::wrong_self_convention)]
 use dioxus::prelude::*;
 use power_daemon::WhiteBlackList;
 

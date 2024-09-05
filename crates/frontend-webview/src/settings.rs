@@ -105,7 +105,7 @@ pub fn SettingsMenu(
             control_routine_send_multiple(
                 control_routine,
                 &[
-                    ControlAction::UpdateConfig(config),
+                    ControlAction::UpdateConfig(config.into()),
                     ControlAction::GetConfig,
                 ],
                 Some(awaiting_completion),

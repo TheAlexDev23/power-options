@@ -87,7 +87,7 @@ pub fn create_profile_file_with_name<P: AsRef<Path>>(
 
     trace!("{content}");
 
-    file.write(content.as_bytes())
+    file.write_all(content.as_bytes())
         .expect("Could not write to profile file");
 }
 

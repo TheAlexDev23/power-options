@@ -80,6 +80,7 @@ impl CPUGroup {
         self.mode.value() == 0 && self.governor.value() == 0
     }
 
+    #[allow(clippy::wrong_self_convention)]
     fn from_cpu_settings(&mut self, cpu_settings: &CPUSettings) {
         *self.mode.guard() = if cpu_settings.mode.as_ref().unwrap() == "active" {
             0
@@ -156,6 +157,7 @@ impl CPUGroup {
         *self.hwp_dyn_boost.guard() = cpu_settings.hwp_dyn_boost.unwrap_or_default();
     }
 
+    #[allow(clippy::wrong_self_convention)]
     fn from_cpu_info(&mut self, cpu_info: &CPUInfo) {
         self.set_can_change_modes(cpu_info.mode.is_some());
         self.set_has_epb_or_epp(cpu_info.has_epp || cpu_info.has_epb);

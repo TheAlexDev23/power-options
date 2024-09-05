@@ -82,7 +82,7 @@ pub fn USBGroup(
             &[
                 ControlAction::UpdateProfileReduced(
                     active_profile_idx as u32,
-                    active_profile,
+                    active_profile.into(),
                     ReducedUpdate::USB,
                 ),
                 ControlAction::GetProfilesInfo,

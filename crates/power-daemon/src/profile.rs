@@ -487,14 +487,12 @@ impl NetworkSettings {
         let entries = fs::read_dir("/sys/class/net").expect("Could not read sysfs path");
         let eth_pattern = regex::Regex::new(r"^(eth|enp|ens|eno)").unwrap();
 
-        for entry in entries {
-            if let Ok(entry) = entry {
-                let name = entry.file_name();
-                let name_str = name.to_string_lossy();
+        for entry in entries.flatten() {
+            let name = entry.file_name();
+            let name_str = name.to_string_lossy();
 
-                if eth_pattern.is_match(&name_str) {
-                    run_command(&format!("ifconfig {} down", &name_str))
-                }
+            if eth_pattern.is_match(&name_str) {
+                run_command(&format!("ifconfig {} down", &name_str))
             }
         }
     }
@@ -626,7 +624,7 @@ impl PCISettings {
 
             let enable_pm = WhiteBlackList::should_enable_item(
                 &self.whiteblacklist,
-                &device_name.to_string(),
+                device_name,
                 self.enable_power_management.unwrap(),
             );
 

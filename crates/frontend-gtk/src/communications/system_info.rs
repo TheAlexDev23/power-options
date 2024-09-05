@@ -86,7 +86,7 @@ pub fn start_system_info_sync_routine() {
                 }
 
                 tokio::select! {
-                    (duration, sync_type) = crate::helpers::recv_different(&mut receiver, (duration.clone(), sync_type.clone())) => {
+                    (duration, sync_type) = crate::helpers::recv_different(&mut receiver, (*duration, sync_type.clone())) => {
                         syncing_state = SyncingState::Syncing(duration, sync_type);
                         trace!("Updating sync state: {syncing_state:?}");
                     },
@@ -107,7 +107,7 @@ pub async fn obtain_full_info_once() {
 
 pub fn set_system_info_sync(duration: Duration, sync_type: SystemInfoSyncType) {
     debug!("Updating system info synchronization: {sync_type:?} every {duration:?}");
-    if let Some(ref sender) = SYSINFO_SYNC.lock().unwrap().as_ref() {
+    if let Some(sender) = SYSINFO_SYNC.lock().unwrap().as_ref() {
         sender.send((duration, sync_type)).unwrap();
     }
 }

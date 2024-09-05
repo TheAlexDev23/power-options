@@ -7,10 +7,13 @@ use tokio::sync::Mutex;
 pub mod extensions;
 pub mod extra_bindings;
 
+type BoxedListener<T> = Box<dyn Fn(Option<&T>) + Send>;
+
+#[derive(Default)]
 pub struct SyncedValue<T: PartialEq + Clone + Debug> {
     value: Mutex<Option<T>>,
 
-    listeners: Mutex<Vec<Box<dyn Fn(Option<&T>) + Send>>>,
+    listeners: Mutex<Vec<BoxedListener<T>>>,
 }
 
 impl<T: PartialEq + Clone + Debug> SyncedValue<T> {

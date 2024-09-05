@@ -121,10 +121,8 @@ impl CPUInfo {
             has_epb: fs::metadata("/sys/devices/system/cpu/cpu0/power/energy_perf_bias").is_ok(),
 
             // This feature is exclusive to intel
-            has_perf_pct_scaling: fs::metadata(&format!(
-                "/sys/devices/system/cpu/intel_pstate/min_perf_pct"
-            ))
-            .is_ok(),
+            has_perf_pct_scaling: fs::metadata("/sys/devices/system/cpu/intel_pstate/min_perf_pct")
+                .is_ok(),
 
             hybrid: false,
             cores: Vec::default(),
@@ -416,8 +414,8 @@ impl ASPMInfo {
                         .map(|s| {
                             // The current enabled mode is written [mode_name] when reading the sysfs entry
                             let stripped = s.strip_prefix("[");
-                            if stripped.is_some() {
-                                String::from(stripped.unwrap().strip_suffix("]").unwrap())
+                            if let Some(stripped) = stripped {
+                                String::from(stripped.strip_suffix("]").unwrap())
                             } else {
                                 s
                             }

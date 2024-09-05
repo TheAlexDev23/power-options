@@ -1,11 +1,11 @@
 use std::convert::identity;
+use std::fmt::Display;
 use std::sync::Arc;
 use std::time::Duration;
 
 use gtk::glib::clone;
 
 use adw::prelude::*;
-use gtk::prelude::*;
 use relm4::loading_widgets::LoadingWidgets;
 use relm4::prelude::*;
 use relm4::Controller;
@@ -57,9 +57,11 @@ impl SettingsGroup {
             _ => panic!("Unkown settings group"),
         }
     }
+}
 
-    pub fn to_string(&self) -> String {
-        String::from(match self {
+impl Display for SettingsGroup {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
             SettingsGroup::CPU => "CPU",
             SettingsGroup::CPUCores => "CPU Cores",
             SettingsGroup::Radio => "Radio",
@@ -104,7 +106,6 @@ pub enum AppSyncUpdate {
 
 pub struct App {
     updating: bool,
-    root: gtk::ApplicationWindow,
 
     changed_groups: BitFlags<SettingsGroup>,
 
@@ -293,7 +294,6 @@ impl SimpleAsyncComponent for App {
         }
 
         let model = App {
-            root: root.clone(),
             updating: false,
             changed_groups: BitFlags::empty(),
             header: Header::builder()

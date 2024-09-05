@@ -54,7 +54,7 @@ impl SystemInfoClient {
     }
 
     async fn get_proxy(&self) -> zbus::Result<SystemInfoDBusProxy> {
-        Ok(SystemInfoDBusProxy::new(&self.dbus_con).await?)
+        SystemInfoDBusProxy::new(&self.dbus_con).await
     }
 }
 
@@ -199,6 +199,6 @@ impl ControlClient {
     }
 
     async fn get_proxy(&self) -> zbus::Result<ControlDBusProxy> {
-        Ok(ControlDBusProxy::new(&self.dbus_con).await?)
+        ControlDBusProxy::new(&self.dbus_con).await
     }
 }

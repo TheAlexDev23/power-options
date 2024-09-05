@@ -98,12 +98,12 @@ pub fn PCIAndASPMGroup(
             &[
                 ControlAction::UpdateProfileReduced(
                     active_profile_idx as u32,
-                    active_profile.clone(),
+                    active_profile.clone().into(),
                     ReducedUpdate::PCI,
                 ),
                 ControlAction::UpdateProfileReduced(
                     active_profile_idx as u32,
-                    active_profile,
+                    active_profile.into(),
                     ReducedUpdate::ASPM,
                 ),
                 ControlAction::GetProfilesInfo,

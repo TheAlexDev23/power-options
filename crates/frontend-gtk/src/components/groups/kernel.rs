@@ -39,6 +39,7 @@ pub struct KernelGroup {
 }
 
 impl KernelGroup {
+    #[allow(clippy::wrong_self_convention)]
     fn from_kernel_settings(&mut self, kernel_settings: &KernelSettings) {
         *self.disable_nmi_watchdog.guard() = kernel_settings.disable_nmi_watchdog.unwrap();
 

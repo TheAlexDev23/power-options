@@ -13,6 +13,7 @@ use power_daemon::{communication::client::SystemInfoClient, Profile};
 use crate::helpers::coroutine_extensions::{wait_for_diff_msg, wait_for_msg};
 
 #[derive(PartialEq, Clone)]
+#[allow(clippy::upper_case_acronyms)]
 pub enum SystemInfoSyncType {
     None,
     Whole,
@@ -85,7 +86,6 @@ pub async fn system_info_service(
 
             tokio::select! {
                 msg = wait_for_diff_msg((refresh_duration.unwrap(), sync_type.as_ref().unwrap().clone()), &mut rx) => {
-                    let msg = msg;
                     refreshing = true;
                     refresh_duration = Some(msg.0);
                     sync_type = Some(msg.1);
@@ -106,7 +106,7 @@ pub enum ControlAction {
     GetConfig,
     GetProfilesInfo,
 
-    UpdateConfig(Config),
+    UpdateConfig(Box<Config>),
 
     CreateProfile(DefaultProfileType),
     ResetProfile(u32),
@@ -114,7 +114,7 @@ pub enum ControlAction {
     RemoveProfile(u32),
     SwapProfiles(u32, u32),
 
-    UpdateProfileReduced(u32, Profile, ReducedUpdate),
+    UpdateProfileReduced(u32, Box<Profile>, ReducedUpdate),
 
     GetProfileOverride,
     SetProfileOverride(String),
@@ -156,11 +156,11 @@ pub async fn control_service(
                         .expect("Could not obtain profiles info."),
                 )),
                 ControlAction::UpdateConfig(config) => control_client
-                    .update_config(config)
+                    .update_config(*config)
                     .await
                     .expect("Could not update config"),
                 ControlAction::UpdateProfileReduced(idx, updated, reduced_update) => control_client
-                    .update_profile_reduced(idx, updated, reduced_update)
+                    .update_profile_reduced(idx, *updated, reduced_update)
                     .await
                     .expect("Could not update profile"),
                 ControlAction::CreateProfile(profile_type) => control_client

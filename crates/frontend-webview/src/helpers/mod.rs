@@ -6,19 +6,19 @@ pub mod toggleable_types;
 #[derive(PartialEq, Clone)]
 #[allow(unused)]
 pub enum TooltipDirection {
-    AtRight,
-    AtLeft,
-    AtTop,
-    AtBottom,
+    Right,
+    Left,
+    Top,
+    Bottom,
 }
 
 impl TooltipDirection {
     pub fn to_class_name(&self) -> String {
         String::from(match self {
-            TooltipDirection::AtRight => "tooltip tooltip-at-right",
-            TooltipDirection::AtLeft => "tooltip tooltip-at-left",
-            TooltipDirection::AtTop => "tooltip tooltip-at-top",
-            TooltipDirection::AtBottom => "tooltip tooltip-at-bottom",
+            TooltipDirection::Right => "tooltip tooltip-at-right",
+            TooltipDirection::Left => "tooltip tooltip-at-left",
+            TooltipDirection::Top => "tooltip tooltip-at-top",
+            TooltipDirection::Bottom => "tooltip tooltip-at-bottom",
         })
     }
 }

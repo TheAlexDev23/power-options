@@ -38,6 +38,7 @@ pub struct RadioGroup {
 }
 
 impl RadioGroup {
+    #[allow(clippy::wrong_self_convention)]
     fn from_radio_settings(&mut self, radio_settings: &RadioSettings) {
         *self.block_wifi.guard() = radio_settings.block_wifi.unwrap();
         *self.block_nfc.guard() = radio_settings.block_nfc.unwrap();

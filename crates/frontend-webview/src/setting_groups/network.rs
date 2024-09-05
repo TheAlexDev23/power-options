@@ -103,7 +103,7 @@ pub fn NetworkGroup(
             &[
                 ControlAction::UpdateProfileReduced(
                     active_profile_idx as u32,
-                    active_profile,
+                    active_profile.into(),
                     ReducedUpdate::Network,
                 ),
                 ControlAction::GetProfilesInfo,

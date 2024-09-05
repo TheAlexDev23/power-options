@@ -32,21 +32,9 @@ impl WhiteBlackList {
         } else if let Some(ref whiteblacklist) = whiteblacklist {
             match whiteblacklist.list_type {
                 // If on whitelist always enable, otherwise always disable
-                WhiteBlackListType::Whitelist => {
-                    if whiteblacklist.items.iter().any(|i| i == item) {
-                        true
-                    } else {
-                        false
-                    }
-                }
+                WhiteBlackListType::Whitelist => whiteblacklist.items.iter().any(|i| i == item),
                 // If on blacklist always disable, otherwise always enable
-                WhiteBlackListType::Blacklist => {
-                    if whiteblacklist.items.iter().any(|i| i == item) {
-                        false
-                    } else {
-                        true
-                    }
-                }
+                WhiteBlackListType::Blacklist => !whiteblacklist.items.iter().any(|i| i == item),
             }
         } else {
             // No list, always enable
@@ -168,26 +156,20 @@ pub fn file_content_to_bool<P: AsRef<Path>>(path: P) -> bool {
     content = content.strip_suffix("\n").unwrap_or(&content).to_string();
     content = content.strip_suffix(" ").unwrap_or(&content).to_string();
 
-    if content == "1" || content == "Y" {
-        true
-    } else {
-        false
-    }
+    content == "1" || content == "Y"
 }
 
 pub fn system_on_ac() -> bool {
     let mut ac_online = false;
 
     if let Ok(entries) = fs::read_dir("/sys/class/power_supply/") {
-        for entry in entries {
-            if let Ok(entry) = entry {
-                let entry_path = entry.path();
-                if let Ok(type_path) = fs::read_to_string(entry_path.join("type")) {
-                    let supply_type = type_path.trim();
-                    if supply_type == "Mains" {
-                        if let Ok(ac_status) = fs::read_to_string(entry_path.join("online")) {
-                            ac_online = ac_status.trim() == "1";
-                        }
+        for entry in entries.flatten() {
+            let entry_path = entry.path();
+            if let Ok(type_path) = fs::read_to_string(entry_path.join("type")) {
+                let supply_type = type_path.trim();
+                if supply_type == "Mains" {
+                    if let Ok(ac_status) = fs::read_to_string(entry_path.join("online")) {
+                        ac_online = ac_status.trim() == "1";
                     }
                 }
             }

@@ -87,6 +87,7 @@ impl Default for CPUCoresGroup {
 }
 
 impl CPUCoresGroup {
+    #[allow(clippy::wrong_self_convention)]
     fn from_cpu_info(&mut self, info: &CPUInfo) {
         self.cores.clear();
         for core_info in &info.cores {
@@ -103,22 +104,18 @@ impl CPUCoresGroup {
                             core_info.physical_core_id, core_info.logical_cpu_id
                         )
                     }
+                } else if p_core {
+                    format!("P (n.a - {})", core_info.logical_cpu_id)
                 } else {
-                    if p_core {
-                        format!("P (n.a - {})", core_info.logical_cpu_id)
-                    } else {
-                        format!("E (n.a - {})", core_info.logical_cpu_id)
-                    }
+                    format!("E (n.a - {})", core_info.logical_cpu_id)
                 }
+            } else if core_info.online.unwrap_or(true) {
+                format!(
+                    "{} - {}",
+                    core_info.physical_core_id, core_info.logical_cpu_id
+                )
             } else {
-                if core_info.online.unwrap_or(true) {
-                    format!(
-                        "{} - {}",
-                        core_info.physical_core_id, core_info.logical_cpu_id
-                    )
-                } else {
-                    format!("n.a - {}", core_info.logical_cpu_id)
-                }
+                format!("n.a - {}", core_info.logical_cpu_id)
             };
 
             self.cores.set(
@@ -176,8 +173,8 @@ impl CPUCoresGroup {
                 cores.push(CoreSetting {
                     cpu_id: idx,
                     online: self.cores.get::<bool>(&iter, ONLINE_IDX as i32).into(),
-                    min_frequency: Some(self.cores.get::<u32>(&iter, MIN_IDX as i32)).into(),
-                    max_frequency: Some(self.cores.get::<u32>(&iter, MAX_IDX as i32)).into(),
+                    min_frequency: self.cores.get::<u32>(&iter, MIN_IDX as i32).into(),
+                    max_frequency: self.cores.get::<u32>(&iter, MAX_IDX as i32).into(),
                     governor: self.cores.get::<String>(&iter, GOV_IDX as i32).into(),
                     epp: if *self.has_epp.borrow() || *self.has_epb.borrow() {
                         self.cores.get::<String>(&iter, EPP_IDX as i32).into()
@@ -250,7 +247,7 @@ impl SimpleComponent for CPUCoresGroup {
                         add_attribute: (&cell_min, "text", MIN_IDX as i32),
                         set_cell_data_func: (&cell_min, move |_column, cell, tree_model, iter| {
                             cell.set_visible(
-                                tree_model.get_value(&iter, ONLINE_IDX as i32).get::<bool>().unwrap()
+                                tree_model.get_value(iter, ONLINE_IDX as i32).get::<bool>().unwrap()
                             );
                         }),
                     },
@@ -265,7 +262,7 @@ impl SimpleComponent for CPUCoresGroup {
                         add_attribute: (&cell_max, "text", MAX_IDX as i32),
                         set_cell_data_func: (&cell_max, move |_column, cell, tree_model, iter| {
                             cell.set_visible(
-                                tree_model.get_value(&iter, ONLINE_IDX as i32).get::<bool>().unwrap()
+                                tree_model.get_value(iter, ONLINE_IDX as i32).get::<bool>().unwrap()
                             );
                         }),
                     },
@@ -289,8 +286,8 @@ impl SimpleComponent for CPUCoresGroup {
 
                             column.set_visible(*epp.borrow());
                             cell.set_visible(
-                                !(*mode.borrow() == 0 && tree_model.get_value(&iter, GOV_IDX as i32).get::<String>().unwrap() == "performance")
-                                && tree_model.get_value(&iter, ONLINE_IDX as i32).get::<bool>().unwrap()
+                                !(*mode.borrow() == 0 && tree_model.get_value(iter, GOV_IDX as i32).get::<String>().unwrap() == "performance")
+                                && tree_model.get_value(iter, ONLINE_IDX as i32).get::<bool>().unwrap()
                             );
                         }}),
                     },
@@ -309,7 +306,7 @@ impl SimpleComponent for CPUCoresGroup {
                         add_attribute: (&cell_gov, "text", GOV_IDX as i32),
                         set_cell_data_func: (&cell_gov, move |_column, cell, tree_model, iter| {
                             cell.set_visible(
-                                tree_model.get_value(&iter, ONLINE_IDX as i32).get::<bool>().unwrap()
+                                tree_model.get_value(iter, ONLINE_IDX as i32).get::<bool>().unwrap()
                             );
                         }),
                     },
@@ -380,7 +377,7 @@ impl SimpleComponent for CPUCoresGroup {
             CPUCoresInput::FreqLimChanged(min, path, v) => {
                 sender.input(CPUCoresInput::Changed);
                 let min = *min;
-                let iter = self.cores.iter(&path).unwrap();
+                let iter = self.cores.iter(path).unwrap();
 
                 let total_min = self.cores.get::<u32>(&iter, TOTAL_MIN_IDX as i32);
                 let total_max = self.cores.get::<u32>(&iter, TOTAL_MAX_IDX as i32);
@@ -409,17 +406,17 @@ impl SimpleComponent for CPUCoresGroup {
             CPUCoresInput::OnlineChanged(path, v) => {
                 sender.input(CPUCoresInput::Changed);
                 self.cores
-                    .set_value(&self.cores.iter(&path).unwrap(), ONLINE_IDX, &v.to_value())
+                    .set_value(&self.cores.iter(path).unwrap(), ONLINE_IDX, &v.to_value())
             }
             CPUCoresInput::EppChanged(path, v) => {
                 sender.input(CPUCoresInput::Changed);
                 self.cores
-                    .set_value(&self.cores.iter(&path).unwrap(), EPP_IDX, &v)
+                    .set_value(&self.cores.iter(path).unwrap(), EPP_IDX, v)
             }
             CPUCoresInput::GovChanged(path, v) => {
                 sender.input(CPUCoresInput::Changed);
                 self.cores
-                    .set_value(&self.cores.iter(&path).unwrap(), GOV_IDX, &v)
+                    .set_value(&self.cores.iter(path).unwrap(), GOV_IDX, v)
             }
             CPUCoresInput::Reset => {
                 fetch_cpu_info_once();

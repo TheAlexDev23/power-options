@@ -170,7 +170,7 @@ fn CPUSettingsForm(
             &[
                 ControlAction::UpdateProfileReduced(
                     active_profile_idx as u32,
-                    active_profile,
+                    active_profile.into(),
                     ReducedUpdate::CPU,
                 ),
                 ControlAction::GetProfilesInfo,
@@ -367,6 +367,7 @@ fn CoreSettings(
         }
     });
 
+    #[allow(clippy::redundant_closure)]
     let mut selected: Signal<Vec<u32>> = use_signal(|| Vec::new());
     let mut shift_selection_pinpoint = use_signal(|| None);
 
@@ -424,13 +425,12 @@ fn CoreSettings(
                                 selected.set(vec![logical_cpu_id]);
                             } else {
                                 let range = (selected()
-                                    .iter()
+                                    .into_iter()
                                     .min()
                                     .unwrap()
-                                    .clone()
                                     .min(
                                         logical_cpu_id,
-                                    )..=selected().iter().max().unwrap().clone().max(logical_cpu_id))
+                                    )..=selected().into_iter().max().unwrap().max(logical_cpu_id))
                                     .collect();
                                 selected.set(range);
                             }
@@ -627,7 +627,7 @@ fn CoreSettings(
                                         && core.governor == "performance"
                                     {
                                         Some((
-                                            TooltipDirection::AtTop,
+                                            TooltipDirection::Top,
                                             String::from(
                                                 "EPP/EPB will be locked to the highest possible value when the governor is set to performance.",
                                             ),
@@ -734,7 +734,7 @@ fn update_core_settings<F>(
         &[
             ControlAction::UpdateProfileReduced(
                 profile_id,
-                profile.clone(),
+                profile.clone().into(),
                 ReducedUpdate::MultipleCPUCores(indices),
             ),
             ControlAction::GetProfilesInfo,

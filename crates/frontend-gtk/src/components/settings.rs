@@ -1,7 +1,6 @@
 use std::{collections::HashMap, convert::identity};
 
 use adw::prelude::*;
-use gtk::prelude::*;
 use log::debug;
 use power_daemon::{Config, DefaultProfileType, Profile};
 use relm4::{
@@ -96,7 +95,7 @@ impl Settings {
             &config
                 .profiles
                 .iter()
-                .map(|e| &e as &str)
+                .map(|e| e as &str)
                 .collect::<Vec<&str>>(),
         );
 

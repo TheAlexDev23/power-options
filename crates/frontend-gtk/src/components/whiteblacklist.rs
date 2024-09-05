@@ -42,7 +42,7 @@ impl SimpleComponent for WhiteBlackListRenderer {
             set_title: "Custom exclusion or inclusion list",
             adw::SwitchRow {
                 set_title: "Make custom list of type whitelist",
-                set_tooltip_text: Some(&"If enabled the list will act as a whitelist, otherwise as a blacklist."),
+                set_tooltip_text: Some("If enabled the list will act as a whitelist, otherwise as a blacklist."),
                 add_binding: (&model.is_whitelist, "active"),
                 connect_active_notify  => WhiteBlackListRendererInput::Changed,
             },

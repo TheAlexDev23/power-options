@@ -68,7 +68,7 @@ pub fn SATAGroup(
             &[
                 ControlAction::UpdateProfileReduced(
                     active_profile_idx as u32,
-                    active_profile,
+                    active_profile.into(),
                     ReducedUpdate::SATA,
                 ),
                 ControlAction::GetProfilesInfo,

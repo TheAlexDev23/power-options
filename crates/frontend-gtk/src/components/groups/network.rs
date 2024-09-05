@@ -47,6 +47,7 @@ pub struct NetworkGroup {
 }
 
 impl NetworkGroup {
+    #[allow(clippy::wrong_self_convention)]
     fn from_network_settings(&mut self, network_settings: &NetworkSettings) {
         *self.disable_ethernet.guard() = network_settings.disable_ethernet.unwrap();
         *self.disable_wifi_7.guard() = network_settings.disable_wifi_7.unwrap();

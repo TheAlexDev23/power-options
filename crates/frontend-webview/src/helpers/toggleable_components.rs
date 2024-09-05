@@ -83,11 +83,9 @@ pub fn ToggleableDropdown(
                 },
                 disabled: !value.0() || disabled.unwrap_or_default(),
                 items,
-                tooltip: if let Some(ref dropdown_tooltip) = dropdown_tooltip {
-                    Some((TooltipDirection::AtLeft, dropdown_tooltip.clone()))
-                } else {
-                    None
-                }
+                tooltip: dropdown_tooltip
+                    .as_ref()
+                    .map(|dropdown_tooltip| (TooltipDirection::Left, dropdown_tooltip.clone()))
             }
         }
     }

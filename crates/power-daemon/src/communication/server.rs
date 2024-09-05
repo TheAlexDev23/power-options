@@ -3,7 +3,6 @@ use log::{debug, error, trace};
 use tokio::sync::Mutex;
 use zbus::{conn::Builder, interface, Connection, Error};
 
-use super::{CONTROL_OBJECT_NAME, SYSTEM_INFO_OBJECT_NAME, WELL_KNOWN_NAME};
 use crate::{
     systeminfo::{CPUInfo, SystemInfo},
     Instance, PCIInfo, SATAInfo, USBInfo,
@@ -17,14 +16,17 @@ impl CommunicationServer {
     pub async fn new(instance: Instance) -> Result<CommunicationServer, Error> {
         debug!("Initializing communications server");
         let con = Builder::system()?
-            .name(WELL_KNOWN_NAME)?
+            .name("io.github.thealexdev23.power_daemon")?
             .serve_at(
-                CONTROL_OBJECT_NAME,
+                "/io/github/thealexdev23/power_daemon/control",
                 ControlServer {
                     instance: instance.into(),
                 },
             )?
-            .serve_at(SYSTEM_INFO_OBJECT_NAME, SystemInfoServer)?
+            .serve_at(
+                "/io/github/thealexdev23/power_daemon/system_info",
+                SystemInfoServer,
+            )?
             .build()
             .await?;
         debug!("Finished setting up communications server connection");

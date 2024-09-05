@@ -40,6 +40,7 @@ pub struct SATAGroup {
 }
 
 impl SATAGroup {
+    #[allow(clippy::wrong_self_convention)]
     fn from_sata_settings(&mut self, sata_settings: &SATASettings) {
         *self.active_link_pm_policy.guard() = SATA_POLICIES
             .iter()
@@ -50,8 +51,7 @@ impl SATAGroup {
     fn to_sata_settings(&self) -> SATASettings {
         SATASettings {
             active_link_pm_policy: SATA_POLICIES
-                .iter()
-                .nth(self.active_link_pm_policy.value() as usize)
+                .get(self.active_link_pm_policy.value() as usize)
                 .unwrap()
                 .to_string()
                 .into(),

@@ -101,7 +101,7 @@ impl Instance {
         if let Some(ref temporary_override) = self.temporary_override {
             debug!("Picking temporary profile override");
             self.profiles_info
-                .find_profile_index_by_name(&temporary_override)
+                .find_profile_index_by_name(temporary_override)
         } else if let Some(ref profile_override) = self.config.profile_override {
             debug!("Picking settings profile override");
             self.profiles_info
@@ -370,7 +370,7 @@ pub fn serialize_config(config: &Config, path: &Path) {
     .expect("Could not write to config");
 }
 
-fn serialize_profiles_clean(profiles: &Vec<Profile>, path: &Path) {
+fn serialize_profiles_clean(profiles: &[Profile], path: &Path) {
     for entry in fs::read_dir(path).unwrap() {
         let entry = entry.unwrap();
         let path = entry.path();
@@ -385,11 +385,11 @@ fn serialize_profiles_clean(profiles: &Vec<Profile>, path: &Path) {
     serialize_profiles(profiles, path);
 }
 
-fn serialize_profiles(profiles: &Vec<Profile>, path: &Path) {
+fn serialize_profiles(profiles: &[Profile], path: &Path) {
     for profile in profiles.iter() {
         let path = path.join(format!("{}.toml", profile.profile_name));
         let mut file = fs::File::create(&path).expect("Could not read file");
-        file.write(
+        file.write_all(
             toml::to_string_pretty(profile)
                 .expect("Could not serialize profile")
                 .as_bytes(),
