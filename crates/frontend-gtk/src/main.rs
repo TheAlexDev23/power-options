@@ -8,6 +8,8 @@ use clap::{command, Parser};
 use clap_verbosity_flag::{InfoLevel, Verbosity};
 use colored::Colorize;
 use log::{Level, Log, Metadata, Record};
+use power_daemon::ZBusError;
+
 use relm4::prelude::*;
 
 use components::*;
@@ -57,7 +59,36 @@ async fn main() {
     log::set_logger(&LOGGER).expect("Could not set logger");
     log::set_max_level(args.verbose.log_level_filter());
 
+    set_panic_dialog();
+
     RelmApp::new("io.github.thealexdev23.power-options.frontend")
         .with_args(Vec::new())
         .run_async::<App>(());
+}
+
+fn set_panic_dialog() {
+    std::panic::set_hook(Box::new(|info| {
+        let message = if info.payload().downcast_ref::<ZBusError>().is_some() {
+            "A ZBus error occured. Make sure the power-options daemon is actually running."
+        } else {
+            "Unexpected error occured."
+        }
+        .to_string();
+
+        let secondary_message = info.to_string();
+
+        log::error!("App panicked with message: {secondary_message}");
+        log::info!("Spawning panic dialog.");
+
+        let _ = std::process::Command::new("yad")
+            .args(&[
+                "--button",
+                "yad-close",
+                "--title",
+                "Unexpected Panic",
+                "--text",
+                &format!("<b>{message}</b>\nFull panic message:\n{secondary_message}"),
+            ])
+            .spawn();
+    }));
 }

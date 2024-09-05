@@ -14,6 +14,7 @@ pub use helpers::{WhiteBlackList, WhiteBlackListType};
 pub use profile::*;
 pub use profiles_generator::DefaultProfileType;
 pub use systeminfo::*;
+pub use zbus::Error as ZBusError;
 
 use std::{
     fs,

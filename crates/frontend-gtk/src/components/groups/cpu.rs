@@ -10,7 +10,7 @@ use relm4::{
 };
 
 use super::{CPU_EPPS, CPU_GOVERNORS_ACTIVE, CPU_GOVERNORS_PASSIVE};
-use crate::helpers::extensions::StringListExtension;
+use crate::helpers::extensions::StringListExt;
 use crate::{
     communications::{daemon_control, system_info},
     helpers::extra_bindings::{AdjustmentBinding, StringListBinding},
