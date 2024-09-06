@@ -52,8 +52,7 @@ struct Args {
     verbose: Verbosity<InfoLevel>,
 }
 
-#[tokio::main]
-async fn main() {
+fn main() {
     let args = Args::parse();
 
     log::set_logger(&LOGGER).expect("Could not set logger");
