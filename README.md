@@ -1,5 +1,5 @@
 <div align="center">
-    <img src="static/power-options.png" width=70>
+    <img src="static/power-options.png" width=120>
     <h1>
         Power Options
     </h1>
