@@ -67,13 +67,6 @@ fn main() {
 
 fn set_panic_dialog() {
     std::panic::set_hook(Box::new(|info| {
-        let message = if info.payload().downcast_ref::<ZBusError>().is_some() {
-            "A ZBus error occured. Make sure the power-options daemon is actually running."
-        } else {
-            "Unexpected error occured."
-        }
-        .to_string();
-
         let secondary_message = info.to_string();
 
         log::error!("App panicked with message: {secondary_message}");
@@ -81,12 +74,13 @@ fn set_panic_dialog() {
 
         let _ = std::process::Command::new("yad")
             .args(&[
+                "--selectable-labels",
                 "--button",
                 "yad-close",
                 "--title",
                 "Unexpected Panic",
                 "--text",
-                &format!("<b>{message}</b>\nFull panic message:\n{secondary_message}"),
+                &format!("<b>Unexpected error occurred, please make sure that the power-options daemon is running.</b>\nFull panic message:\n{secondary_message}"),
             ])
             .spawn();
     }));
