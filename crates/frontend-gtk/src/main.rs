@@ -72,7 +72,7 @@ fn set_panic_dialog() {
         log::info!("Spawning panic dialog.");
 
         let _ = std::process::Command::new("yad")
-            .args(&[
+            .args([
                 "--selectable-labels",
                 "--button",
                 "yad-close",
