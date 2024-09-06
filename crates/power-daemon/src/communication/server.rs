@@ -102,6 +102,11 @@ impl ControlServer {
         }
     }
 
+    async fn get_active_profile_name(&mut self) -> String {
+        debug!(target: "D-BUS", "get_active_profile_name");
+        self.instance.get_mut().get_active_profile_name()
+    }
+
     async fn create_profile(&mut self, profile_type: String) {
         debug!(target: "D-BUS", "create_profile: {profile_type}");
         match serde_json::from_str(&profile_type) {

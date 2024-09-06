@@ -121,6 +121,52 @@ pub enum ControlAction {
     RemoveProfileOverride,
 }
 
+pub async fn background_daemon_sync_routine(
+    mut active_profile_name: Signal<Option<String>>,
+    profiles_info: Signal<Option<ProfilesInfo>>,
+    control_routine: ControlRoutine,
+) {
+    let control_client = ControlClient::new()
+        .await
+        .expect("Could not initialize control client");
+
+    active_profile_name.set(
+        control_client
+            .get_active_profile_name()
+            .await
+            .unwrap()
+            .into(),
+    );
+
+    loop {
+        let name = control_client.get_active_profile_name().await.unwrap();
+
+        if active_profile_name().unwrap() != name {
+            let local_info_up_to_date = if let Some(profiles_info) = profiles_info() {
+                profiles_info.get_active_profile().profile_name == name
+            } else {
+                false
+            };
+
+            if !local_info_up_to_date {
+                control_routine_send_multiple(
+                    control_routine,
+                    &[
+                        ControlAction::GetProfilesInfo,
+                        ControlAction::GetConfig,
+                        ControlAction::GetProfileOverride,
+                    ],
+                    None,
+                );
+            }
+
+            active_profile_name.set(name.into());
+        }
+
+        tokio::time::sleep(std::time::Duration::from_secs_f32(1.0)).await;
+    }
+}
+
 pub type ControlRoutine = Coroutine<(ControlAction, Option<Signal<bool>>)>;
 
 pub async fn control_service(

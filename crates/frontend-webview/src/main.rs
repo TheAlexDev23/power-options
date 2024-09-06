@@ -8,8 +8,8 @@ mod settings;
 use std::time::Duration;
 
 use communication_services::{
-    control_routine_send_multiple, control_service, system_info_service, ControlAction,
-    ControlRoutine, SystemInfoSyncType,
+    background_daemon_sync_routine, control_routine_send_multiple, control_service,
+    system_info_service, ControlAction, ControlRoutine, SystemInfoSyncType,
 };
 use setting_groups::{
     cpu::CPUGroup, kernel::KernelGroup, network::NetworkGroup, pci::PCIAndASPMGroup,
@@ -51,6 +51,11 @@ fn App() -> Element {
     let active_profile_override = use_signal(|| None);
     let control_routine = use_coroutine(move |rx| {
         control_service(rx, config, profiles_info, active_profile_override)
+    });
+
+    let active_profile_name = use_signal(|| None);
+    let _ = use_coroutine(move |_: UnboundedReceiver<()>| {
+        background_daemon_sync_routine(active_profile_name, profiles_info, control_routine)
     });
 
     control_routine_send_multiple(

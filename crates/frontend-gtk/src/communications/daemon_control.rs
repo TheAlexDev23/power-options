@@ -34,6 +34,10 @@ pub async fn update_config(config: Config) {
     debug!("Updating config");
     get_client().await.update_config(config).await.unwrap();
 }
+pub async fn get_active_profile_name() -> String {
+    debug!("Obtaining the name of the active profile");
+    get_client().await.get_active_profile_name().await.unwrap()
+}
 pub async fn create_profile(profile_type: DefaultProfileType) {
     debug!("Creating profile of type {profile_type:?}");
     get_client()

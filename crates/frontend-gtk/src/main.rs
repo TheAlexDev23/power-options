@@ -8,7 +8,6 @@ use clap::{command, Parser};
 use clap_verbosity_flag::{InfoLevel, Verbosity};
 use colored::Colorize;
 use log::{Level, Log, Metadata, Record};
-use power_daemon::ZBusError;
 
 use relm4::prelude::*;
 

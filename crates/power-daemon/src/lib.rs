@@ -131,6 +131,10 @@ impl Instance {
         self.update_full();
     }
 
+    pub fn get_active_profile_name(&self) -> String {
+        self.profiles_info.get_active_profile().profile_name.clone()
+    }
+
     pub fn create_profile(&mut self, profile_type: DefaultProfileType) {
         debug!("Creating profile of type {profile_type:?}");
         let base_name = "New Profile";

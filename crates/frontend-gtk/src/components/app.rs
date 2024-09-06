@@ -186,9 +186,10 @@ impl SimpleAsyncComponent for App {
     ) -> AsyncComponentParts<Self> {
         communications::daemon_control::setup_control_client().await;
 
+        spawn_background_sync_thread().await;
+
         tokio::join!(
             communications::daemon_control::get_profiles_info(),
-            communications::daemon_control::get_profile_override(),
             communications::daemon_control::get_config(),
             communications::daemon_control::get_profile_override(),
         );
@@ -444,6 +445,43 @@ impl SimpleAsyncComponent for App {
                 .unwrap(),
         }
     }
+}
+
+async fn spawn_background_sync_thread() {
+    let mut last_profile_name = communications::daemon_control::get_active_profile_name().await;
+    tokio::spawn(async move {
+        loop {
+            tokio::time::sleep(std::time::Duration::from_secs_f32(1.0)).await;
+            let name = communications::daemon_control::get_active_profile_name().await;
+            if name != last_profile_name {
+                // All changes made by the frontend that could influence the
+                // active profile are allways followed by the obtention of
+                // profiles_info, if the current syncewd profiles info
+                // aren't up to date with the current profile, then we sync
+                // everything because we don't know what caused the change.
+                let local_info_up_to_date = if let Some(profiles_info) =
+                    communications::PROFILES_INFO.get().await.as_ref()
+                {
+                    profiles_info.get_active_profile().profile_name == name
+                } else {
+                    false
+                };
+
+                if !local_info_up_to_date {
+                    log::debug!(
+                        "The active profile changed unexpectedly, synchornizing with the daemon..."
+                    );
+                    tokio::join!(
+                        communications::daemon_control::get_profiles_info(),
+                        communications::daemon_control::get_config(),
+                        communications::daemon_control::get_profile_override(),
+                    );
+                }
+
+                last_profile_name = name;
+            }
+        }
+    });
 }
 
 async fn setup_sync_listeners(sender: AsyncComponentSender<App>) {
