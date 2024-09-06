@@ -6,7 +6,6 @@ use dioxus::desktop::{use_wry_event_handler, WindowEvent};
 use dioxus::prelude::Event;
 use dioxus::prelude::*;
 
-use labels::DRIVER_OPMODE_TT;
 use power_daemon::{CPUSettings, CoreSetting, Profile, ProfilesInfo, ReducedUpdate, SystemInfo};
 
 use crate::communication_services::{
