@@ -79,7 +79,6 @@ impl Instance {
             self.set_profile_override(name);
         }
     }
-
     pub fn remove_profile_override(&mut self) {
         self.temporary_override = None;
         self.update_full();
@@ -90,32 +89,11 @@ impl Instance {
 
         self.profiles_info.get_active_profile().apply_all();
     }
-
     pub fn update_reduced(&mut self, reduced_update: ReducedUpdate) {
         self.profiles_info.active_profile = self.pick_profile();
         self.profiles_info
             .get_active_profile()
             .apply_reduced(&reduced_update);
-    }
-
-    pub fn pick_profile(&self) -> usize {
-        if let Some(ref temporary_override) = self.temporary_override {
-            debug!("Picking temporary profile override");
-            self.profiles_info
-                .find_profile_index_by_name(temporary_override)
-        } else if let Some(ref profile_override) = self.config.profile_override {
-            debug!("Picking settings profile override");
-            self.profiles_info
-                .find_profile_index_by_name(profile_override)
-        } else if helpers::system_on_ac() {
-            debug!("Picking AC profile");
-            self.profiles_info
-                .find_profile_index_by_name(&self.config.ac_profile)
-        } else {
-            debug!("Picking BAT profile");
-            self.profiles_info
-                .find_profile_index_by_name(&self.config.bat_profile)
-        }
     }
 
     pub fn update_config(&mut self, config: Config) {
@@ -137,6 +115,7 @@ impl Instance {
 
     pub fn create_profile(&mut self, profile_type: DefaultProfileType) {
         debug!("Creating profile of type {profile_type:?}");
+
         let base_name = "New Profile";
         let mut profile_name = base_name.to_string();
         let mut count = 1;
@@ -154,10 +133,17 @@ impl Instance {
 
         self.config.profiles.push(profile_name.clone());
         serialize_config(&self.config, &self.config_path);
+        // parse_profiles obtains profiles according to the order defined in the
+        // config. If the config's order changed then re-callign parse_profiles
+        // should give a list of profiles in the new order
         self.profiles_info.profiles = parse_profiles(&self.config, &self.profiles_path);
     }
 
     pub fn reset_profile(&mut self, idx: usize) {
+        if self.verify_index_ranges(idx) {
+            return;
+        }
+
         debug!("Resetting profile No {idx}");
         let system_info = SystemInfo::obtain();
 
@@ -216,9 +202,9 @@ impl Instance {
         );
         self.profiles_info.profiles.remove(idx);
 
-        // This needs to be done fater removign the actual profile from the
+        // This needs to be done after removing the actual profile from the
         // list, so that the .first() and .last() values would not point to
-        // profiles that won't exist after deletion
+        // profiles that may not exist after deletion
         if self.config.bat_profile == profile_to_remove_name {
             self.config.bat_profile = self
                 .profiles_info
@@ -257,6 +243,14 @@ impl Instance {
         if self.verify_index_ranges(idx) {
             return;
         }
+        for profile in &self.config.profiles {
+            if new_name == *profile {
+                error!(
+                    "Requested to update profile name to an already occupied name. Ignorring..."
+                );
+                return;
+            }
+        }
 
         let old_name = self.config.profiles[idx].clone();
 
@@ -280,7 +274,7 @@ impl Instance {
         }
 
         serialize_config(&self.config, &self.config_path);
-        // Renamign a profile could cause a previous file with the same name
+        // Renaming a profile could cause a previous file with the same name
         // left behind. Therefore we need to clear the directory first and then serialize
         serialize_profiles_clean(&self.profiles_info.profiles, &self.profiles_path);
     }
@@ -322,6 +316,29 @@ impl Instance {
             self.update_reduced(reduced_update);
         }
     }
+
+    /// Returns the index of the profile that should be selcted at the moment
+    /// according to all settings and overrides
+    fn pick_profile(&self) -> usize {
+        if let Some(ref temporary_override) = self.temporary_override {
+            debug!("Picking temporary profile override");
+            self.profiles_info
+                .find_profile_index_by_name(temporary_override)
+        } else if let Some(ref profile_override) = self.config.profile_override {
+            debug!("Picking settings profile override");
+            self.profiles_info
+                .find_profile_index_by_name(profile_override)
+        } else if helpers::system_on_ac() {
+            debug!("Picking AC profile");
+            self.profiles_info
+                .find_profile_index_by_name(&self.config.ac_profile)
+        } else {
+            debug!("Picking BAT profile");
+            self.profiles_info
+                .find_profile_index_by_name(&self.config.bat_profile)
+        }
+    }
+
     fn update_profile(&mut self, idx: usize, profile: Profile) {
         if self.verify_index_ranges(idx) {
             return;
