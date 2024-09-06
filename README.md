@@ -1,4 +1,5 @@
-<div style="text-align: center;">
+<div align="center">
+    <img src="static/power-options.png" width=70>
     <h1>
         Power Options
     </h1>
@@ -77,7 +78,27 @@ Power Option includes the following features:
 
 ## Installation
 
-Installation scripts for package managers are in the process of being written.
+- Webview: currently Dioxus (the framework used for the frontend) is having some
+  asset inclusion issues in their bundling system. I've already opened an issue
+  in their repository and will create a script as soon as possible. 
+
+- GTK: 
+```bash
+git clone https://github.com/TheAlexDev23/power-options/ --depth=1
+cd power-options
+chmod +x ./install-gtk.sh
+# Run as local user, will require sudo password
+./install-gtk.sh
+```
+
+- Just the daemon:
+```bash
+git clone https://github.com/TheAlexDev23/power-options/ --depth=1
+cd power-options
+chmod +x ./install-gtk.sh
+# Run as local user, will require sudo password
+./install-gtk.sh
+```
 
 ## Dependencies
 
