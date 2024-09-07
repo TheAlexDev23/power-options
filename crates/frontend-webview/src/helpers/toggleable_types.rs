@@ -34,10 +34,6 @@ impl ToggleableString {
 }
 
 impl ToggleableInt {
-    pub fn from(&mut self, other: Option<i32>) {
-        self.0.set(other.is_some());
-        self.1.set(other.unwrap_or_default());
-    }
     pub fn from_u32(&mut self, other: Option<u32>) {
         self.0.set(other.is_some());
         self.1.set(other.unwrap_or_default() as i32);
@@ -47,13 +43,6 @@ impl ToggleableInt {
         self.1.set(other.unwrap_or_default() as i32);
     }
 
-    pub fn into_base(&self) -> Option<i32> {
-        if self.0() {
-            Some(self.1())
-        } else {
-            None
-        }
-    }
     pub fn into_u32(&self) -> Option<u32> {
         if self.0() {
             Some(self.1() as u32)
