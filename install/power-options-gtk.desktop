@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Power Options Gtk
+Comment=GTK Frontend for the Power Options daemon
+Exec=power-options-gtk
+Icon=power-options
+Terminal=false
+Type=Application
+Categories=Utility;Settings;

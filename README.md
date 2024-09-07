@@ -1,5 +1,5 @@
 <div align="center">
-    <img src="static/power-options.png" width=120>
+    <img src="icon.png" width=120>
     <h1>
         Power Options
     </h1>
@@ -78,10 +78,6 @@ Power Option includes the following features:
 
 ## Installation
 
-- Webview: currently Dioxus (the framework used for the frontend) is having some
-  asset inclusion issues in their bundling system. I've already opened an issue
-  in their repository and will create a script as soon as possible. 
-
 - GTK: 
 ```bash
 git clone https://github.com/TheAlexDev23/power-options/ --depth=1
@@ -91,13 +87,24 @@ chmod +x ./install-gtk.sh
 ./install-gtk.sh
 ```
 
+- Webview: 
+```bash
+# dioxus-cli is required
+cargo install dioxus-cli
+git clone https://github.com/TheAlexDev23/power-options/ --depth=1
+cd power-options
+chmod +x ./install-webview.sh
+# Run as local user, will require sudo password
+./install-webview.sh
+```
+
 - Just the daemon:
 ```bash
 git clone https://github.com/TheAlexDev23/power-options/ --depth=1
 cd power-options
-chmod +x ./install-gtk.sh
+chmod +x ./install-webview.sh
 # Run as local user, will require sudo password
-./install-gtk.sh
+./install-daemon-only.sh
 ```
 
 ## Dependencies

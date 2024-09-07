@@ -41,3 +41,6 @@ script = []
 # Javascript code file
 # serve: [dev-server] only
 script = []
+
+[bundle]
+resources = ["color.css", "custom-elements.css", "main.css", "icons/*"]

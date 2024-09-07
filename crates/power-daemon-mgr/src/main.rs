@@ -278,7 +278,7 @@ fn generate_dbus_file(path: &Path) {
 fn genereate_systemd_file(path: &Path, program_path: &Path, verbose_daemon: bool) {
     debug!("Generating systemd file");
 
-    let dir = path.join("lib/systemd/system/");
+    let dir = path.join("usr/lib/systemd/system/");
     fs::create_dir_all(&dir).expect("Could not create directory");
 
     let program_path = program_path.display();

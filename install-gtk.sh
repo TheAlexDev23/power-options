@@ -20,13 +20,6 @@ sudo systemctl daemon-reload
 sudo systemctl enable power-options
 sudo systemctl start power-options
 
-sudo cp -f static/power-options.png /usr/share/icons
+sudo cp -f icon.png /usr/share/icons/power-options.png
 
-echo "[Desktop Entry]
-Name=Power Options Gtk
-Comment=GTK Frontend for the Power Options daemon
-Exec=/usr/bin/power-options-gtk
-Icon=/usr/share/icons/power-options.png
-Terminal=false
-Type=Application
-Categories=Utility;Settings;" | sudo tee /usr/share/applications/power-options-gtk.desktop > /dev/null
+sudo cp -f install/power-options-gtk.desktop /usr/share/applications/
