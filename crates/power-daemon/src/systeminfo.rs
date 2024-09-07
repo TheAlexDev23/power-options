@@ -108,7 +108,7 @@ impl CPUInfo {
             mode: if driver == CPUFreqDriver::Other {
                 None
             } else {
-                Some(file_content_to_string(&format!(
+                Some(file_content_to_string(format!(
                     "/sys/devices/system/cpu/{}/status",
                     well_known_driver_name
                 )))

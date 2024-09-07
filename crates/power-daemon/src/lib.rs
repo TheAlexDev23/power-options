@@ -14,7 +14,6 @@ pub use helpers::{WhiteBlackList, WhiteBlackListType};
 pub use profile::*;
 pub use profiles_generator::DefaultProfileType;
 pub use systeminfo::*;
-pub use zbus::Error as ZBusError;
 
 use std::{
     fs,
@@ -228,7 +227,7 @@ impl Instance {
 
         fs::remove_file(
             self.profiles_path
-                .join(&format!("{}.toml", &profile_to_remove_name)),
+                .join(format!("{}.toml", &profile_to_remove_name)),
         )
         .expect("Could not remove profile file");
 
