@@ -71,7 +71,7 @@ post_remove() {{
     return pkgbuild_content
 
 def main():
-    pkgname = "power-options-daemon"
+    pkgname = "power-options-daemon-git"
     pkgver = get_version()
     url = "https://github.com/thealexdev23/power-options"
 
