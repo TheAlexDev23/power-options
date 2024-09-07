@@ -20,8 +20,7 @@ jobs:
             - uses: actions-rust-lang/setup-rust-toolchain@v1
               with:
                 components: clippy
-            - name: Clippy Check
-              uses: actions-rust-lang/clippy@v1
+            - run: cargo clippy
     publish_aur_packages:
         name: Publish AUR packages
         runs-on: ubuntu-latest
