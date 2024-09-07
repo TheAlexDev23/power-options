@@ -9,12 +9,9 @@ jobs:
     check_and_format:
         name: cargo check and clippy
         runs-on: ubuntu-24.04
-        # env:
-        #     PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig:/usr/local/lib/pkgconfig
         steps:
             - run: sudo apt-get update
             - run: sudo apt-get install -y pkg-config libglib2.0-dev libgtk-4-dev libgtk-3-dev libwebkit2gtk-4.1-dev libjavascriptcoregtk-4.1-dev libsoup-3.0-dev libadwaita-1-dev 
-            - run: pkg-config --modversion glib-2.0
             - uses: actions/checkout@v4
             - uses: actions-rust-lang/setup-rust-toolchain@v1
               with:
@@ -29,6 +26,8 @@ jobs:
         steps:
             - uses: actions/checkout@v4
 
+            - name: Allow script execution
+              run: chmod +x ./ci/*.py
             - name: Generate PKGBUILDs
               run: ./ci/gen_daemon_pkgbuild_git.py
 
