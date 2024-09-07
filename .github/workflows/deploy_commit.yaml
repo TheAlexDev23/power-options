@@ -25,6 +25,10 @@ jobs:
             - check_and_format
         steps:
             - uses: actions/checkout@v4
+              with:
+                # Fetches entire history, this is necessary to properly generate
+                # version in aur
+                fetch-depth: 0
 
             - name: Generate PKGBUILDs
               run: python ./ci/gen_daemon_pkgbuild_git.py
