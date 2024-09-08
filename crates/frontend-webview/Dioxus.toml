@@ -43,4 +43,5 @@ script = []
 script = []
 
 [bundle]
-resources = ["color.css", "custom-elements.css", "main.css", "icons/*"]
+resources = ["color.css", "custom-elements.css", "main.css", "icons/*.svg"]
+icon = ["icon.png"]
