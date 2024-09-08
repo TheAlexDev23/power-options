@@ -20,6 +20,7 @@ pub enum SystemInfoSyncType {
     PCI,
     USB,
     SATA,
+    Opt,
 }
 
 #[derive(PartialEq, Clone, Debug)]
@@ -81,6 +82,17 @@ pub fn start_system_info_sync_routine() {
                         let updated = system_info_client.get_sata_info().await.unwrap();
                         SYSTEM_INFO
                             .set_mut(move |v| v.as_mut().unwrap().sata_info = updated.clone())
+                            .await
+                    }
+                    SystemInfoSyncType::Opt => {
+                        let updated = system_info_client
+                            .get_optional_features_info()
+                            .await
+                            .unwrap();
+                        SYSTEM_INFO
+                            .set_mut(move |v| {
+                                v.as_mut().unwrap().opt_features_info = updated.clone()
+                            })
                             .await
                     }
                 }

@@ -21,6 +21,7 @@ pub enum SystemInfoSyncType {
     PCI,
     USB,
     SATA,
+    Opt,
 }
 
 pub type SystemInfoRoutine = Coroutine<(Duration, SystemInfoSyncType)>;
@@ -79,6 +80,12 @@ pub async fn system_info_service(
                 SystemInfoSyncType::SATA => {
                     system_info.as_mut().unwrap().sata_info = client
                         .get_sata_info()
+                        .await
+                        .expect("Could not get system info")
+                }
+                SystemInfoSyncType::Opt => {
+                    system_info.as_mut().unwrap().opt_features_info = client
+                        .get_optional_features_info()
                         .await
                         .expect("Could not get system info")
                 }

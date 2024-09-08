@@ -44,6 +44,9 @@ pub struct NetworkGroup {
 
     last_network_settings: Option<NetworkSettings>,
     active_profile: Option<(usize, Profile)>,
+
+    supports_wifi_drivers: bool,
+    supports_ifconfig: bool,
 }
 
 impl NetworkGroup {
@@ -111,7 +114,14 @@ impl SimpleComponent for NetworkGroup {
                     adw::PreferencesGroup {
                         adw::SwitchRow {
                             set_title: labels::DIS_ETH_TITLE,
-                            set_tooltip_text: Some(labels::DIS_ETH_TT),
+                            #[watch]
+                            set_sensitive: model.supports_ifconfig,
+                            #[watch]
+                            set_tooltip_text: if !model.supports_ifconfig {
+                                Some(labels::NO_IFCONFIG_TT)
+                            } else {
+                                Some(labels::DIS_ETH_TT)
+                            },
                             add_binding: (&model.disable_ethernet, "active"),
                             connect_active_notify => NetworkInput::Changed,
                         },
@@ -119,16 +129,40 @@ impl SimpleComponent for NetworkGroup {
                     adw::PreferencesGroup {
                         adw::SwitchRow {
                             set_title: "Disable WiFi 7",
+                            #[watch]
+                            set_sensitive: model.supports_wifi_drivers,
+                            #[watch]
+                            set_tooltip_text: if !model.supports_wifi_drivers {
+                                Some(labels::NO_WIFI_DRIVER_TT)
+                            } else {
+                                None
+                            },
                             add_binding: (&model.disable_wifi_7, "active"),
                             connect_active_notify => NetworkInput::Changed,
                         },
                         adw::SwitchRow {
                             set_title: "Disable WiFi 6",
+                            #[watch]
+                            set_sensitive: model.supports_wifi_drivers,
+                            #[watch]
+                            set_tooltip_text: if !model.supports_wifi_drivers {
+                                Some(labels::NO_WIFI_DRIVER_TT)
+                            } else {
+                                None
+                            },
                             add_binding: (&model.disable_wifi_6, "active"),
                             connect_active_notify => NetworkInput::Changed,
                         },
                         adw::SwitchRow {
                             set_title: "Disable WiFi 5",
+                            #[watch]
+                            set_sensitive: model.supports_wifi_drivers,
+                            #[watch]
+                            set_tooltip_text: if !model.supports_wifi_drivers {
+                                Some(labels::NO_WIFI_DRIVER_TT)
+                            } else {
+                                None
+                            },
                             add_binding: (&model.disable_wifi_5, "active"),
                             connect_active_notify => NetworkInput::Changed,
                         },
@@ -136,13 +170,27 @@ impl SimpleComponent for NetworkGroup {
                     adw::PreferencesGroup {
                         adw::SwitchRow {
                             set_title: labels::IWLWIFI_POWERSAVING_TITLE,
-                            set_tooltip_text: Some(labels::IWLWIFI_POWERSAVING_TT),
+                            #[watch]
+                            set_sensitive: model.supports_wifi_drivers,
+                            #[watch]
+                            set_tooltip_text: if !model.supports_wifi_drivers {
+                                Some(labels::NO_WIFI_DRIVER_TT)
+                            } else {
+                                Some(labels::IWLWIFI_POWERSAVING_TT)
+                            },
                             add_binding: (&model.enable_power_save, "active"),
                             connect_active_notify => NetworkInput::Changed,
                         },
                         adw::SwitchRow {
                             set_title: labels::UAPSD_TITLE,
-                            set_tooltip_text: Some(labels::UAPSD_TT),
+                            #[watch]
+                            set_sensitive: model.supports_wifi_drivers,
+                            #[watch]
+                            set_tooltip_text: if !model.supports_wifi_drivers {
+                                Some(labels::NO_WIFI_DRIVER_TT)
+                            } else {
+                                Some(labels::UAPSD_TT)
+                            },
                             add_binding: (&model.enable_uapsd, "active"),
                             connect_active_notify => NetworkInput::Changed,
                         },
@@ -150,13 +198,27 @@ impl SimpleComponent for NetworkGroup {
                     adw::PreferencesGroup {
                         adw::SpinRow {
                             set_title: labels::WIFI_POWERLEVEL_TITLE,
-                            set_tooltip_text: Some(labels::WIFI_POWERLEVEL_TT),
+                            #[watch]
+                            set_sensitive: model.supports_wifi_drivers,
+                            #[watch]
+                            set_tooltip_text: if !model.supports_wifi_drivers {
+                                Some(labels::NO_WIFI_DRIVER_TT)
+                            } else {
+                                Some(labels::WIFI_POWERLEVEL_TT)
+                            },
                             add_binding: (&model.power_level, "adjustment"),
                             connect_value_notify => NetworkInput::Changed,
                         },
                         adw::SpinRow {
                             set_title: labels::WIFI_POWERSCHEME_TITLE,
-                            set_tooltip_text: Some(labels::WIFI_POWERSCHEME_TT),
+                            #[watch]
+                            set_sensitive: model.supports_wifi_drivers,
+                            #[watch]
+                            set_tooltip_text: if !model.supports_wifi_drivers {
+                                Some(labels::NO_WIFI_DRIVER_TT)
+                            } else {
+                                Some(labels::WIFI_POWERSCHEME_TT)
+                            },
                             add_binding: (&model.power_scheme, "adjustment"),
                             connect_value_notify => NetworkInput::Changed,
                         }
@@ -192,10 +254,18 @@ impl SimpleComponent for NetworkGroup {
                             self.last_network_settings = Some(self.to_network_settings());
                         }
                     }
+                    if let AppSyncUpdate::SystemInfo(ref system_info) = message {
+                        if let Some(system_info) = system_info.as_ref() {
+                            self.supports_ifconfig =
+                                system_info.opt_features_info.supports_ifconfig;
+                            self.supports_wifi_drivers =
+                                system_info.opt_features_info.supports_wifi_drivers;
+                        }
+                    }
                 }
                 RootRequest::ConfigureSystemInfoSync => system_info::set_system_info_sync(
-                    Duration::from_secs_f32(10.0),
-                    system_info::SystemInfoSyncType::None,
+                    Duration::from_secs_f32(15.0),
+                    system_info::SystemInfoSyncType::Opt,
                 ),
                 RootRequest::Apply => {
                     if !(self.settings_obtained && self.active_profile.is_some()) {

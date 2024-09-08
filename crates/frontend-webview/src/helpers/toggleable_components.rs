@@ -11,6 +11,7 @@ use power_daemon::WhiteBlackListType;
 pub fn ToggleableNumericField(
     name: String,
     tooltip: Option<String>,
+    disabled: Option<bool>,
     value: ToggleableInt,
 ) -> Element {
     rsx! {
@@ -39,14 +40,19 @@ pub fn ToggleableNumericField(
                     value.1.set(v.value().parse().unwrap_or_default());
                 },
                 value: "{value.1}",
-                disabled: !value.0.cloned()
+                disabled: !value.0.cloned() || disabled.unwrap_or_default()
             }
         }
     }
 }
 
 #[component]
-pub fn ToggleableTextField(name: String, value: ToggleableString) -> Element {
+pub fn ToggleableTextField(
+    name: String,
+    value: ToggleableString,
+    disabled: Option<bool>,
+    tooltip: Option<String>,
+) -> Element {
     rsx! {
         div {
             input {
@@ -58,13 +64,22 @@ pub fn ToggleableTextField(name: String, value: ToggleableString) -> Element {
             }
             label { "{name}" }
         }
-        input {
-            r#type: "text",
-            onchange: move |v| {
-                value.1.set(v.value());
-            },
-            value: "{value.1}",
-            disabled: !value.0.cloned()
+        div { class: "tooltip-parent",
+            if tooltip.is_some() {
+                span {
+                    class: "tooltip",
+                    class: TooltipDirection::Left.to_class_name(),
+                    "{tooltip.clone().unwrap()}"
+                }
+            }
+            input {
+                r#type: "text",
+                onchange: move |v| {
+                    value.1.set(v.value());
+                },
+                value: "{value.1}",
+                disabled: !value.0.cloned() || disabled.unwrap_or_default()
+            }
         }
     }
 }

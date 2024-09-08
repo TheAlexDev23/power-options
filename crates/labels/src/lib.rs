@@ -64,3 +64,10 @@ pub const ASPM_UNSUPPORTED_TT: &str = "Your system does not PCIe Active State Po
 
 pub const SATA_ACTIVE_LINK_TITLE: &str = "Set SATA Active Link Power Management";
 pub const SATA_ACTIVE_LINK_TT: &str = "SATA Active Link PM is a feature of the SATA Protocol which allows different performance to powersaving rates. med_power_with_dipm has been shown to save 1.0 to 1.5 watts and is enabled by default on most linux distributions. Be careful with min_power, it could cause data loss.";
+
+pub const NO_IFCONFIG_TT: &str =
+    "This option requires ifconfig. Install net-tools with you system's package manager.";
+pub const NO_WIFI_DRIVER_TT: &str = "This option is unsupported for you network card and/or driver. Only Intel WiFi cards with the iwlwifi module, and iwldvm/iwlmvm firmware modules are supported.";
+pub const NO_XRANDR_TT: &str = "This option requires xrandr to be installed in your system. Install xorg-xrandr with you system's package manager.";
+pub const NO_BRIGHTNESSCTL_TT: &str =
+    "This option requires brightnessctl to be installed in your system. Install brightnessctl with your system's package manager.";

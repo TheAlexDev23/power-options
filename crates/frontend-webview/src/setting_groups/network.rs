@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use dioxus::prelude::*;
-use power_daemon::{NetworkSettings, ProfilesInfo, ReducedUpdate};
+use power_daemon::{NetworkSettings, ProfilesInfo, ReducedUpdate, SystemInfo};
 
 use crate::communication_services::{
     control_routine_send_multiple, ControlAction, ControlRoutine, SystemInfoRoutine,
@@ -52,12 +52,13 @@ impl NetworkForm {
 #[component]
 pub fn NetworkGroup(
     profiles_info: Signal<Option<ProfilesInfo>>,
+    system_info: Signal<Option<SystemInfo>>,
     system_info_routine: SystemInfoRoutine,
     control_routine: ControlRoutine,
 ) -> Element {
-    system_info_routine.send((Duration::from_secs_f32(15.0), SystemInfoSyncType::None));
+    system_info_routine.send((Duration::from_secs_f32(15.0), SystemInfoSyncType::Opt));
 
-    if profiles_info().is_none() {
+    if profiles_info().is_none() || system_info().is_none() {
         return rsx! { "Connecting to the daemon.." };
     }
 
@@ -121,60 +122,70 @@ pub fn NetworkGroup(
                 onsubmit();
                 changed.set(false);
             },
+
             div { class: "option-group",
                 div { class: "option",
                     ToggleableToggle {
                         name: labels::DIS_ETH_TITLE,
-                        toggle_tooltip: labels::DIS_ETH_TT,
+                        toggle_tooltip: if !system_info().unwrap().opt_features_info.supports_ifconfig {
+                            labels::NO_IFCONFIG_TT
+                        } else {
+                            labels::DIS_ETH_TT
+                        },
+                        disabled: !system_info().unwrap().opt_features_info.supports_ifconfig,
                         value: form.disable_ethernet
                     }
                 }
             }
 
-            div { class: "option-group",
-                div { class: "option",
-                    ToggleableToggle { name: "Disable WiFi 7", value: form.disable_wifi_7 }
+            if system_info().unwrap().opt_features_info.supports_wifi_drivers {
+                div { class: "option-group",
+                    div { class: "option",
+                        ToggleableToggle { name: "Disable WiFi 7", value: form.disable_wifi_7 }
+                    }
+                    div { class: "option",
+                        ToggleableToggle { name: "Disable WiFi 6", value: form.disable_wifi_6 }
+                    }
+                    div { class: "option",
+                        ToggleableToggle { name: "Disable WiFi 5", value: form.disable_wifi_5 }
+                    }
                 }
-                div { class: "option",
-                    ToggleableToggle { name: "Disable WiFi 6", value: form.disable_wifi_6 }
-                }
-                div { class: "option",
-                    ToggleableToggle { name: "Disable WiFi 5", value: form.disable_wifi_5 }
-                }
-            }
 
-            div { class: "option-group",
-                div { class: "option",
-                    ToggleableToggle {
-                        name: labels::IWLWIFI_POWERSAVING_TITLE,
-                        toggle_tooltip: labels::IWLWIFI_POWERSAVING_TT,
-                        value: form.enable_power_save
+                div { class: "option-group",
+                    div { class: "option",
+                        ToggleableToggle {
+                            name: labels::IWLWIFI_POWERSAVING_TITLE,
+                            toggle_tooltip: labels::IWLWIFI_POWERSAVING_TT,
+                            value: form.enable_power_save
+                        }
+                    }
+                    div { class: "option",
+                        ToggleableToggle {
+                            name: labels::UAPSD_TITLE,
+                            toggle_tooltip: labels::UAPSD_TT,
+                            value: form.enable_uapsd
+                        }
                     }
                 }
-                div { class: "option",
-                    ToggleableToggle {
-                        name: labels::UAPSD_TITLE,
-                        toggle_tooltip: labels::UAPSD_TT,
-                        value: form.enable_uapsd
-                    }
-                }
-            }
 
-            div { class: "option-group",
-                div { class: "option",
-                    ToggleableNumericField {
-                        name: labels::WIFI_POWERLEVEL_TITLE,
-                        tooltip: labels::WIFI_POWERLEVEL_TT,
-                        value: form.power_level
+                div { class: "option-group",
+                    div { class: "option",
+                        ToggleableNumericField {
+                            name: labels::WIFI_POWERLEVEL_TITLE,
+                            tooltip: labels::WIFI_POWERLEVEL_TT,
+                            value: form.power_level
+                        }
+                    }
+                    div { class: "option",
+                        ToggleableNumericField {
+                            name: labels::WIFI_POWERSCHEME_TITLE,
+                            tooltip: labels::WIFI_POWERSCHEME_TT,
+                            value: form.power_scheme
+                        }
                     }
                 }
-                div { class: "option",
-                    ToggleableNumericField {
-                        name: labels::WIFI_POWERSCHEME_TITLE,
-                        tooltip: labels::WIFI_POWERSCHEME_TT,
-                        value: form.power_scheme
-                    }
-                }
+            } else {
+                p { "{labels::NO_WIFI_DRIVER_TT}" }
             }
 
             div { class: "confirm-buttons",
@@ -195,7 +206,6 @@ pub fn NetworkGroup(
                     value: "Cancel"
                 }
             }
-
             br {}
             br {}
             br {}

@@ -5,8 +5,8 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 use crate::helpers::{
-    file_content_to_bool, file_content_to_list, file_content_to_string, file_content_to_u32,
-    run_command_with_output,
+    command_exists, file_content_to_bool, file_content_to_list, file_content_to_string,
+    file_content_to_u32, run_command_with_output,
 };
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -15,6 +15,7 @@ pub struct SystemInfo {
     pub pci_info: PCIInfo,
     pub usb_info: USBInfo,
     pub sata_info: SATAInfo,
+    pub opt_features_info: OptionalFeaturesInfo,
 }
 
 impl SystemInfo {
@@ -26,6 +27,7 @@ impl SystemInfo {
             pci_info: PCIInfo::obtain(),
             usb_info: USBInfo::obtain(),
             sata_info: SATAInfo::obtain(),
+            opt_features_info: OptionalFeaturesInfo::obtain(),
         }
     }
 }
@@ -471,6 +473,27 @@ impl SATAInfo {
                 .expect("Could not read sysfs dir")
                 .filter_map(Result::ok)
                 .count() as u32,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct OptionalFeaturesInfo {
+    pub supports_wifi_drivers: bool,
+    pub supports_ifconfig: bool,
+    pub supports_xrandr: bool,
+    pub supports_brightnessctl: bool,
+}
+
+impl OptionalFeaturesInfo {
+    pub fn obtain() -> OptionalFeaturesInfo {
+        OptionalFeaturesInfo {
+            supports_wifi_drivers: fs::metadata("/sys/module/iwlwifi").is_ok()
+                && (fs::metadata("/sys/module/iwlmvm").is_ok()
+                    || fs::metadata("/sys/module/iwldvm").is_ok()),
+            supports_ifconfig: command_exists("ifconfig"),
+            supports_xrandr: command_exists("xrandr"),
+            supports_brightnessctl: command_exists("brightnessctl"),
         }
     }
 }

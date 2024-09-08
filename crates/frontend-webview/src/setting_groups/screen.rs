@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use dioxus::prelude::*;
-use power_daemon::{ProfilesInfo, ReducedUpdate, ScreenSettings};
+use power_daemon::{ProfilesInfo, ReducedUpdate, ScreenSettings, SystemInfo};
 
 use crate::communication_services::{
     control_routine_send_multiple, ControlAction, ControlRoutine, SystemInfoRoutine,
@@ -34,12 +34,13 @@ impl ScreenForm {
 #[component]
 pub fn ScreenGroup(
     profiles_info: Signal<Option<ProfilesInfo>>,
+    system_info: Signal<Option<SystemInfo>>,
     system_info_routine: SystemInfoRoutine,
     control_routine: ControlRoutine,
 ) -> Element {
-    system_info_routine.send((Duration::from_secs_f32(15.0), SystemInfoSyncType::None));
+    system_info_routine.send((Duration::from_secs_f32(15.0), SystemInfoSyncType::Opt));
 
-    if profiles_info().is_none() {
+    if profiles_info().is_none() || system_info().is_none() {
         return rsx! { "Connecting to the daemon..." };
     }
 
@@ -98,15 +99,42 @@ pub fn ScreenGroup(
 
             div { class: "option-group",
                 div { class: "option",
-                    ToggleableNumericField { name: "Set brightness percentage", value: form.brightness }
+                    ToggleableNumericField {
+                        name: "Set brightness percentage",
+                        value: form.brightness,
+                        disabled: !system_info().unwrap().opt_features_info.supports_brightnessctl,
+                        tooltip: if !system_info().unwrap().opt_features_info.supports_brightnessctl {
+                            Some(labels::NO_BRIGHTNESSCTL_TT.to_string())
+                        } else {
+                            None
+                        }
+                    }
                 }
             }
             div { class: "option-group",
                 div { class: "option",
-                    ToggleableTextField { name: "Set resolution", value: form.resolution }
+                    ToggleableTextField {
+                        name: "Set resolution",
+                        value: form.resolution,
+                        disabled: !system_info().unwrap().opt_features_info.supports_xrandr,
+                        tooltip: if !system_info().unwrap().opt_features_info.supports_xrandr {
+                            Some(labels::NO_XRANDR_TT.to_string())
+                        } else {
+                            None
+                        }
+                    }
                 }
                 div { class: "option",
-                    ToggleableTextField { name: "Set refresh rate", value: form.refresh_rate }
+                    ToggleableTextField {
+                        name: "Set refresh rate",
+                        value: form.refresh_rate,
+                        disabled: !system_info().unwrap().opt_features_info.supports_xrandr,
+                        tooltip: if !system_info().unwrap().opt_features_info.supports_xrandr {
+                            Some(labels::NO_XRANDR_TT.to_string())
+                        } else {
+                            None
+                        }
+                    }
                 }
             }
 

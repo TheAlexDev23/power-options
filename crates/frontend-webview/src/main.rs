@@ -281,11 +281,21 @@ fn SettingGroup(
                     system_info_routine
                 }
             } else if current_tab_val == 1 {
-                ScreenGroup { profiles_info, control_routine, system_info_routine }
+                ScreenGroup {
+                    profiles_info,
+                    system_info,
+                    control_routine,
+                    system_info_routine
+                }
             } else if current_tab_val == 2 {
                 RadioGroup { profiles_info, control_routine, system_info_routine }
             } else if current_tab_val == 3 {
-                NetworkGroup { profiles_info, control_routine, system_info_routine }
+                NetworkGroup {
+                    profiles_info,
+                    system_info,
+                    control_routine,
+                    system_info_routine
+                }
             } else if current_tab_val == 4 {
                 PCIAndASPMGroup {
                     system_info,

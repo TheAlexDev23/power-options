@@ -6,6 +6,7 @@ use std::time::Duration;
 use gtk::glib::clone;
 
 use adw::prelude::*;
+use power_daemon::OptionalFeaturesInfo;
 use relm4::loading_widgets::LoadingWidgets;
 use relm4::prelude::*;
 use relm4::Controller;
@@ -574,7 +575,7 @@ pub async fn remove_all_none_options() -> bool {
         // those will be updated on demand by the component.
 
         default_radio_settings(&mut profile.radio_settings);
-        default_network_settings(&mut profile.network_settings);
+        default_network_settings(&mut profile.network_settings, &info.opt_features_info);
         default_pci_settings(&mut profile.pci_settings);
         default_aspm_settings(&mut profile.aspm_settings, &info.pci_info.aspm_info);
         default_usb_settings(&mut profile.usb_settings);
@@ -643,30 +644,35 @@ fn default_radio_settings(settings: &mut RadioSettings) {
     }
 }
 
-fn default_network_settings(settings: &mut NetworkSettings) {
-    if settings.disable_ethernet.is_none() {
-        settings.disable_ethernet = false.into();
+fn default_network_settings(settings: &mut NetworkSettings, info: &OptionalFeaturesInfo) {
+    if info.supports_ifconfig {
+        if settings.disable_ethernet.is_none() {
+            settings.disable_ethernet = false.into();
+        }
     }
-    if settings.disable_wifi_7.is_none() {
-        settings.disable_wifi_7 = false.into();
-    }
-    if settings.disable_wifi_6.is_none() {
-        settings.disable_wifi_6 = false.into();
-    }
-    if settings.disable_wifi_5.is_none() {
-        settings.disable_wifi_5 = false.into();
-    }
-    if settings.enable_power_save.is_none() {
-        settings.enable_power_save = false.into();
-    }
-    if settings.enable_uapsd.is_none() {
-        settings.enable_uapsd = false.into();
-    }
-    if settings.power_level.is_none() {
-        settings.power_level = 2.into();
-    }
-    if settings.power_scheme.is_none() {
-        settings.power_scheme = 2.into();
+
+    if info.supports_wifi_drivers {
+        if settings.disable_wifi_7.is_none() {
+            settings.disable_wifi_7 = false.into();
+        }
+        if settings.disable_wifi_6.is_none() {
+            settings.disable_wifi_6 = false.into();
+        }
+        if settings.disable_wifi_5.is_none() {
+            settings.disable_wifi_5 = false.into();
+        }
+        if settings.enable_power_save.is_none() {
+            settings.enable_power_save = false.into();
+        }
+        if settings.enable_uapsd.is_none() {
+            settings.enable_uapsd = false.into();
+        }
+        if settings.power_level.is_none() {
+            settings.power_level = 2.into();
+        }
+        if settings.power_scheme.is_none() {
+            settings.power_scheme = 2.into();
+        }
     }
 }
 

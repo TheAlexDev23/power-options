@@ -5,7 +5,7 @@ use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    helpers::{file_content_to_string, run_command, WhiteBlackList},
+    helpers::{command_exists, file_content_to_string, run_command, WhiteBlackList},
     profiles_generator::{self, DefaultProfileType},
     ReducedUpdate, SystemInfo,
 };
@@ -401,13 +401,29 @@ impl ScreenSettings {
         );
 
         if let Some(ref resolution) = self.resolution {
-            run_command(&format!("xrandr --mode {}", resolution));
+            Self::try_run_xrandr(&format!("xrandr --mode {}", resolution));
         }
         if let Some(ref refresh_rate) = self.refresh_rate {
-            run_command(&format!("xrandr -r {}", refresh_rate));
+            Self::try_run_xrandr(&format!("xrandr -r {}", refresh_rate));
         }
         if let Some(brightness) = self.brightness {
-            run_command(&format!("brightnessctl s {}%", brightness));
+            Self::try_set_brightness(&format!("brightnessctl s {}%", brightness));
+        }
+    }
+
+    pub fn try_run_xrandr(command: &str) {
+        if command_exists("xrandr") {
+            run_command(command);
+        } else {
+            error!("xrandr is not present in the system. Ignoring settings utilizing it...");
+        }
+    }
+
+    pub fn try_set_brightness(command: &str) {
+        if command_exists("brightnessctl") {
+            run_command(command);
+        } else {
+            error!("brightnessctl is not present in the system. Install it if you want brightness configuration. Ignoring settings utilizing it...");
         }
     }
 }
@@ -484,6 +500,10 @@ impl NetworkSettings {
     }
 
     fn toggle_all_ethernet_cards(disable: bool) {
+        if !command_exists("ifconfig") {
+            error!("ifconfig is not present in the system, ignoring ethernet settings...");
+        }
+
         let entries = fs::read_dir("/sys/class/net").expect("Could not read sysfs path");
         let eth_pattern = regex::Regex::new(r"^(eth|enp|ens|eno)").unwrap();
 
@@ -519,7 +539,7 @@ impl NetworkSettings {
             debug!("Identified that the system uses iwldvm");
             false
         } else {
-            error!("Could not identify wifi firmware module. Expected either iwlmvm or iwldvm, neither found. Ignoring network kernel module settings...");
+            error!("Could not identify spuported wifi firmware module. Expected either iwlmvm or iwldvm, neither found. Ignoring network kernel module settings...");
             return;
         };
 

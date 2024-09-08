@@ -60,6 +60,13 @@ impl WhiteBlackListType {
     }
 }
 
+pub fn command_exists(command: &str) -> bool {
+    Command::new("which")
+        .arg(command)
+        .output()
+        .map_or(false, |output| output.status.success())
+}
+
 pub fn run_command(command: &str) {
     debug!("running: {command}");
     let output = Command::new("zsh")
