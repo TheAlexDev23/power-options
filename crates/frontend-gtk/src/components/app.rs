@@ -645,10 +645,8 @@ fn default_radio_settings(settings: &mut RadioSettings) {
 }
 
 fn default_network_settings(settings: &mut NetworkSettings, info: &OptionalFeaturesInfo) {
-    if info.supports_ifconfig {
-        if settings.disable_ethernet.is_none() {
-            settings.disable_ethernet = false.into();
-        }
+    if info.supports_ifconfig && settings.disable_ethernet.is_none() {
+        settings.disable_ethernet = false.into();
     }
 
     if info.supports_wifi_drivers {
