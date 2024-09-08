@@ -31,13 +31,27 @@ jobs:
                 fetch-depth: 0
 
             - name: Generate PKGBUILDs
-              run: python ./ci/gen_daemon_pkgbuild.py
+              run: |
+                python ./ci/gen_daemon_pkgbuild.py
+                python ./ci/gen_gtk_pkgbuild.py
 
             - name: Publish power-options-daemon to the AUR
               uses: KSXGitHub/github-actions-deploy-aur@v3.0.1
               with:
                 pkgname: power-options-daemon
                 pkgbuild: ./pkgbuilds/daemon/PKGBUILD
+                updpkgsums: true
+                commit_username: ${{ secrets.AUR_USERNAME }}
+                commit_email: ${{ secrets.AUR_EMAIL }}
+                ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+                commit_message: "Automated update on GitHub release"
+                force_push: 'true'
+            - name: Publish power-options-gtk to the AUR
+              uses: KSXGitHub/github-actions-deploy-aur@v3.0.1
+              with:
+                pkgname: power-options-gtk
+                pkgbuild: ./pkgbuilds/gtk/PKGBUILD
+                updpkgsums: true
                 commit_username: ${{ secrets.AUR_USERNAME }}
                 commit_email: ${{ secrets.AUR_EMAIL }}
                 ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
