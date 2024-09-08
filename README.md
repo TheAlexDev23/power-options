@@ -79,6 +79,11 @@ Power Option includes the following features:
 ## Installation
 
 - GTK: 
+
+Arch Linux has an AUR package: `yay -S power-options-gtk`
+
+Or for bleeding edge: `yay -S power-options-gtk-git`
+
 ```bash
 git clone https://github.com/TheAlexDev23/power-options/ --depth=1
 cd power-options
@@ -99,6 +104,11 @@ chmod +x ./install-webview.sh
 ```
 
 - Just the daemon:
+
+Arch Linux has an AUR package: `yay -S power-options-daemon`
+
+Or for bleeding edge: `yay -S power-options-daemon-git`
+
 ```bash
 git clone https://github.com/TheAlexDev23/power-options/ --depth=1
 cd power-options
