@@ -24,7 +24,7 @@ arch=('x86_64')
 url={url}
 license=('MIT')
 
-depends=('power-options-daemon' 'libadwaita' 'yad')
+depends=('power-options-daemon-git' 'libadwaita' 'yad')
 makedepends=('cargo' 'git')
 
 provides=('power-options-gtk')
