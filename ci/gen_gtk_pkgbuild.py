@@ -18,9 +18,13 @@ pkgdesc="A gtk frontend for Power Options, a blazingly fast power management sol
 arch=('x86_64')
 url={url}
 license=('MIT')
-conflicts=('power-options-gtk-git')
-depends=('power-options-daemon-git')
+
+depends=('power-options-daemon' 'libadwaita' 'yad')
 makedepends=('cargo')
+
+provides=('power-options-gtk')
+conflicts=('power-options-gtk-git' 'tlp' 'auto-cpufreq' 'power-profiles-daemon' 'cpupower-gui')
+
 source=("$pkgname-$pkgver.tar.gz::{url}/archive/v$pkgver.tar.gz")
 sha256sums=('SKIP')
 

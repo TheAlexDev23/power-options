@@ -18,10 +18,14 @@ pkgdesc="The core daemon for Power Options, a blazingly fast power management so
 arch=('x86_64')
 url="{url}"
 license=('MIT')
+
 depends=('acpid' 'zsh' 'pciutils' 'usbutils')
 optdepends=('xorg-xrandr: needed for screen settings' 'brightnessctl: needed for brightness settings' 'net-tools: needed to disable ethernet cards')
 makedepends=('cargo')
+
+provides=('power-options-daemon')
 conflicts=('power-options-daemon-git')
+
 source=("$pkgname-$pkgver.tar.gz::{url}/archive/v$pkgver.tar.gz")
 sha256sums=('SKIP')
 
