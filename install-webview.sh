@@ -13,7 +13,7 @@ popd
 sudo cp -f target/release/power-daemon-mgr /usr/bin/
 sudo cp -f dist/bundle/deb/frontend_*_amd64/data/usr/bin/frontend-webview /usr/bin/power-options-webview
 
-sudo target/release/power-daemon-mgr -v generate-files --path / --program-path /usr/bin/power-daemon-mgr
+sudo target/release/power-daemon-mgr -v generate-base-files --path / --program-path /usr/bin/power-daemon-mgr
 
 sudo systemctl restart acpid
 sudo systemctl daemon-reload

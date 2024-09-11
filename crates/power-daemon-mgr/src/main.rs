@@ -5,7 +5,7 @@ use clap::{Parser, Subcommand};
 use clap_verbosity_flag::{InfoLevel, Verbosity};
 
 use colored::Colorize;
-use log::{debug, error, trace, Level, Log, Metadata, Record};
+use log::{debug, error, info, trace, Level, Log, Metadata, Record};
 use nix::unistd::Uid;
 
 use power_daemon::{
@@ -27,7 +27,7 @@ struct Args {
 
 #[derive(Debug, Clone, Subcommand)]
 enum OpMode {
-    GenerateFiles {
+    GenerateBaseFiles {
         #[arg(long)]
         path: PathBuf,
         /// Path of the executable for this program
@@ -36,6 +36,14 @@ enum OpMode {
         /// Make sure the daemon starts with maximum verbosity
         #[arg(long, action=clap::ArgAction::SetTrue)]
         verbose_daemon: bool,
+    },
+    GenerateConfigFiles {
+        #[arg(long)]
+        path: PathBuf,
+        #[arg(long, action=clap::ArgAction::SetTrue)]
+        config_only: bool,
+        #[arg(long, action=clap::ArgAction::SetTrue)]
+        profiles_only: bool,
     },
     Daemon,
     RefreshFull,
@@ -75,6 +83,9 @@ impl Log for StdoutLogger {
     fn flush(&self) {}
 }
 
+pub const CONFIG_FILE: &str = "/etc/power-options/config.toml";
+pub const PROFILES_DIRECTORY: &str = "/etc/power-options/profiles";
+
 #[tokio::main]
 async fn main() {
     let args = Args::parse();
@@ -83,12 +94,67 @@ async fn main() {
     log::set_max_level(args.verbose.log_level_filter());
 
     match args.mode {
-        OpMode::Daemon => daemon().await,
-        OpMode::GenerateFiles {
+        OpMode::Daemon => {
+            let missing_config = fs::metadata(CONFIG_FILE).is_err();
+
+            let missing_profiles = if let Ok(dir) = fs::read_dir(PROFILES_DIRECTORY) {
+                dir.flatten().count() == 0
+            } else {
+                true
+            };
+
+            debug!("Config missing: {missing_config}; Profiles missing: {missing_profiles}");
+
+            if missing_config || missing_profiles {
+                info!("Either missing config or missing profiles were detected. Generating them now...");
+
+                let mut args = vec!["generate-config-files", "--path", "/"];
+                if missing_config ^ missing_profiles {
+                    if missing_config {
+                        args.push("--config-only")
+                    } else {
+                        args.push("--profiles-only")
+                    }
+                }
+
+                let out = std::process::Command::new(
+                    std::env::current_exe()
+                        .unwrap()
+                        .to_string_lossy()
+                        .into_owned(),
+                )
+                .args(&args)
+                .output()
+                .expect("Failed to execute self");
+
+                if !out.status.success() {
+                    error!(
+                        "Issue while attempting to generate config/profiles. Exited without success: {:?}",
+                        out.status
+                    );
+                    std::process::exit(-1);
+                }
+            }
+
+            daemon().await
+        }
+        OpMode::GenerateBaseFiles {
             path,
             program_path,
             verbose_daemon,
-        } => generate_files(path, program_path, verbose_daemon),
+        } => generate_base_files(path, program_path, verbose_daemon),
+        OpMode::GenerateConfigFiles {
+            path,
+            mut config_only,
+            mut profiles_only,
+        } => {
+            if !config_only && !profiles_only {
+                config_only = true;
+                profiles_only = true;
+            }
+
+            generate_config_files(path, config_only, profiles_only);
+        }
         OpMode::RefreshFull => refresh_full().await,
         OpMode::RefreshUSB => refresh_reduced(ReducedUpdate::USB).await,
         OpMode::RefreshPCI => {
@@ -100,9 +166,6 @@ async fn main() {
         }
     }
 }
-
-pub const CONFIG_FILE: &str = "/etc/power-options/config.toml";
-pub const PROFILES_DIRECTORY: &str = "/etc/power-options/profiles";
 
 async fn daemon() {
     // From now on, we are the daemon
@@ -130,9 +193,16 @@ async fn daemon() {
     }
 }
 
-fn generate_files(path: PathBuf, program_path: PathBuf, verbose_daemon: bool) {
-    generate_config(&path);
-    generate_profiles(&path);
+fn generate_config_files(path: PathBuf, config: bool, profiles: bool) {
+    if config {
+        generate_config(&path);
+    }
+    if profiles {
+        generate_profiles(&path);
+    }
+}
+
+fn generate_base_files(path: PathBuf, program_path: PathBuf, verbose_daemon: bool) {
     generate_udev_file(&path, &program_path);
     generate_acpi_file(&path, &program_path);
     generate_dbus_file(&path);

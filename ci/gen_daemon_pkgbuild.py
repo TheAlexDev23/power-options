@@ -47,7 +47,7 @@ package() {{
   install -Dm755 "target/release/power-daemon-mgr" "$pkgdir/usr/bin/power-daemon-mgr"
 
   # Generate files
-  "$pkgdir/usr/bin/power-daemon-mgr" -v generate-files --path "$pkgdir" --program-path "/usr/bin/power-daemon-mgr"
+  "$pkgdir/usr/bin/power-daemon-mgr" -v generate-base-files --path "$pkgdir" --program-path "/usr/bin/power-daemon-mgr"
 }}
 
 post_install() {{

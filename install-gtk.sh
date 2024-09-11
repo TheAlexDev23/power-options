@@ -13,7 +13,7 @@ popd
 sudo cp -f target/release/power-daemon-mgr /usr/bin/
 sudo cp -f target/release/frontend-gtk /usr/bin/power-options-gtk
 
-sudo target/release/power-daemon-mgr -v generate-files --path / --program-path /usr/bin/power-daemon-mgr
+sudo target/release/power-daemon-mgr -v generate-base-files --path / --program-path /usr/bin/power-daemon-mgr
 
 sudo systemctl restart acpid
 sudo systemctl daemon-reload
