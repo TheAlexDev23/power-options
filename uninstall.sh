@@ -26,7 +26,13 @@ remove_files_and_dirs() {
 
     # Remove daemon binaries
     echo "Removing executables..."
-    rm -f /usr/bin/power-daemon-*
+    rm -f /usr/bin/power-daemon-mgr
+    if [ -d "/usr/bin/power-options-gtk" ]; then
+        rm -f /usr/bin/power-options-gtk
+    fi
+    if [ -d "/usr/bin/power-options-webview" ]; then
+        rm -f /usr/bin/power-options-webview
+    fi
 
     # Remove additional files
     echo "Removing additional configuration files..."
