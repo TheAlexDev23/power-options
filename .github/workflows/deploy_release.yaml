@@ -34,6 +34,7 @@ jobs:
               run: |
                 python ./ci/gen_daemon_pkgbuild.py
                 python ./ci/gen_gtk_pkgbuild.py
+                python ./ci/gen_webview_pkgbuild.py
 
             - name: Publish power-options-daemon to the AUR
               uses: KSXGitHub/github-actions-deploy-aur@v3.0.1
@@ -51,6 +52,17 @@ jobs:
               with:
                 pkgname: power-options-gtk
                 pkgbuild: ./pkgbuilds/gtk/PKGBUILD
+                updpkgsums: true
+                commit_username: ${{ secrets.AUR_USERNAME }}
+                commit_email: ${{ secrets.AUR_EMAIL }}
+                ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+                commit_message: "Automated update on GitHub release"
+                force_push: 'true'
+            - name: Publish power-options-webview to the AUR
+              uses: KSXGitHub/github-actions-deploy-aur@v3.0.1
+              with:
+                pkgname: power-options-webview
+                pkgbuild: ./pkgbuilds/webview/PKGBUILD
                 updpkgsums: true
                 commit_username: ${{ secrets.AUR_USERNAME }}
                 commit_email: ${{ secrets.AUR_EMAIL }}
