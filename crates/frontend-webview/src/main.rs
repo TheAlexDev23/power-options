@@ -25,6 +25,19 @@ use power_daemon::{ProfilesInfo, SystemInfo};
 use tracing::Level;
 
 fn main() {
+    const PROPER_PATH: &str = "/usr/lib/power-options-webview";
+    if std::env::current_dir().unwrap().display().to_string() != PROPER_PATH {
+        println!("flags: {:?}", std::env::args().collect::<Vec<_>>());
+        let no_change_dir = std::env::args().any(|p| p == "--no-change-dir");
+
+        if !no_change_dir {
+            println!("Program was not run in {PROPER_PATH}. Rerunning under proper directory...");
+            println!("If you want to prevent this behaviour pass in the --no-change-dir flag");
+
+            std::env::set_current_dir(PROPER_PATH).expect("Could not change path");
+        }
+    }
+
     // Init logger
     dioxus_logger::init(Level::INFO).expect("failed to init logger");
 

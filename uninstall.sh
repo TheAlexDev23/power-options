@@ -33,6 +33,10 @@ remove_files_and_dirs() {
     if [ -d "/usr/bin/power-options-webview" ]; then
         rm -f /usr/bin/power-options-webview
     fi
+    
+    if [ -d "/usr/lib/power-options-webview" ]; then
+        rm -rf /usr/lib/power-options-webview
+    fi
 
     # Remove additional files
     echo "Removing additional configuration files..."

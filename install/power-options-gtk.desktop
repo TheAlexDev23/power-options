@@ -2,7 +2,7 @@
 Name=Power Options Gtk
 Comment=GTK Frontend for the Power Options daemon
 Exec=power-options-gtk
-Icon=power-options
+Icon=power-options-gtk
 Terminal=false
 Type=Application
 Categories=Utility;Settings;

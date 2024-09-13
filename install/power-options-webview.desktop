@@ -2,7 +2,7 @@
 Name=Power Options Webview
 Comment=Webivew Frontend for the Power Options daemon
 Exec=power-options-webview
-Icon=power-options
+Icon=power-options-webview
 Terminal=false
 Type=Application
 Categories=Utility;Settings;

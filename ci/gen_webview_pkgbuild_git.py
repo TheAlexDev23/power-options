@@ -19,52 +19,51 @@ def create_pkgbuild(pkgname, pkgver, url):
 pkgname={pkgname}
 pkgver={pkgver}
 pkgrel=1
-pkgdesc="A gtk frontend for Power Options, a blazingly fast power management solution."
+pkgdesc="A Web Renderer frontend for Power Options, a blazingly fast power management solution."
 arch=('x86_64')
 url={url}
 license=('MIT')
 
-depends=('power-options-daemon-git' 'libadwaita' 'yad')
-makedepends=('cargo' 'git')
+depends=('power-options-daemon-git')
+makedepends=('cargo' 'dioxus-cli' 'git')
 
-provides=('power-options-gtk')
-conflicts=('power-options-gtk' 'tlp' 'auto-cpufreq' 'power-profiles-daemon' 'cpupower-gui')
+provides=('power-options-webview')
+conflicts=('power-options-webview')
 
 source=("git+https://github.com/thealexdev23/power-options.git")
 sha256sums=('SKIP')
 
-prepare() {{
-  export RUSTUP_TOOLCHAIN=stable
-  cd "$srcdir/power-options/crates/frontend-gtk"
-  cargo fetch --target "$(rustc -vV | sed -n 's/host: //p')"
-}}
-
 build() {{
   export RUSTUP_TOOLCHAIN=stable
-  cd "$srcdir/power-options/crates/frontend-gtk"
-  cargo build --frozen --release
+  cd "$srcdir/power-options/crates/frontend-webview"
+  dx build --release
 }}
 
 package() {{
   cd "$srcdir/power-options"
 
-  install -Dm755 "target/release/frontend-gtk" "$pkgdir/usr/bin/power-options-gtk"
-  install -Dm755 "icon.png" "$pkgdir/usr/share/icons/power-options-gtk.png"
-  install -Dm755 "install/power-options-gtk.desktop" "$pkgdir/usr/share/applications/power-options-gtk.desktop"
+  install -Dm755 "target/release/frontend" "$pkgdir/usr/bin/power-options-webview"
+
+  mkdir -p "$pkgdir/usr/lib/power-options-webview/"
+  cp -r "crates/frontend-webview/assets" "$pkgdir/usr/lib/power-options-webview/"
+
+  install -Dm755 "icon.png" "$pkgdir/usr/share/icons/power-options-webview.png"
+
+  install -Dm755 "install/power-options-webview.desktop" "$pkgdir/usr/share/applications/power-options-webview.desktop"
 }}
 """
     return pkgbuild_content
 
 def main():
-    pkgname = "power-options-gtk-git"
+    pkgname = "power-options-webview-git"
     pkgver = get_version()
     url = "https://github.com/thealexdev23/power-options"
 
     pkgbuild_content = create_pkgbuild(pkgname, pkgver, url)
 
-    os.makedirs('./pkgbuilds/gtk-git', exist_ok=True)
+    os.makedirs('./pkgbuilds/webview-git', exist_ok=True)
 
-    with open('./pkgbuilds/gtk-git/PKGBUILD', 'w') as file:
+    with open('./pkgbuilds/webview-git/PKGBUILD', 'w') as file:
         file.write(pkgbuild_content)
 
 if __name__ == "__main__":
