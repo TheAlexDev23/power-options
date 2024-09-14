@@ -5,6 +5,8 @@
     </h1>
 </div>
 
+[Discord Server](https://discord.gg/KyZt97MvdU)
+
 All-In-One blazingly fast Linux GUI Application for simple and advanced power
 management on any device.
 
@@ -24,6 +26,7 @@ led to the creation of the profile system that this program uses:
 - The user can temporarily override the profile selection to another one until
   they remove that override.
 - The user may set a persistent override that will be kept across reboots.
+
 
 ## Available Frontends/Interfaces
 
