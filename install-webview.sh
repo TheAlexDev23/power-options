@@ -26,3 +26,5 @@ sudo systemctl start power-options
 sudo cp -f icon.png /usr/share/icons/power-options.png
 
 sudo cp -f install/power-options-webview.desktop /usr/share/applications/
+
+echo "If you see D-Bus related issues, please restart your system."

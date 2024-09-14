@@ -68,7 +68,13 @@ fn set_panic_dialog() {
     std::panic::set_hook(Box::new(|info| {
         let secondary_message = info.to_string();
 
-        log::error!("App panicked with message: {secondary_message}");
+        let message = 
+                format!("<b>Unexpected error occurred</b> 
+                    \n- Please make sure that the power-options daemon is running.
+                    \n- If this is your first time running the app since installing you might need to reboot.
+                    \nFull panic message:\n{secondary_message}");
+
+        log::error!("{message}");
         log::info!("Spawning panic dialog.");
 
         let _ = std::process::Command::new("yad")
@@ -79,7 +85,7 @@ fn set_panic_dialog() {
                 "--title",
                 "Unexpected Panic",
                 "--text",
-                &format!("<b>Unexpected error occurred, please make sure that the power-options daemon is running.</b>\nFull panic message:\n{secondary_message}"),
+                &message
             ])
             .spawn();
     }));
