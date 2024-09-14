@@ -88,8 +88,8 @@ AUR: `power-options-gtk` or `power-options-gtk-git` for bleeding edge
 
 ```bash
 git clone https://github.com/TheAlexDev23/power-options/ --depth=1
-cd power-options
-chmod +x ./install-gtk.sh
+cd power-options/scripts
+chmod +x *.sh
 # Run as local user, will require sudo password
 ./install-gtk.sh
 ```
@@ -102,8 +102,8 @@ AUR: `power-options-webview` or `power-options-webview-git` for bleeding edge
 # dioxus-cli is required
 cargo install dioxus-cli
 git clone https://github.com/TheAlexDev23/power-options/ --depth=1
-cd power-options
-chmod +x ./install-webview.sh
+cd power-options/scripts
+chmod +x *.sh
 # Run as local user, will require sudo password
 ./install-webview.sh
 ```
@@ -114,10 +114,10 @@ AUR: `power-options-daemon` or `power-options-daemon-git` for bleeding edge
 
 ```bash
 git clone https://github.com/TheAlexDev23/power-options/ --depth=1
-cd power-options
-chmod +x ./install-webview.sh
+cd power-options/scripts
+chmod +x *.sh
 # Run as local user, will require sudo password
-./install-daemon-only.sh
+./install-daemon.sh
 ```
 
 ## Dependencies
@@ -141,6 +141,16 @@ Webview frontend:
 GTK frontend:
 - yad
 - libadwaita
+
+## Updating 
+
+If you've installed using the AUR, your package manager should handle the
+updates.
+
+If you've installed using install scripts, simply pull the latest changes and
+re-run the install scripts again. **Important, do not run ./uninstall.sh if you
+want to keep your profiles**
+
 
 ## Limitations
 - Network configuration only works on intel cards and cards that use iwlwifi
