@@ -617,7 +617,7 @@ impl ASPMSettings {
 pub struct PCISettings {
     pub enable_power_management: Option<bool>,
     // whitelist or blacklist device to exlude/include.
-    // Should be the name of the device under /sys/bus/pci/devices excluding the beggining 0000:
+    // Should be the name of the device under /sys/bus/pci/devices
     pub whiteblacklist: Option<WhiteBlackList>,
 }
 
@@ -638,17 +638,9 @@ impl PCISettings {
             let entry = entry.expect("Could not read sysfs entry");
             let path = entry.path();
 
-            let device_name = path
-                .file_name()
-                .unwrap()
-                .to_str()
-                .unwrap()
-                .strip_prefix("0000:")
-                .unwrap();
-
             let enable_pm = WhiteBlackList::should_enable_item(
                 &self.whiteblacklist,
-                device_name,
+                path.file_name().unwrap().to_str().unwrap(),
                 self.enable_power_management.unwrap(),
             );
 

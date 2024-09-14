@@ -392,13 +392,7 @@ impl PCIInfo {
             ))
             .0;
 
-            let pci_address = device
-                .file_name()
-                .into_string()
-                .unwrap()
-                .strip_prefix("0000:")
-                .unwrap()
-                .to_string();
+            let pci_address = device.file_name().into_string().unwrap();
 
             pci_devices.push(PCIDeviceInfo {
                 display_name,
