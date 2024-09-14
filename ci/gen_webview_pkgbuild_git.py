@@ -24,7 +24,7 @@ arch=('x86_64')
 url={url}
 license=('MIT')
 
-depends=('power-options-daemon-git')
+depends=('power-options-daemon-git' 'webkit2gtk')
 makedepends=('cargo' 'dioxus-cli' 'git')
 
 provides=('power-options-webview')
