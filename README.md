@@ -78,11 +78,10 @@ Power Option includes the following features:
 
 ## Installation
 
+
 - GTK: 
 
-Arch Linux has an AUR package: `yay -S power-options-gtk`
-
-Or for bleeding edge: `yay -S power-options-gtk-git`
+AUR: `power-options-gtk` or `power-options-gtk-git` for bleeding edge
 
 ```bash
 git clone https://github.com/TheAlexDev23/power-options/ --depth=1
@@ -93,6 +92,9 @@ chmod +x ./install-gtk.sh
 ```
 
 - Webview: 
+
+AUR: `power-options-webview` or `power-options-webview-git` for bleeding edge
+
 ```bash
 # dioxus-cli is required
 cargo install dioxus-cli
@@ -105,9 +107,7 @@ chmod +x ./install-webview.sh
 
 - Just the daemon:
 
-Arch Linux has an AUR package: `yay -S power-options-daemon`
-
-Or for bleeding edge: `yay -S power-options-daemon-git`
+AUR: `power-options-daemon` or `power-options-daemon-git` for bleeding edge
 
 ```bash
 git clone https://github.com/TheAlexDev23/power-options/ --depth=1
@@ -131,8 +131,13 @@ Optional:
 - brightnessctl: brightness control
 - ifconfig: ethernet blocking
 
+Webview frontend:
+- webkit2gtk
+- dioxus-cli
+
 GTK frontend:
 - yad
+- libadwaita
 
 ## Limitations
 - Network configuration only works on intel cards and cards that use iwlwifi
