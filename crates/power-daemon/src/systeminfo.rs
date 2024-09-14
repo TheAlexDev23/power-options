@@ -234,8 +234,16 @@ impl CPUInfo {
 
                 let cpufreq_path = entry.path().join("cpufreq/");
 
-                let base_frequency =
-                    file_content_to_u32(cpufreq_path.join("base_frequency")) / 1000;
+                let base_frequency_path = cpufreq_path.join("base_frequency");
+
+                // Some cpu's straight up do not have base_frequency and it's
+                // not mentioned anywhere in kernel docs
+                let base_frequency = if fs::metadata(&base_frequency_path).is_ok() {
+                    file_content_to_u32(base_frequency_path) / 1000
+                } else {
+                    0
+                };
+
                 let current_frequency =
                     file_content_to_u32(cpufreq_path.join("scaling_cur_freq")) / 1000;
 
