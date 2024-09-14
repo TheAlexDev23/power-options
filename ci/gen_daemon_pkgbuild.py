@@ -29,6 +29,8 @@ conflicts=('power-options-daemon-git')
 source=("$pkgname-$pkgver.tar.gz::{url}/archive/v$pkgver.tar.gz")
 sha256sums=('SKIP')
 
+install="daemon.install"
+
 prepare() {{
   export RUSTUP_TOOLCHAIN=stable
   cd "$srcdir/power-options-$pkgver/crates/power-daemon-mgr"
@@ -69,17 +71,37 @@ post_remove() {{
 """
     return pkgbuild_content
 
+def create_install_file():
+    return f"""post_install() {{
+  systemctl daemon-reload
+  systemctl restart acpid.service
+  systemctl enable --now power-options.service
+}}
+
+post_upgrade() {{
+  systemctl daemon-reload
+  systemctl restart acpid.service
+  systemctl restart power-options.service
+}}
+
+post_remove() {{
+  systemctl daemon-reload
+}}"""
+
 def main():
     pkgname = "power-options-daemon"
     pkgver = get_latest_tag()
     url = "https://github.com/thealexdev23/power-options"
 
     pkgbuild_content = create_pkgbuild(pkgname, pkgver, url)
+    install_file_content = create_install_file();
 
     os.makedirs('./pkgbuilds/daemon', exist_ok=True)
 
     with open('./pkgbuilds/daemon/PKGBUILD', 'w') as file:
         file.write(pkgbuild_content)
+    with open('./pkgbuilds/daemon/daemon.install', 'w') as file:
+        file.write(install_file_content)
 
 if __name__ == "__main__":
     main()
