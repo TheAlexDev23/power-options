@@ -108,6 +108,16 @@ pub fn run_command_with_output(command: &str) -> (String, String) {
     (stdout, stderr)
 }
 
+pub fn run_command_in_background(command: &str) {
+    debug!("running in background: {command}");
+    Command::new("zsh")
+        .args(["-c", command])
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .spawn()
+        .expect("Could not run command");
+}
+
 pub fn file_content_to_string<P: AsRef<Path>>(path: P) -> String {
     let mut file = File::open(path).expect("Could not open file");
     let mut content = String::new();

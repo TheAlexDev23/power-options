@@ -5,7 +5,10 @@ use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    helpers::{command_exists, file_content_to_string, run_command, WhiteBlackList},
+    helpers::{
+        command_exists, file_content_to_string, run_command, run_command_in_background,
+        WhiteBlackList,
+    },
     profiles_generator::{self, DefaultProfileType},
     ReducedUpdate, SystemInfo,
 };
@@ -37,6 +40,7 @@ pub struct Profile {
     pub profile_name: String,
     pub base_profile: DefaultProfileType,
 
+    pub sleep_settings: SleepSettings,
     pub cpu_settings: CPUSettings,
     pub cpu_core_settings: CPUCoreSettings,
     pub screen_settings: ScreenSettings,
@@ -110,6 +114,53 @@ impl Profile {
             self.base_profile.clone(),
             system_info,
         )
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
+pub struct SleepSettings {
+    /// Time to turn off screen after N minutes of inactivity
+    pub turn_off_screen_after: Option<u32>,
+    /// Time to suspend the device after N mintues of inactivity
+    pub suspend_after: Option<u32>,
+}
+
+impl SleepSettings {
+    pub fn apply(&self) {
+        info!(
+            "Applying Sleep settings on {:?}",
+            std::thread::current().id()
+        );
+
+        if let Some(turn_off_screen_after) = self.turn_off_screen_after {
+            if command_exists("xset") {
+                let time_in_secs = turn_off_screen_after * 60;
+                run_command(&format!(
+                    "xset dpms {time_in_secs} {time_in_secs} {time_in_secs}"
+                ));
+            } else {
+                error!("Attempted to set screen turn off timeout when xset is not installed");
+            }
+        } else {
+            if command_exists("xset") {
+                run_command("xset -dpms");
+            }
+        }
+
+        if let Some(suspend_after) = self.suspend_after {
+            if command_exists("xautolock") {
+                run_command("xautolock -exit");
+                run_command_in_background(&format!(
+                    "xautolock -time {suspend_after} -locker 'systemctl suspend'"
+                ));
+            } else {
+                error!("Attempted to set suspend time when xautolock is not installed");
+            }
+        } else {
+            if command_exists("xautolock") {
+                run_command("xautolock -exit");
+            }
+        }
     }
 }
 
