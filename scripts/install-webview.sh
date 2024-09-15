@@ -10,7 +10,7 @@ popd
 
 sudo cp -f ../target/release/frontend /usr/bin/power-options-webview
 
-sudo mkdir /usr/lib/power-options-webview
+sudo mkdir -p /usr/lib/power-options-webview
 sudo cp -r ../crates/frontend-webview/assets /usr/lib/power-options-webview
 
 sudo cp -f ../icon.png /usr/share/icons/power-options-webview.png
