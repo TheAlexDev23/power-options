@@ -148,10 +148,10 @@ impl CPUGroup {
 
         self.min_perf
             .guard()
-            .set_value(cpu_settings.min_perf_pct.unwrap() as f64);
+            .set_value(cpu_settings.min_perf_pct.unwrap_or_default() as f64);
         self.max_perf
             .guard()
-            .set_value(cpu_settings.max_perf_pct.unwrap() as f64);
+            .set_value(cpu_settings.max_perf_pct.unwrap_or_default() as f64);
 
         *self.boost.guard() = cpu_settings.boost.unwrap_or_default();
         *self.hwp_dyn_boost.guard() = cpu_settings.hwp_dyn_boost.unwrap_or_default();
