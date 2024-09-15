@@ -104,6 +104,44 @@ impl Profile {
         }
     }
 
+    pub fn parse_or_default(contents: &str, profile_name: &str) -> Profile {
+        match toml::from_str(contents) {
+            Ok(p) => p,
+            Err(_) => {
+                #[derive(Deserialize)]
+                struct ProfileTypeOnly {
+                    pub base_profile: DefaultProfileType,
+                }
+
+                warn!("Could not parse profile {profile_name}. Attempting to migrate to newer version.");
+
+                let profile_type: DefaultProfileType = toml::from_str::<ProfileTypeOnly>(&contents)
+                    .expect("Could not parse base profile type")
+                    .base_profile;
+
+                let base_profile = toml::to_string(&profiles_generator::create_default(
+                    &profile_name,
+                    profile_type,
+                    &SystemInfo::obtain(),
+                ))
+                .expect("Could not merge default profile and user profile");
+
+                let merged = serde_toml_merge::merge(
+                    base_profile.parse().unwrap(),
+                    contents.parse().unwrap(),
+                )
+                .unwrap();
+
+                debug!("Merged profile {merged:?}");
+
+                let profile =
+                    Profile::deserialize(merged).expect("Could not parse updated profile");
+
+                profile
+            }
+        }
+    }
+
     pub fn get_original_values(&self, system_info: &SystemInfo) -> Profile {
         profiles_generator::create_default(
             &self.profile_name,

@@ -1,6 +1,9 @@
+use log::{debug, warn};
 use serde::{Deserialize, Serialize};
 
 use crate::profiles_generator::DefaultProfileType;
+
+use itertools::Itertools;
 
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct Config {
@@ -21,6 +24,32 @@ impl Config {
             profile_override: None,
 
             profiles: DefaultProfileType::get_name_of_all(),
+        }
+    }
+
+    /// Will attempt to parse `contentent`, if it fails will merge `content`
+    /// with the deafult config and attempt to merge that too
+    pub fn parse_or_default(content: &str) -> Config {
+        match toml::from_str::<Config>(&content) {
+            Ok(c) => c,
+            Err(_) => {
+                warn!("Failed to parse config, attempting to migrate to newer version");
+
+                let default_content = toml::to_string(&Config::create_default()).unwrap();
+                let merged = serde_toml_merge::merge(
+                    default_content.parse::<toml::Value>().unwrap(),
+                    content.parse::<toml::Value>().unwrap(),
+                )
+                .expect("Could not merge default config and user config");
+
+                debug!("Merged config: {merged:?}");
+
+                let mut config = Config::deserialize(merged).unwrap();
+
+                config.profiles = config.profiles.into_iter().unique().collect();
+
+                config
+            }
         }
     }
 }
