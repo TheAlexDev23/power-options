@@ -30,7 +30,7 @@ impl Config {
     /// Will attempt to parse `contentent`, if it fails will merge `content`
     /// with the deafult config and attempt to merge that too
     pub fn parse_or_default(content: &str) -> Config {
-        match toml::from_str::<Config>(&content) {
+        match toml::from_str::<Config>(content) {
             Ok(c) => c,
             Err(_) => {
                 warn!("Failed to parse config, attempting to migrate to newer version");

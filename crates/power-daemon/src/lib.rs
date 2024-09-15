@@ -381,7 +381,7 @@ fn parse_profiles(config: &Config, path: &Path) -> Vec<Profile> {
         file.read_to_string(&mut contents)
             .expect("Could not read file");
 
-        let mut profile = Profile::parse_or_default(&contents, &profile_name);
+        let mut profile = Profile::parse_or_default(&contents, profile_name);
 
         fs::write(path, toml::to_string_pretty(&profile).unwrap())
             .expect("Could not write to profile");

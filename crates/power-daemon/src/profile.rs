@@ -115,12 +115,12 @@ impl Profile {
 
                 warn!("Could not parse profile {profile_name}. Attempting to migrate to newer version.");
 
-                let profile_type: DefaultProfileType = toml::from_str::<ProfileTypeOnly>(&contents)
+                let profile_type: DefaultProfileType = toml::from_str::<ProfileTypeOnly>(contents)
                     .expect("Could not parse base profile type")
                     .base_profile;
 
                 let base_profile = toml::to_string(&profiles_generator::create_default(
-                    &profile_name,
+                    profile_name,
                     profile_type,
                     &SystemInfo::obtain(),
                 ))
