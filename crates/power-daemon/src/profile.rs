@@ -545,14 +545,14 @@ impl NetworkSettings {
 
         let firmware_parameters = if let Some(power_scheme) = self.power_scheme {
             if uses_iwlmvm {
-                &format!("power_scheme={}", power_scheme)
+                format!("power_scheme={}", power_scheme)
             } else if power_scheme == 3 {
-                "force_cam=0"
+                "force_cam=0".to_string()
             } else {
-                ""
+                String::default()
             }
         } else {
-            ""
+            String::default()
         };
 
         let mut driver_parameters = String::new();
