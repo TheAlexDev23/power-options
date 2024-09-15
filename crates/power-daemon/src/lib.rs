@@ -362,8 +362,13 @@ impl Instance {
 }
 
 pub fn parse_config(path: &Path) -> Config {
-    toml::from_str::<Config>(&fs::read_to_string(path).expect("Could not read config"))
-        .expect("Could not parse config")
+    let content = fs::read_to_string(path).expect("Could not read config");
+
+    let config = Config::parse_or_default(&content);
+
+    fs::write(path, toml::to_string_pretty(&config).unwrap()).expect("Could not write to config");
+
+    config
 }
 
 fn parse_profiles(config: &Config, path: &Path) -> Vec<Profile> {
@@ -372,10 +377,15 @@ fn parse_profiles(config: &Config, path: &Path) -> Vec<Profile> {
         let path = path.join(format!("{profile_name}.toml"));
         let mut file = fs::File::open(&path).expect("Could not read file");
         let mut contents = String::new();
+
         file.read_to_string(&mut contents)
             .expect("Could not read file");
 
-        let mut profile: Profile = toml::from_str(&contents).expect("Could not parse profile");
+        let mut profile = Profile::parse_or_default(&contents, &profile_name);
+
+        fs::write(path, toml::to_string_pretty(&profile).unwrap())
+            .expect("Could not write to profile");
+
         profile.profile_name = profile_name.clone();
         profiles.push(profile);
     }
