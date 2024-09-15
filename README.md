@@ -3,9 +3,15 @@
     <h1>
         Power Options
     </h1>
+    <a href="https://discord.gg/KyZt97MvdU">
+        <img src="https://img.shields.io/badge/Discord-%235865F2.svg?style=for-the-badge&logo=discord&logoColor=white">
+    </a>
+    <a href="https://www.paypal.com/paypalme/AlexanderKarpukhin2">
+        <img src="https://img.shields.io/badge/PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white">
+    </a>
 </div>
 
-[Discord Server](https://discord.gg/KyZt97MvdU)
+<br/>
 
 All-In-One blazingly fast Linux GUI Application for simple and advanced power
 management on any device.
