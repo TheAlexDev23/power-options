@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     helpers::{
-        command_exists, file_content_to_string, run_command, run_command_in_background,
-        WhiteBlackList,
+        command_exists, file_content_to_string, run_command, run_graphical_command,
+        run_graphical_command_in_background, WhiteBlackList,
     },
     profiles_generator::{self, DefaultProfileType},
     ReducedUpdate, SystemInfo,
@@ -58,6 +58,7 @@ impl Profile {
         info!("Applying profile: {}", self.profile_name);
 
         let settings_functions: Vec<Box<dyn FnOnce() + Send>> = vec![
+            Box::new(|| self.sleep_settings.apply()),
             Box::new(|| {
                 self.cpu_settings.apply();
                 self.cpu_core_settings.apply();
@@ -173,7 +174,7 @@ impl SleepSettings {
         if let Some(turn_off_screen_after) = self.turn_off_screen_after {
             if command_exists("xset") {
                 let time_in_secs = turn_off_screen_after * 60;
-                run_command(&format!(
+                run_graphical_command(&format!(
                     "xset dpms {time_in_secs} {time_in_secs} {time_in_secs}"
                 ));
             } else {
@@ -181,14 +182,14 @@ impl SleepSettings {
             }
         } else {
             if command_exists("xset") {
-                run_command("xset -dpms");
+                run_graphical_command("xset -dpms");
             }
         }
 
         if let Some(suspend_after) = self.suspend_after {
             if command_exists("xautolock") {
-                run_command("xautolock -exit");
-                run_command_in_background(&format!(
+                run_graphical_command("xautolock -exit");
+                run_graphical_command_in_background(&format!(
                     "xautolock -time {suspend_after} -locker 'systemctl suspend'"
                 ));
             } else {
@@ -196,7 +197,7 @@ impl SleepSettings {
             }
         } else {
             if command_exists("xautolock") {
-                run_command("xautolock -exit");
+                run_graphical_command("xautolock -exit");
             }
         }
     }
@@ -502,7 +503,7 @@ impl ScreenSettings {
 
     pub fn try_run_xrandr(command: &str) {
         if command_exists("xrandr") {
-            run_command(command);
+            run_graphical_command(command);
         } else {
             error!("xrandr is not present in the system. Ignoring settings utilizing it...");
         }
