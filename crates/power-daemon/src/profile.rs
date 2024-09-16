@@ -1,4 +1,4 @@
-use std::fs;
+use std::{fs, io};
 
 use log::{debug, error, info, warn};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
@@ -765,8 +765,11 @@ impl SATASettings {
 
         let pm_policy = self.active_link_pm_policy.as_ref().unwrap();
 
-        let entries =
-            fs::read_dir("/sys/class/scsi_host/").expect("Could not read sysfs directory");
+        let entries = match fs::read_dir("/sys/class/scsi_host/") {
+            Ok(itr) => itr,
+            Err(e) if e.kind() == io::ErrorKind::NotFound => return,
+            Err(e) => panic!("Could not read sysfs directory: {e:?}"),
+        };
 
         for entry in entries {
             let entry = entry.expect("Could not read sysfs entry");
