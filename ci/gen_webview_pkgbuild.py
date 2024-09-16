@@ -19,7 +19,7 @@ arch=('x86_64')
 url={url}
 license=('MIT')
 
-depends=('power-options-daemon' 'webkit2gtk')
+depends=('power-options-daemon' 'webkit2gtk' 'xdotool')
 makedepends=('cargo' 'dioxus-cli')
 
 provides=('power-options-webview')
