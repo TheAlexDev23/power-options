@@ -13,6 +13,11 @@
 
 <br/>
 
+*Warning: power options **will** enable usb autosuspend on first-run if you are on
+battery power, potentially disabling some input devices during inactivity. Go
+into the frontend of your choice and include in the blacklist devices that you
+do not want to follow usb autsuspend.*
+
 All-In-One blazingly fast Linux GUI Application for simple and advanced power
 management on any device.
 
@@ -92,6 +97,10 @@ Power Option includes the following features:
 
 AUR: `power-options-gtk` or `power-options-gtk-git` for bleeding edge
 
+From source:
+
+To build, requires dev libraries `libgtk4-dev` `libadwaita-1-dev` (or the equivalent in
+your distro)
 ```bash
 git clone https://github.com/TheAlexDev23/power-options/ --depth=1
 cd power-options/scripts
@@ -104,6 +113,8 @@ chmod +x *.sh
 
 AUR: `power-options-webview` or `power-options-webview-git` for bleeding edge
 
+To build, requires dev libraries `libsoup-3.0-dev`, `libwebkit2gtk-4.1-dev` and
+`libxdo-dev` (or the equivalent in your distro)
 ```bash
 # dioxus-cli is required
 cargo install dioxus-cli
@@ -127,6 +138,8 @@ chmod +x *.sh
 ```
 
 ## Dependencies
+
+For *build* dependendencies refer to the installation guide above.
 
 Mandatory:
 - zsh
