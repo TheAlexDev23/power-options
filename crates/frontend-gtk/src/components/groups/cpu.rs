@@ -82,12 +82,18 @@ impl CPUGroup {
 
     #[allow(clippy::wrong_self_convention)]
     fn from_cpu_settings(&mut self, cpu_settings: &CPUSettings) {
-        *self.mode.guard() = if cpu_settings.mode.as_ref().unwrap() == "active" {
-            0
-        } else if cpu_settings.mode.as_ref().unwrap() == "passive" {
-            1
+        *self.mode.guard() = if let Some(ref mode) = cpu_settings.mode {
+            if mode == "active" {
+                0
+            } else if mode == "passive" {
+                1
+            } else {
+                panic!("Unkown driver opmode");
+            }
         } else {
-            panic!("Unkown driver opmode");
+            // The user does not have the ability to switch cpufreq opmodes,
+            // set as any value because the option will be disabled anyways
+            0
         };
 
         let epps = CPU_EPPS.clone();
