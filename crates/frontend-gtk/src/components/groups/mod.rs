@@ -21,7 +21,7 @@ lazy_static::lazy_static! {
         "power",
     ];
     pub static ref CPU_GOVERNORS_ACTIVE: Vec<&'static str> = vec!["performance", "powersave"];
-    pub static ref CPU_GOVERNORS_PASSIVE: Vec<&'static str> = vec![
+    pub static ref CPU_GOVERNORS_GENERIC: Vec<&'static str> = vec![
         "conservative",
         "ondemand",
         "userspace",

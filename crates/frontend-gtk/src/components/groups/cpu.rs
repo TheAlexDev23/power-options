@@ -9,7 +9,7 @@ use relm4::{
     RelmObjectExt,
 };
 
-use super::{CPU_EPPS, CPU_GOVERNORS_ACTIVE, CPU_GOVERNORS_PASSIVE};
+use super::{CPU_EPPS, CPU_GOVERNORS_ACTIVE, CPU_GOVERNORS_GENERIC};
 use crate::helpers::extensions::StringListExt;
 use crate::{
     communications::{daemon_control, system_info},
@@ -91,9 +91,11 @@ impl CPUGroup {
                 panic!("Unkown driver opmode");
             }
         } else {
-            // The user does not have the ability to switch cpufreq opmodes,
-            // set as any value because the option will be disabled anyways
-            0
+            // The inability to change the opmode likely means that the user is
+            // using a generic cpufreq governor (acpi-cpufreq for example).
+            // By setting the opmode to 1 (passive), the governor dropdown will
+            // have the generic cpufreq settings.
+            1
         };
 
         let epps = CPU_EPPS.clone();
@@ -102,7 +104,7 @@ impl CPUGroup {
         {
             CPU_GOVERNORS_ACTIVE.clone()
         } else {
-            CPU_GOVERNORS_PASSIVE.clone()
+            CPU_GOVERNORS_GENERIC.clone()
         };
 
         *self.available_epps.guard() = gtk::StringList::new(&epps);
@@ -196,7 +198,7 @@ impl CPUGroup {
                 if active {
                     CPU_GOVERNORS_ACTIVE[gov]
                 } else {
-                    CPU_GOVERNORS_PASSIVE[gov]
+                    CPU_GOVERNORS_GENERIC[gov]
                 }
                 .to_string(),
             ),
@@ -235,7 +237,7 @@ impl CPUGroup {
         let governors = if active {
             CPU_GOVERNORS_ACTIVE.clone()
         } else {
-            CPU_GOVERNORS_PASSIVE.clone()
+            CPU_GOVERNORS_GENERIC.clone()
         };
 
         let governors_as_string_vec = governors.iter().map(|v| v.to_string()).collect::<Vec<_>>();

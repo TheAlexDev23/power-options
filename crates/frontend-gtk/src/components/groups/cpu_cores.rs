@@ -6,7 +6,7 @@ use power_daemon::{CPUCoreSettings, CPUInfo, CPUSettings, CoreSetting, Profile};
 use adw::prelude::*;
 use relm4::prelude::*;
 
-use super::{CPU_EPPS, CPU_GOVERNORS_ACTIVE, CPU_GOVERNORS_PASSIVE};
+use super::{CPU_EPPS, CPU_GOVERNORS_ACTIVE, CPU_GOVERNORS_GENERIC};
 use crate::{
     communications::{daemon_control, system_info},
     AppInput, AppSyncUpdate, RootRequest,
@@ -149,7 +149,7 @@ impl CPUCoresGroup {
         let governors = if active {
             CPU_GOVERNORS_ACTIVE.clone()
         } else {
-            CPU_GOVERNORS_PASSIVE.clone()
+            CPU_GOVERNORS_GENERIC.clone()
         };
 
         fn set_liststore(list_store: &mut ListStore, items: &[&str]) {
