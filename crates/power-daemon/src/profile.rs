@@ -1,4 +1,5 @@
 use std::fs;
+use std::path::Path;
 
 use log::{debug, error, info, warn};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
@@ -214,28 +215,19 @@ impl CPUSettings {
         }
 
         if let Some(ref governor) = self.governor {
-            run_command(&format!(
-                "echo {} > /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor",
-                governor
-            ));
+            write_all_cores("cpufreq/scaling_governor", governor);
         }
 
         if let Some(ref epp) = self.energy_perf_ratio {
             if fs::metadata("/sys/devices/system/cpu/cpu0/cpufreq/energy_performance_preference")
                 .is_ok()
             {
-                run_command(&format!(
-                    "echo {} > /sys/devices/system/cpu/cpu*/cpufreq/energy_performance_preference",
-                    epp
-                ));
+                write_all_cores("cpufreq/energy_performance_preference", epp);
             } else if fs::metadata("/sys/devices/system/cpu/cpu0/power/energy_perf_bias").is_ok() {
                 debug!(
                     "System does not have EPP but EPB is present, translating and setting EPB..."
                 );
-                run_command(&format!(
-                    "echo {} > /sys/devices/system/cpu/cpu*/power/energy_perf_bias",
-                    Self::translate_epp_to_epb(epp)
-                ));
+                write_all_cores("power/energy_perf_bias", &Self::translate_epb_to_epp(epp));
             } else {
                 warn!("System does not have EPP or EPB but configuration attempted to set anyways. Ignoring...");
             }
@@ -260,16 +252,16 @@ impl CPUSettings {
         }
 
         if let Some(min_frequency) = self.min_freq {
-            run_command(&format!(
-                "echo {} > /sys/devices/system/cpu/cpu*/cpufreq/scaling_min_freq",
-                min_frequency * 1000
-            ));
+            write_all_cores(
+                "cpufreq/scaling_min_freq",
+                (min_frequency * 1000).to_string().as_str(),
+            );
         }
         if let Some(max_frequency) = self.max_freq {
-            run_command(&format!(
-                "echo {} > /sys/devices/system/cpu/cpu*/cpufreq/scaling_max_freq",
-                max_frequency * 1000
-            ));
+            write_all_cores(
+                "cpufreq/scaling_max_freq",
+                (max_frequency * 1000).to_string().as_str(),
+            );
         }
 
         if let Some(min_perf_pct) = self.min_perf_pct {
@@ -356,8 +348,7 @@ impl CPUCoreSettings {
         // Given the way per-core settings work (first apply settings to all cores then individual overrides),
         // it's logical to also remove all the core-disabling overrides first and then maybe disable individual cores
         // Could this be fixed in the UI? Yes. Would it be better architecture-wise? Yes. But it's way easier to just to this
-        run_command("echo 1 > /sys/devices/system/cpu/cpu*/online");
-
+        write_all_cores("online", "1");
         if self.cores.is_none() {
             return;
         }
@@ -371,11 +362,15 @@ impl CPUCoreSettings {
 impl CoreSetting {
     pub fn apply(&self) {
         if let Some(online) = self.online {
-            run_command(&format!(
-                "echo {} > /sys/devices/system/cpu/cpu{}/online",
-                if online { "1" } else { "0" },
-                self.cpu_id,
-            ));
+            if fs::metadata(format!("/sys/devices/system/cpu/cpu{}/online", self.cpu_id)).is_ok() {
+                run_command(&format!(
+                    "echo {} > /sys/devices/system/cpu/cpu{}/online",
+                    if online { "1" } else { "0" },
+                    self.cpu_id,
+                ));
+            } else {
+                warn!("System does not support toggling CPU {} online or offline but attempted to set anyways. Ignoring...", self.cpu_id);
+            }
         }
 
         if let Some(ref epp) = self.epp {
@@ -421,6 +416,33 @@ impl CoreSetting {
                 self.cpu_id
             ));
         }
+    }
+}
+
+/// Writes a value to all CPU paths under /sys/devices/cpu/cpu* that are
+/// actually single CPU core management directories (which end in numbers),
+/// warning if any of the individual cores can't have that value set.
+fn write_all_cores(path: impl AsRef<Path>, data: &str) {
+    let path = path.as_ref();
+    let raw = fs::read_dir("/sys/devices/system/cpu/").expect("Error reading CPU list");
+    let relevant = raw.filter_map(Result::ok).filter(|ent| {
+        let raw_filename = ent.file_name();
+        let name = raw_filename.to_string_lossy();
+        let Some((_, suffix)) = name.split_once("cpu") else {
+            return false;
+        };
+        suffix.parse::<u32>().is_ok()
+    });
+    let to_write = relevant.map(|ent| ent.path().join(path));
+    for target in to_write {
+        if !target.exists() {
+            warn!(
+                "Attempted to write {data} to CPU sysfs path {}, but that path does not exist!",
+                target.display()
+            );
+            continue;
+        }
+        run_command(&format!("echo {} > {}", data, target.display()));
     }
 }
 
