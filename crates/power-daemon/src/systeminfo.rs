@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs};
+use std::{collections::HashMap, fs, io};
 
 use log::{error, trace};
 use regex::Regex;
@@ -470,11 +470,15 @@ pub struct SATAInfo {
 
 impl SATAInfo {
     pub fn obtain() -> SATAInfo {
-        SATAInfo {
-            hosts: fs::read_dir("/sys/class/scsi_host/")
-                .expect("Could not read sysfs dir")
-                .filter_map(Result::ok)
-                .count() as u32,
+        let raw = fs::read_dir("/sys/class/scsi_host/");
+        match raw {
+            Ok(itr) => SATAInfo {
+                hosts: itr.filter_map(Result::ok).count() as u32,
+            },
+            Err(e) if e.kind() == io::ErrorKind::NotFound => SATAInfo { hosts: 0 },
+            Err(e) => {
+                panic!("Could not read sysfs dir: {e:?}")
+            }
         }
     }
 }
