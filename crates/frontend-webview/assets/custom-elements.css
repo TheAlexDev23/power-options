@@ -52,7 +52,6 @@
     border-radius: 50%;
 }
 
-
 input:checked+.slider:before {
     transform: translateX(20px);
 }
@@ -70,12 +69,12 @@ input:checked+.slider:before {
 
     visibility: hidden;
 
-    font-size: 12px;
+    font-size: 13px;
 
     padding: 5px;
     border-radius: 5px;
 
-    width: 200px;
+    width: 250px;
 
     z-index: 1;
 }

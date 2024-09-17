@@ -208,7 +208,7 @@ fn CPUSettingsForm(
                     div { class: "option",
                         ToggleableDropdown {
                             name: labels::DRIVER_OPMODE_TITLE,
-                            dropdown_tooltip: labels::DRIVER_OPMODE_TT,
+                            tooltip: labels::DRIVER_OPMODE_TT,
                             items: vec![String::from("active"), String::from("passive")],
                             value: form.mode
                         }
@@ -224,7 +224,7 @@ fn CPUSettingsForm(
                             items: epps,
                             value: form.epp,
                             disabled: form.mode.1() == "active" && form.governor.1() == "performance",
-                            dropdown_tooltip: if form.governor.1() == "performance" {
+                            tooltip: if form.governor.1() == "performance" {
                                 Some(labels::EPP_GOV_PERF_TT.to_string())
                             } else {
                                 Some(labels::EPP_TT.to_string())
@@ -235,7 +235,7 @@ fn CPUSettingsForm(
                 div { class: "option",
                     ToggleableDropdown {
                         name: labels::GOV_TITLE,
-                        dropdown_tooltip: Some(labels::GOV_TT.to_string()),
+                        tooltip: Some(labels::GOV_TT.to_string()),
                         items: governors,
                         value: form.governor
                     }
@@ -275,7 +275,7 @@ fn CPUSettingsForm(
                     div { class: "option",
                         ToggleableToggle {
                             name: labels::BOOST_TITLE.to_string(),
-                            toggle_tooltip: labels::BOOST_TT.to_string(),
+                            tooltip: labels::BOOST_TT.to_string(),
                             value: form.boost
                         }
                     }
@@ -287,7 +287,7 @@ fn CPUSettingsForm(
                             name: labels::HWP_DYN_BOOST_TITLE,
                             value: form.hwp_dyn_boost,
                             disabled: form.mode.1() != "active",
-                            toggle_tooltip: if form.mode.1() != "active" {
+                            tooltip: if form.mode.1() != "active" {
                                 labels::HWP_DYN_BOOST_MODE_ACTIVE_TT
                             } else {
                                 labels::HWP_DYN_BOOST_TT

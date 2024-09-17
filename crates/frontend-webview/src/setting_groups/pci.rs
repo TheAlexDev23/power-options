@@ -129,7 +129,7 @@ pub fn PCIAndASPMGroup(
                     div { class: "option",
                         ToggleableDropdown {
                             name: labels::ASPM_TITLE,
-                            dropdown_tooltip: labels::ASPM_TT,
+                            tooltip: labels::ASPM_TT,
                             items: pci_info.aspm_info.supported_modes.unwrap(),
                             value: form.aspm
                         }

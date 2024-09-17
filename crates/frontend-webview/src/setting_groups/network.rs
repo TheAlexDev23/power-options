@@ -127,7 +127,7 @@ pub fn NetworkGroup(
                 div { class: "option",
                     ToggleableToggle {
                         name: labels::DIS_ETH_TITLE,
-                        toggle_tooltip: if !system_info().unwrap().opt_features_info.supports_ifconfig {
+                        tooltip: if !system_info().unwrap().opt_features_info.supports_ifconfig {
                             labels::NO_IFCONFIG_TT
                         } else {
                             labels::DIS_ETH_TT
@@ -155,14 +155,14 @@ pub fn NetworkGroup(
                     div { class: "option",
                         ToggleableToggle {
                             name: labels::IWLWIFI_POWERSAVING_TITLE,
-                            toggle_tooltip: labels::IWLWIFI_POWERSAVING_TT,
+                            tooltip: labels::IWLWIFI_POWERSAVING_TT,
                             value: form.enable_power_save
                         }
                     }
                     div { class: "option",
                         ToggleableToggle {
                             name: labels::UAPSD_TITLE,
-                            toggle_tooltip: labels::UAPSD_TT,
+                            tooltip: labels::UAPSD_TT,
                             value: form.enable_uapsd
                         }
                     }
