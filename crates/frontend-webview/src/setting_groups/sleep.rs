@@ -101,19 +101,29 @@ pub fn SleepGroup(
             },
 
             div { class: "option-group",
-                if opt_info.supports_xautolock {
-                    div { class: "option",
-                        ToggleableNumericField { name: labels::SUSPEND_TITLE, value: form.suspend }
+                div { class: "option",
+                    ToggleableNumericField {
+                        name: labels::SUSPEND_TITLE,
+                        disabled: !opt_info.supports_xautolock,
+                        value: form.suspend,
+                        tooltip: if !opt_info.supports_xautolock {
+                            Some(labels::SUSPEND_XAUTOLOCK_MISSING.to_string())
+                        } else {
+                            None
+                        }
                     }
-                } else {
-                    p { "To set proper suspend time, xautolock needs to be installed in your system" }
                 }
-                if opt_info.supports_xset {
-                    div { class: "option",
-                        ToggleableNumericField { name: labels::SCREEN_TURN_OFF_TITLE, value: form.turn_off_screen }
+                div { class: "option",
+                    ToggleableNumericField {
+                        name: labels::SCREEN_TURN_OFF_TITLE,
+                        disabled: !opt_info.supports_xset,
+                        value: form.turn_off_screen,
+                        tooltip: if !opt_info.supports_xset {
+                            Some(labels::SCREEN_TURN_OFF_XSET_MISSING.to_string())
+                        } else {
+                            None
+                        }
                     }
-                } else {
-                    p { "To set proper suspend time, xset needs to be installed in your system" }
                 }
             }
 
