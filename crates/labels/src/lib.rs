@@ -1,3 +1,6 @@
+pub const SUSPEND_TITLE: &str = "Minutes of inactivity before the system goes into suspend mode.";
+pub const SCREEN_TURN_OFF_TITLE: &str = "Minutes of inactivity before the display turns off.";
+
 pub const DRIVER_OPMODE_TITLE: &str = "Scaling driver operation mode";
 pub const DRIVER_OPMODE_TT: &str = "The operation mode of the CPU frequency scaling driver. Passive will give control of frequency scaling to the CPUFreq kernel driver. In active mode the CPU manages frequencies.";
 pub const DRIVER_OPMODE_UNAVAILABLE_TT: &str = "The ability to change the scaling driver operation mode is only available on intel_pstate and amd_pstate drivers.";
