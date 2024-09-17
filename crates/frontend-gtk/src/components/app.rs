@@ -25,6 +25,7 @@ use super::groups::{
 };
 
 use super::settings::Settings;
+use super::sleep::SleepGroup;
 use super::Header;
 use super::HeaderInput;
 use crate::communications::system_info::SystemInfoSyncType;
@@ -32,7 +33,7 @@ use crate::communications::{self, daemon_control, SYSTEM_INFO};
 
 #[derive(Debug, Clone, Copy)]
 #[enumflags2::bitflags]
-#[repr(u8)]
+#[repr(u16)]
 pub enum SettingsGroup {
     CPU,
     CPUCores,
@@ -42,6 +43,7 @@ pub enum SettingsGroup {
     USB,
     SATA,
     Kernel,
+    Sleep,
 }
 
 impl SettingsGroup {
@@ -55,6 +57,7 @@ impl SettingsGroup {
             "USB" => SettingsGroup::USB,
             "SATA" => SettingsGroup::SATA,
             "Kernel" => SettingsGroup::Kernel,
+            "Sleep" => SettingsGroup::Sleep,
             _ => panic!("Unkown settings group"),
         }
     }
@@ -71,6 +74,7 @@ impl Display for SettingsGroup {
             SettingsGroup::USB => "USB",
             SettingsGroup::SATA => "SATA",
             SettingsGroup::Kernel => "Kernel",
+            SettingsGroup::Sleep => "Sleep",
         })
     }
 }
@@ -116,6 +120,7 @@ pub struct App {
 
     settings_dialog: Option<AsyncController<Settings>>,
 
+    sleep_group: Controller<SleepGroup>,
     cpu_group: Controller<CPUGroup>,
     cpu_cores_group: Controller<CPUCoresGroup>,
     radio_group: Controller<RadioGroup>,
@@ -201,6 +206,9 @@ impl SimpleAsyncComponent for App {
             SystemInfoSyncType::None,
         );
 
+        let sleep_group = SleepGroup::builder()
+            .launch(())
+            .forward(sender.input_sender(), identity);
         let cpu_group = CPUGroup::builder()
             .launch(())
             .forward(sender.input_sender(), identity);
@@ -228,6 +236,14 @@ impl SimpleAsyncComponent for App {
 
         let settings_group_stack = gtk::Stack::new();
         settings_group_stack.set_transition_type(gtk::StackTransitionType::SlideUpDown);
+
+        settings_group_stack.add_titled(
+            &gtk::ScrolledWindow::builder()
+                .child(sleep_group.widget())
+                .build(),
+            Some("Sleep"),
+            "Sleep",
+        );
         settings_group_stack.add_titled(
             &gtk::ScrolledWindow::builder()
                 .child(cpu_group.widget())
@@ -312,6 +328,7 @@ impl SimpleAsyncComponent for App {
             usb_group,
             sata_group,
             kernel_group,
+            sleep_group,
         };
 
         let widgets = view_output!();
@@ -340,9 +357,15 @@ impl SimpleAsyncComponent for App {
                 SettingsGroup::USB => self.usb_group.sender().send(request.into()).unwrap(),
                 SettingsGroup::SATA => self.sata_group.sender().send(request.into()).unwrap(),
                 SettingsGroup::Kernel => self.kernel_group.sender().send(request.into()).unwrap(),
+                SettingsGroup::Sleep => self.sleep_group.sender().send(request.into()).unwrap(),
             },
             AppInput::SendRootRequestToAll(request) => {
                 self.header.sender().send(request.clone().into()).unwrap();
+
+                self.sleep_group
+                    .sender()
+                    .send(request.clone().into())
+                    .unwrap();
                 self.cpu_group
                     .sender()
                     .send(request.clone().into())

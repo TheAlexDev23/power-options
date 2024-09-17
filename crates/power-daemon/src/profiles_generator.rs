@@ -13,6 +13,7 @@ use crate::{
         Profile, RadioSettings, SATASettings, ScreenSettings, USBSettings,
     },
     systeminfo::{CPUFreqDriver, SystemInfo},
+    SleepSettings,
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -100,6 +101,7 @@ pub fn create_default(
         profile_name: String::from(name),
         base_profile: profile_type.clone(),
 
+        sleep_settings: sleep_settings_default(&profile_type),
         cpu_settings: cpu_settings_default(&profile_type, system_info),
         cpu_core_settings: CPUCoreSettings::default(),
         screen_settings: ScreenSettings::default(),
@@ -364,6 +366,30 @@ pub fn kernel_settings_default(profile_type: &DefaultProfileType) -> KernelSetti
             disable_nmi_watchdog: Some(true),
             vm_writeback: Some(15),
             laptop_mode: Some(2),
+        },
+    }
+}
+fn sleep_settings_default(profile_type: &DefaultProfileType) -> SleepSettings {
+    match profile_type {
+        DefaultProfileType::Superpowersave => SleepSettings {
+            turn_off_screen_after: Some(10),
+            suspend_after: Some(15),
+        },
+        DefaultProfileType::Powersave => SleepSettings {
+            turn_off_screen_after: Some(15),
+            suspend_after: Some(20),
+        },
+        DefaultProfileType::Balanced => SleepSettings {
+            turn_off_screen_after: Some(20),
+            suspend_after: Some(30),
+        },
+        DefaultProfileType::Performance => SleepSettings {
+            turn_off_screen_after: Some(30),
+            suspend_after: Some(45),
+        },
+        DefaultProfileType::Ultraperformance => SleepSettings {
+            turn_off_screen_after: Some(45),
+            suspend_after: Some(60),
         },
     }
 }

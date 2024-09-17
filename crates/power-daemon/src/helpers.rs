@@ -67,6 +67,61 @@ pub fn command_exists(command: &str) -> bool {
         .map_or(false, |output| output.status.success())
 }
 
+pub fn run_graphical_command(command: &str) {
+    debug!("running graphical command: {command}");
+
+    let output = Command::new("zsh")
+        .args(["-c", command])
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .env("DISPLAY", ":0.0")
+        .env("XAUTHORITY", get_xauthority())
+        .spawn()
+        .expect("Could not run command")
+        .wait_with_output()
+        .expect("Could not wait command");
+
+    trace!(
+        "Command output: {}",
+        String::from_utf8(output.stdout).unwrap()
+    );
+    if !output.stderr.is_empty() {
+        error!(
+            "Command returned with stderr: {}",
+            String::from_utf8(output.stderr).unwrap()
+        );
+    }
+}
+
+pub fn run_graphical_command_in_background(command: &str) -> std::process::Child {
+    debug!("running graphical command in background: {command}");
+    Command::new("zsh")
+        .args(["-c", command])
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .env("DISPLAY", ":0.0")
+        .env("XAUTHORITY", get_xauthority())
+        .spawn()
+        .expect("Could not run command")
+}
+
+fn get_xauthority() -> String {
+    // Point to the XAuthority of the first user, not the best way to do it but
+    // will work for most users.
+
+    format!(
+        "/home/{}/.Xauthority",
+        fs::read_dir("/home")
+            .expect("Could not read home dir")
+            .flatten()
+            .nth(0)
+            .unwrap()
+            .file_name()
+            .into_string()
+            .unwrap()
+    )
+}
+
 pub fn run_command(command: &str) {
     debug!("running: {command}");
     let output = Command::new("zsh")

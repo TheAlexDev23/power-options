@@ -13,7 +13,7 @@ use communication_services::{
 };
 use setting_groups::{
     cpu::CPUGroup, kernel::KernelGroup, network::NetworkGroup, pci::PCIAndASPMGroup,
-    radio::RadioGroup, sata::SATAGroup, screen::ScreenGroup, usb::USBGroup,
+    radio::RadioGroup, sata::SATAGroup, screen::ScreenGroup, sleep::SleepGroup, usb::USBGroup,
 };
 use settings::SettingsMenu;
 
@@ -246,6 +246,7 @@ fn ManageProfilesButton(settings_opened: Signal<bool>) -> Element {
 #[component]
 fn SettingGroupsNav(current_tab: Signal<u8>) -> Element {
     let setting_groups = vec![
+        ("assets/icons/navbar-sleep.svg", "Sleep"),
         ("assets/icons/navbar-cpu.svg", "CPU"),
         ("assets/icons/navbar-screen.svg", "Screen"),
         ("assets/icons/navbar-radio.svg", "Radio devices"),
@@ -286,50 +287,57 @@ fn SettingGroup(
     rsx! {
         div { class: "settings-group",
             if current_tab_val == 0 {
-                CPUGroup {
+                SleepGroup {
                     system_info,
                     profiles_info,
                     control_routine,
                     system_info_routine
                 }
             } else if current_tab_val == 1 {
+                CPUGroup {
+                    system_info,
+                    profiles_info,
+                    control_routine,
+                    system_info_routine
+                }
+            } else if current_tab_val == 2 {
                 ScreenGroup {
                     profiles_info,
                     system_info,
                     control_routine,
                     system_info_routine
                 }
-            } else if current_tab_val == 2 {
-                RadioGroup { profiles_info, control_routine, system_info_routine }
             } else if current_tab_val == 3 {
+                RadioGroup { profiles_info, control_routine, system_info_routine }
+            } else if current_tab_val == 4 {
                 NetworkGroup {
                     profiles_info,
                     system_info,
                     control_routine,
                     system_info_routine
                 }
-            } else if current_tab_val == 4 {
+            } else if current_tab_val == 5 {
                 PCIAndASPMGroup {
                     system_info,
                     profiles_info,
                     control_routine,
                     system_info_routine
                 }
-            } else if current_tab_val == 5 {
+            } else if current_tab_val == 6 {
                 USBGroup {
                     system_info,
                     profiles_info,
                     control_routine,
                     system_info_routine
                 }
-            } else if current_tab_val == 6 {
+            } else if current_tab_val == 7 {
                 SATAGroup {
                     system_info,
                     profiles_info,
                     control_routine,
                     system_info_routine
                 }
-            } else if current_tab_val == 7 {
+            } else if current_tab_val == 8 {
                 KernelGroup { profiles_info, control_routine, system_info_routine }
             } else {
                 PlaceholderGroup { current_tab }

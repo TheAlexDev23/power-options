@@ -485,21 +485,26 @@ impl SATAInfo {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct OptionalFeaturesInfo {
-    pub supports_wifi_drivers: bool,
-    pub supports_ifconfig: bool,
+    pub supports_xautolock: bool,
+    pub supports_xset: bool,
     pub supports_xrandr: bool,
     pub supports_brightnessctl: bool,
+
+    pub supports_wifi_drivers: bool,
+    pub supports_ifconfig: bool,
 }
 
 impl OptionalFeaturesInfo {
     pub fn obtain() -> OptionalFeaturesInfo {
         OptionalFeaturesInfo {
+            supports_xautolock: command_exists("xautolock"),
+            supports_xset: command_exists("xset"),
+            supports_xrandr: command_exists("xrandr"),
+            supports_brightnessctl: command_exists("brightnessctl"),
             supports_wifi_drivers: fs::metadata("/sys/module/iwlwifi").is_ok()
                 && (fs::metadata("/sys/module/iwlmvm").is_ok()
                     || fs::metadata("/sys/module/iwldvm").is_ok()),
             supports_ifconfig: command_exists("ifconfig"),
-            supports_xrandr: command_exists("xrandr"),
-            supports_brightnessctl: command_exists("brightnessctl"),
         }
     }
 }

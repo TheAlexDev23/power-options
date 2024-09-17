@@ -1,14 +1,19 @@
-use std::{fs, io};
+use std::{fs, io, sync::Mutex};
 
 use log::{debug, error, info, warn};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    helpers::{command_exists, file_content_to_string, run_command, WhiteBlackList},
+    helpers::{
+        command_exists, file_content_to_string, run_command, run_graphical_command,
+        run_graphical_command_in_background, WhiteBlackList,
+    },
     profiles_generator::{self, DefaultProfileType},
     ReducedUpdate, SystemInfo,
 };
+
+use lazy_static::lazy_static;
 
 #[derive(Serialize, Deserialize, Default, Clone, Debug, PartialEq)]
 pub struct ProfilesInfo {
@@ -37,6 +42,7 @@ pub struct Profile {
     pub profile_name: String,
     pub base_profile: DefaultProfileType,
 
+    pub sleep_settings: SleepSettings,
     pub cpu_settings: CPUSettings,
     pub cpu_core_settings: CPUCoreSettings,
     pub screen_settings: ScreenSettings,
@@ -54,6 +60,7 @@ impl Profile {
         info!("Applying profile: {}", self.profile_name);
 
         let settings_functions: Vec<Box<dyn FnOnce() + Send>> = vec![
+            Box::new(|| self.sleep_settings.apply()),
             Box::new(|| {
                 self.cpu_settings.apply();
                 self.cpu_core_settings.apply();
@@ -76,6 +83,9 @@ impl Profile {
 
         match reduced_update {
             ReducedUpdate::None => {}
+            ReducedUpdate::Sleep => {
+                self.sleep_settings.apply();
+            }
             ReducedUpdate::CPU => {
                 self.cpu_settings.apply();
                 self.cpu_core_settings.apply();
@@ -148,6 +158,76 @@ impl Profile {
             self.base_profile.clone(),
             system_info,
         )
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
+pub struct SleepSettings {
+    /// Time to turn off screen after N minutes of inactivity
+    pub turn_off_screen_after: Option<u32>,
+    /// Time to suspend the device after N mintues of inactivity
+    pub suspend_after: Option<u32>,
+}
+
+lazy_static! {
+    pub static ref AUTOLOCK_INSTANCE: Mutex<Option<std::process::Child>> = Mutex::new(None);
+}
+
+impl SleepSettings {
+    pub fn apply(&self) {
+        info!(
+            "Applying Sleep settings on {:?}",
+            std::thread::current().id()
+        );
+
+        if let Some(turn_off_screen_after) = self.turn_off_screen_after {
+            if command_exists("xset") {
+                let time_in_secs = turn_off_screen_after * 60;
+                run_graphical_command(&format!(
+                    "xset dpms {time_in_secs} {time_in_secs} {time_in_secs}"
+                ));
+            } else {
+                error!("Attempted to set screen turn off timeout when xset is not installed");
+            }
+        } else {
+            if command_exists("xset") {
+                run_graphical_command("xset -dpms");
+            }
+        }
+
+        if let Some(suspend_after) = self.suspend_after {
+            Self::kill_previous_autolock_instance();
+
+            if command_exists("xautolock") {
+                info!("Running autolock");
+                *AUTOLOCK_INSTANCE.lock().unwrap() = run_graphical_command_in_background(&format!(
+                    "xautolock -time {suspend_after} -locker 'systemctl suspend'"
+                ))
+                .into();
+            } else {
+                error!("Attempted to set suspend time when xautolock is not installed");
+            }
+        } else {
+            Self::kill_previous_autolock_instance();
+        }
+    }
+
+    fn kill_previous_autolock_instance() {
+        debug!("Killing previous autolock instance");
+
+        if command_exists("xautolock") {
+            run_graphical_command("xautolock -exit");
+        }
+
+        let mut instance_lock = AUTOLOCK_INSTANCE.lock().unwrap();
+
+        if let Some(instance) = instance_lock.as_mut() {
+            instance
+                .wait()
+                .expect("Could not wait for xautolock process to exit after killing.");
+        }
+
+        *instance_lock = None;
     }
 }
 
@@ -451,7 +531,7 @@ impl ScreenSettings {
 
     pub fn try_run_xrandr(command: &str) {
         if command_exists("xrandr") {
-            run_command(command);
+            run_graphical_command(command);
         } else {
             error!("xrandr is not present in the system. Ignoring settings utilizing it...");
         }
