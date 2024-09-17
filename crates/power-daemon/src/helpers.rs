@@ -114,7 +114,7 @@ fn get_xauthority() -> String {
         fs::read_dir("/home")
             .expect("Could not read home dir")
             .flatten()
-            .nth(0)
+            .next()
             .unwrap()
             .file_name()
             .into_string()

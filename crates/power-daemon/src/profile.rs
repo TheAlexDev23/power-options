@@ -189,10 +189,8 @@ impl SleepSettings {
             } else {
                 error!("Attempted to set screen turn off timeout when xset is not installed");
             }
-        } else {
-            if command_exists("xset") {
-                run_graphical_command("xset -dpms");
-            }
+        } else if command_exists("xset") {
+            run_graphical_command("xset -dpms");
         }
 
         if let Some(suspend_after) = self.suspend_after {
