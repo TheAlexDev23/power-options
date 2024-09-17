@@ -74,7 +74,7 @@ pub fn create_profile_file<P: AsRef<Path>>(
 pub fn create_empty_profile_file_with_name<P: AsRef<Path>>(directory_path: P, name: &str) {
     debug!("Generating empty profile");
 
-    let profile = create_empty(&name);
+    let profile = create_empty(name);
 
     let path = PathBuf::from(directory_path.as_ref()).join(format!("{name}.toml"));
 
