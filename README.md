@@ -38,7 +38,6 @@ led to the creation of the profile system that this program uses:
   they remove that override.
 - The user may set a persistent override that will be kept across reboots.
 
-
 ## Available Frontends/Interfaces
 
 One can simply install the daemon and edit the configuration files manually
@@ -94,6 +93,7 @@ Power Option includes the following features:
 
 ## Installation
 
+Run the installation script bellow and then run
 
 - GTK: 
 
@@ -109,6 +109,10 @@ cd power-options/scripts
 chmod +x *.sh
 # Run as local user, will require sudo password
 ./install-gtk.sh
+# If installing for the first time
+./setup.sh
+# If updating
+./update.sh
 ```
 
 - Webview: 
@@ -125,6 +129,10 @@ cd power-options/scripts
 chmod +x *.sh
 # Run as local user, will require sudo password
 ./install-webview.sh
+# If installing for the first time
+./setup.sh
+# If updating
+./update.sh
 ```
 
 - Just the daemon:
@@ -137,11 +145,15 @@ cd power-options/scripts
 chmod +x *.sh
 # Run as local user, will require sudo password
 ./install-daemon.sh
+# If installing for the first time
+./setup.sh
+# If updating
+./update.sh
 ```
 
 ## Dependencies
 
-For *build* dependendencies refer to the installation guide above.
+For *build* dependendencies, refer to the installation guide above.
 
 Mandatory:
 - zsh
@@ -171,9 +183,9 @@ If you've installed using the AUR, your package manager should handle the
 updates.
 
 If you've installed using install scripts, simply pull the latest changes and
-re-run the install scripts again. **Important, do not run ./uninstall.sh if you
+re-run the install scripts again and `./update.sh`. **Important, do not run
+`./uninstall.sh`, `./setup.sh` or `power-daemon-mgr setup` if you
 want to keep your profiles**
-
 
 ## Limitations
 - Network configuration only works on intel cards and cards that use iwlwifi

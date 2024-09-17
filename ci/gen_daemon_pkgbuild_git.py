@@ -67,6 +67,7 @@ package() {{
 
 def create_install_file():
     return f"""post_install() {{
+  power-daemon-mgr setup
   systemctl daemon-reload
   systemctl restart acpid.service
   systemctl enable --now power-options.service

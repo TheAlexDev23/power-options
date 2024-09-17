@@ -71,6 +71,23 @@ pub fn create_profile_file<P: AsRef<Path>>(
     create_profile_file_with_name(name, directory_path, profile_type, system_info);
 }
 
+pub fn create_empty_profile_file_with_name<P: AsRef<Path>>(directory_path: P, name: &str) {
+    debug!("Generating empty profile");
+
+    let profile = create_empty(&name);
+
+    let path = PathBuf::from(directory_path.as_ref()).join(format!("{name}.toml"));
+
+    let mut file = File::create(path).expect("Could not create profile file");
+
+    let content = toml::to_string_pretty(&profile).unwrap();
+
+    trace!("{content}");
+
+    file.write_all(content.as_bytes())
+        .expect("Could not write to profile file");
+}
+
 pub fn create_profile_file_with_name<P: AsRef<Path>>(
     name: String,
     directory_path: P,
@@ -99,7 +116,7 @@ pub fn create_default(
 ) -> Profile {
     Profile {
         profile_name: String::from(name),
-        base_profile: profile_type.clone(),
+        base_profile: profile_type.clone().into(),
 
         sleep_settings: sleep_settings_default(&profile_type),
         cpu_settings: cpu_settings_default(&profile_type, system_info),
@@ -112,6 +129,15 @@ pub fn create_default(
         usb_settings: usb_settings_default(&profile_type),
         sata_settings: sata_settings_default(&profile_type),
         kernel_settings: kernel_settings_default(&profile_type),
+    }
+}
+
+pub fn create_empty(name: &str) -> Profile {
+    Profile {
+        profile_name: String::from(name),
+        base_profile: None,
+
+        ..Default::default()
     }
 }
 
@@ -187,8 +213,12 @@ pub fn cpu_settings_default(
         },
         DefaultProfileType::Performance => CPUSettings {
             mode,
-            // To set EPP balance_performance we cannot set governor to performance. idk why the scaling driver behaves like that
-            governor: Some(String::from("powersave")),
+            governor: Some(String::from(if widespread_driver {
+                // To set EPP balance_performance we cannot set governor to performance. idk why the scaling driver behaves like that
+                "powersave"
+            } else {
+                "performance"
+            })),
             energy_perf_ratio: if widespread_driver {
                 Some(String::from("balance_performance"))
             } else {

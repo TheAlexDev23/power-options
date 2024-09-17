@@ -26,6 +26,16 @@ impl Config {
             profiles: DefaultProfileType::get_name_of_all(),
         }
     }
+    pub fn create_empty() -> Config {
+        Config {
+            ac_profile: "Default".to_string(),
+            bat_profile: "Default".to_string(),
+
+            profile_override: None,
+
+            profiles: vec!["Default".to_string()],
+        }
+    }
 
     /// Will attempt to parse `contentent`, if it fails will merge `content`
     /// with the deafult config and attempt to merge that too

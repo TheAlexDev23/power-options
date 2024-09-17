@@ -36,11 +36,11 @@ impl ProfilesInfo {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Default)]
 pub struct Profile {
     /// Name of the profile. Should match the profile filename
     pub profile_name: String,
-    pub base_profile: DefaultProfileType,
+    pub base_profile: Option<DefaultProfileType>,
 
     pub sleep_settings: SleepSettings,
     pub cpu_settings: CPUSettings,
@@ -120,20 +120,24 @@ impl Profile {
             Err(_) => {
                 #[derive(Deserialize)]
                 struct ProfileTypeOnly {
-                    pub base_profile: DefaultProfileType,
+                    pub base_profile: Option<DefaultProfileType>,
                 }
 
                 warn!("Could not parse profile {profile_name}. Attempting to migrate to newer version.");
 
-                let profile_type: DefaultProfileType = toml::from_str::<ProfileTypeOnly>(contents)
+                let profile_type = toml::from_str::<ProfileTypeOnly>(contents)
                     .expect("Could not parse base profile type")
                     .base_profile;
 
-                let base_profile = toml::to_string(&profiles_generator::create_default(
-                    profile_name,
-                    profile_type,
-                    &SystemInfo::obtain(),
-                ))
+                let base_profile = toml::to_string(&if let Some(profile_type) = profile_type {
+                    profiles_generator::create_default(
+                        profile_name,
+                        profile_type,
+                        &SystemInfo::obtain(),
+                    )
+                } else {
+                    profiles_generator::create_empty(profile_name)
+                })
                 .expect("Could not merge default profile and user profile");
 
                 let merged = serde_toml_merge::merge(
@@ -153,15 +157,15 @@ impl Profile {
     }
 
     pub fn get_original_values(&self, system_info: &SystemInfo) -> Profile {
-        profiles_generator::create_default(
-            &self.profile_name,
-            self.base_profile.clone(),
-            system_info,
-        )
+        if let Some(base_profile_type) = self.base_profile.clone() {
+            profiles_generator::create_default(&self.profile_name, base_profile_type, system_info)
+        } else {
+            profiles_generator::create_empty(&self.profile_name)
+        }
     }
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Default)]
 pub struct SleepSettings {
     /// Time to turn off screen after N minutes of inactivity
     pub turn_off_screen_after: Option<u32>,
@@ -197,7 +201,6 @@ impl SleepSettings {
             Self::kill_previous_autolock_instance();
 
             if command_exists("xautolock") {
-                info!("Running autolock");
                 *AUTOLOCK_INSTANCE.lock().unwrap() = run_graphical_command_in_background(&format!(
                     "xautolock -time {suspend_after} -locker 'systemctl suspend'"
                 ))
@@ -229,7 +232,7 @@ impl SleepSettings {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Default)]
 pub struct CPUSettings {
     // Scaling driver mode (active, passive) for intel_pstate (active, passive, guided) for amd_pstate
     pub mode: Option<String>,
@@ -544,7 +547,7 @@ impl ScreenSettings {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Default)]
 pub struct RadioSettings {
     pub block_wifi: Option<bool>,
     pub block_nfc: Option<bool>,
@@ -579,7 +582,7 @@ impl RadioSettings {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Default)]
 pub struct NetworkSettings {
     pub disable_ethernet: Option<bool>,
 
@@ -707,7 +710,7 @@ impl NetworkSettings {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Default)]
 
 pub struct ASPMSettings {
     pub mode: Option<String>,
@@ -729,7 +732,7 @@ impl ASPMSettings {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Default)]
 pub struct PCISettings {
     pub enable_power_management: Option<bool>,
     // whitelist or blacklist device to exlude/include.
@@ -769,7 +772,7 @@ impl PCISettings {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Default)]
 pub struct USBSettings {
     pub enable_pm: Option<bool>,
     pub autosuspend_delay_ms: Option<u32>,
@@ -825,7 +828,7 @@ impl USBSettings {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Default)]
 pub struct SATASettings {
     pub active_link_pm_policy: Option<String>,
 }
@@ -861,7 +864,7 @@ impl SATASettings {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Default)]
 pub struct KernelSettings {
     pub disable_nmi_watchdog: Option<bool>,
     pub vm_writeback: Option<u32>,
