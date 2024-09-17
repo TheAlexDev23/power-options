@@ -80,10 +80,12 @@ Power Option includes the following features:
 - CPU Options
 - Individual CPU Core Options. Most power saving tools lack this option and was
   one of the main motivations for this project.
+- System Sleep Options (suspend, screen turn off)
 - Screen Options
 - Options for disabling radio components (e.g Bluetooth, WiFi, NFC)
 - Network Options. Allows WAY greater control than alternative applications, but
-  does require network driver reload. Limited to Intel network cards that use iwlwifi.
+  does require network driver reload. Limited to Intel network cards that use
+  iwlwifi.
 - ASPM Options
 - PCI Options
 - USB Options
@@ -152,6 +154,8 @@ Optional:
 - xrandr: resolution/refresh rate control
 - brightnessctl: brightness control
 - ifconfig: ethernet blocking
+- xset: screen turn off timeout
+- xautolock: system suspend timeout
 
 Webview frontend:
 - webkit2gtk

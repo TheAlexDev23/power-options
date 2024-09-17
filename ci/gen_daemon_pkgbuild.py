@@ -20,7 +20,13 @@ url="{url}"
 license=('MIT')
 
 depends=('acpid' 'zsh' 'pciutils' 'usbutils')
-optdepends=('xorg-xrandr: needed for screen settings' 'brightnessctl: needed for brightness settings' 'net-tools: needed to disable ethernet cards')
+optdepends=(
+'brightnessctl: needed for brightness settings' 
+'net-tools: needed to disable ethernet cards' 'net-tools: needed to disable ethernet cards'
+'xorg-xrandr: needed for screen settings' 
+'xorg-xset: needed to configure screen turn off timeout'
+'xautolock: needed to configure system suspend timeout'
+)
 makedepends=('cargo')
 
 provides=('power-options-daemon')
