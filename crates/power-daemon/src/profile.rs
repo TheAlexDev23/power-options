@@ -1,4 +1,4 @@
-use std::{fs, io};
+use std::{fs, io, sync::Mutex};
 
 use log::{debug, error, info, warn};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
@@ -12,6 +12,8 @@ use crate::{
     profiles_generator::{self, DefaultProfileType},
     ReducedUpdate, SystemInfo,
 };
+
+use lazy_static::lazy_static;
 
 #[derive(Serialize, Deserialize, Default, Clone, Debug, PartialEq)]
 pub struct ProfilesInfo {
@@ -81,6 +83,9 @@ impl Profile {
 
         match reduced_update {
             ReducedUpdate::None => {}
+            ReducedUpdate::Sleep => {
+                self.sleep_settings.apply();
+            }
             ReducedUpdate::CPU => {
                 self.cpu_settings.apply();
                 self.cpu_core_settings.apply();
@@ -164,6 +169,10 @@ pub struct SleepSettings {
     pub suspend_after: Option<u32>,
 }
 
+lazy_static! {
+    pub static ref AUTOLOCK_INSTANCE: Mutex<Option<std::process::Child>> = Mutex::new(None);
+}
+
 impl SleepSettings {
     pub fn apply(&self) {
         info!(
@@ -187,19 +196,38 @@ impl SleepSettings {
         }
 
         if let Some(suspend_after) = self.suspend_after {
+            Self::kill_previous_autolock_instance();
+
             if command_exists("xautolock") {
-                run_graphical_command("xautolock -exit");
-                run_graphical_command_in_background(&format!(
+                info!("Running autolock");
+                *AUTOLOCK_INSTANCE.lock().unwrap() = run_graphical_command_in_background(&format!(
                     "xautolock -time {suspend_after} -locker 'systemctl suspend'"
-                ));
+                ))
+                .into();
             } else {
                 error!("Attempted to set suspend time when xautolock is not installed");
             }
         } else {
-            if command_exists("xautolock") {
-                run_graphical_command("xautolock -exit");
-            }
+            Self::kill_previous_autolock_instance();
         }
+    }
+
+    fn kill_previous_autolock_instance() {
+        debug!("Killing previous autolock instance");
+
+        if command_exists("xautolock") {
+            run_graphical_command("xautolock -exit");
+        }
+
+        let mut instance_lock = AUTOLOCK_INSTANCE.lock().unwrap();
+
+        if let Some(instance) = instance_lock.as_mut() {
+            instance
+                .wait()
+                .expect("Could not wait for xautolock process to exit after killing.");
+        }
+
+        *instance_lock = None;
     }
 }
 

@@ -26,6 +26,7 @@ use log::{debug, error, trace};
 #[derive(Clone, Deserialize, Serialize, PartialEq, Debug)]
 pub enum ReducedUpdate {
     None,
+    Sleep,
     CPU,
     CPUCores,
     SingleCPUCore(u32),

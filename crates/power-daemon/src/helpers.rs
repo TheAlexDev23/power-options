@@ -93,8 +93,8 @@ pub fn run_graphical_command(command: &str) {
     }
 }
 
-pub fn run_graphical_command_in_background(command: &str) {
-    debug!("running in background: {command}");
+pub fn run_graphical_command_in_background(command: &str) -> std::process::Child {
+    debug!("running graphical command in background: {command}");
     Command::new("zsh")
         .args(["-c", command])
         .stdout(Stdio::inherit())
@@ -102,7 +102,7 @@ pub fn run_graphical_command_in_background(command: &str) {
         .env("DISPLAY", ":0.0")
         .env("XAUTHORITY", get_xauthority())
         .spawn()
-        .expect("Could not run command");
+        .expect("Could not run command")
 }
 
 fn get_xauthority() -> String {
