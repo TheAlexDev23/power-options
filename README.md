@@ -93,13 +93,28 @@ Power Option includes the following features:
 
 ## Installation
 
-Run the installation script bellow and then run
+
+### Arch Linux
+
+There are 6 AUR packages for power-options.
+
+- GTK: `power-options-gtk` (stable) and `power-options-gtk-git` (bleeding edge)
+- Webview: `power-options-webview` (stable) and `power-options-webview-git` (bleeding edge)
+- Just the daemon: `power-options-daemon` (stable) and `power-options-daemon-git` (bleeding edge)
+
+
+### Fedora
+
+The COPR GTK package is maintained by @lpuv
+
+```bash
+sudo dnf copr enable leo/power-options 
+sudo dnf install power-options
+```
+
+### Other distros / from source
 
 - GTK: 
-
-AUR: `power-options-gtk` or `power-options-gtk-git` for bleeding edge
-
-From source:
 
 To build, requires dev libraries `libgtk4-dev` `libadwaita-1-dev` (or the equivalent in
 your distro)
@@ -116,8 +131,6 @@ chmod +x *.sh
 ```
 
 - Webview: 
-
-AUR: `power-options-webview` or `power-options-webview-git` for bleeding edge
 
 To build, requires dev libraries `libsoup-3.0-dev`, `libwebkit2gtk-4.1-dev` and
 `libxdo-dev` (or the equivalent in your distro)
@@ -136,8 +149,6 @@ chmod +x *.sh
 ```
 
 - Just the daemon:
-
-AUR: `power-options-daemon` or `power-options-daemon-git` for bleeding edge
 
 ```bash
 git clone https://github.com/TheAlexDev23/power-options/ --depth=1
