@@ -105,7 +105,7 @@ There are 6 AUR packages for power-options.
 
 ### Fedora
 
-The COPR GTK package is maintained by @lpuv
+The COPR GTK package is maintained by [@lpuv](https://github.com/lpuv)
 
 ```bash
 sudo dnf copr enable leo/power-options 
