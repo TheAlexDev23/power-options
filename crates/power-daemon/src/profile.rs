@@ -197,9 +197,9 @@ impl SleepSettings {
             run_graphical_command("xset -dpms");
         }
 
-        if let Some(suspend_after) = self.suspend_after {
-            Self::kill_previous_autolock_instance();
+        Self::kill_previous_autolock_instance();
 
+        if let Some(suspend_after) = self.suspend_after {
             if command_exists("xautolock") {
                 *AUTOLOCK_INSTANCE.lock().unwrap() = run_graphical_command_in_background(&format!(
                     "xautolock -time {suspend_after} -locker 'systemctl suspend'"
@@ -208,21 +208,19 @@ impl SleepSettings {
             } else {
                 error!("Attempted to set suspend time when xautolock is not installed");
             }
-        } else {
-            Self::kill_previous_autolock_instance();
         }
     }
 
     fn kill_previous_autolock_instance() {
         debug!("Killing previous autolock instance");
 
-        if command_exists("xautolock") {
-            run_graphical_command("xautolock -exit");
-        }
-
         let mut instance_lock = AUTOLOCK_INSTANCE.lock().unwrap();
 
         if let Some(instance) = instance_lock.as_mut() {
+            if command_exists("xautolock") {
+                run_graphical_command("xautolock -exit");
+            }
+
             instance
                 .wait()
                 .expect("Could not wait for xautolock process to exit after killing.");
