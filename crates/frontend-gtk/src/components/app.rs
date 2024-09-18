@@ -6,6 +6,8 @@ use std::time::Duration;
 use gtk::glib::clone;
 
 use adw::prelude::*;
+use power_daemon::FirmwareInfo;
+use power_daemon::FirmwareSettings;
 use power_daemon::OptionalFeaturesInfo;
 use relm4::loading_widgets::LoadingWidgets;
 use relm4::prelude::*;
@@ -19,6 +21,7 @@ use power_daemon::{
 };
 use power_daemon::{Config, ProfilesInfo, SystemInfo};
 
+use super::firmware::FirmwareGroup;
 use super::groups::{
     cpu::CPUGroup, cpu_cores::CPUCoresGroup, kernel::KernelGroup, network::NetworkGroup,
     pci::PCIGroup, radio::RadioGroup, sata::SATAGroup, usb::USBGroup,
@@ -44,6 +47,7 @@ pub enum SettingsGroup {
     SATA,
     Kernel,
     Sleep,
+    Firmware,
 }
 
 impl SettingsGroup {
@@ -58,6 +62,7 @@ impl SettingsGroup {
             "SATA" => SettingsGroup::SATA,
             "Kernel" => SettingsGroup::Kernel,
             "Sleep" => SettingsGroup::Sleep,
+            "Firmware" => SettingsGroup::Firmware,
             _ => panic!("Unkown settings group"),
         }
     }
@@ -75,6 +80,7 @@ impl Display for SettingsGroup {
             SettingsGroup::SATA => "SATA",
             SettingsGroup::Kernel => "Kernel",
             SettingsGroup::Sleep => "Sleep",
+            SettingsGroup::Firmware => "Firmware",
         })
     }
 }
@@ -129,6 +135,7 @@ pub struct App {
     usb_group: Controller<USBGroup>,
     sata_group: Controller<SATAGroup>,
     kernel_group: Controller<KernelGroup>,
+    firmware_group: Controller<FirmwareGroup>,
 }
 
 impl App {
@@ -233,6 +240,9 @@ impl SimpleAsyncComponent for App {
         let kernel_group = KernelGroup::builder()
             .launch(())
             .forward(sender.input_sender(), identity);
+        let firmware_group = FirmwareGroup::builder()
+            .launch(())
+            .forward(sender.input_sender(), identity);
 
         let settings_group_stack = gtk::Stack::new();
         settings_group_stack.set_transition_type(gtk::StackTransitionType::SlideUpDown);
@@ -300,6 +310,13 @@ impl SimpleAsyncComponent for App {
             Some("Kernel"),
             "Kernel",
         );
+        settings_group_stack.add_titled(
+            &gtk::ScrolledWindow::builder()
+                .child(firmware_group.widget())
+                .build(),
+            Some("Firmware"),
+            "Firmware",
+        );
 
         {
             let sender = sender.clone();
@@ -329,6 +346,7 @@ impl SimpleAsyncComponent for App {
             sata_group,
             kernel_group,
             sleep_group,
+            firmware_group,
         };
 
         let widgets = view_output!();
@@ -347,6 +365,7 @@ impl SimpleAsyncComponent for App {
                 ));
             }
             AppInput::SendRootRequestToGroup(group, request) => match group {
+                SettingsGroup::Sleep => self.sleep_group.sender().send(request.into()).unwrap(),
                 SettingsGroup::CPU => self.cpu_group.sender().send(request.into()).unwrap(),
                 SettingsGroup::CPUCores => {
                     self.cpu_cores_group.sender().send(request.into()).unwrap()
@@ -357,7 +376,9 @@ impl SimpleAsyncComponent for App {
                 SettingsGroup::USB => self.usb_group.sender().send(request.into()).unwrap(),
                 SettingsGroup::SATA => self.sata_group.sender().send(request.into()).unwrap(),
                 SettingsGroup::Kernel => self.kernel_group.sender().send(request.into()).unwrap(),
-                SettingsGroup::Sleep => self.sleep_group.sender().send(request.into()).unwrap(),
+                SettingsGroup::Firmware => {
+                    self.firmware_group.sender().send(request.into()).unwrap()
+                }
             },
             AppInput::SendRootRequestToAll(request) => {
                 self.header.sender().send(request.clone().into()).unwrap();
@@ -395,6 +416,10 @@ impl SimpleAsyncComponent for App {
                     .send(request.clone().into())
                     .unwrap();
                 self.kernel_group
+                    .sender()
+                    .send(request.clone().into())
+                    .unwrap();
+                self.firmware_group
                     .sender()
                     .send(request.clone().into())
                     .unwrap();
@@ -604,6 +629,7 @@ pub async fn remove_all_none_options() -> bool {
         default_usb_settings(&mut profile.usb_settings);
         default_sata_settings(&mut profile.sata_settings);
         default_kernel_settings(&mut profile.kernel_settings);
+        default_firmware_settings(&mut profile.firmware_settings, &info.firmware_info);
 
         if initial != profile {
             changed_any = true;
@@ -745,5 +771,14 @@ fn default_kernel_settings(settings: &mut KernelSettings) {
     }
     if settings.laptop_mode.is_none() {
         settings.laptop_mode = Some(5);
+    }
+}
+
+fn default_firmware_settings(settings: &mut FirmwareSettings, info: &FirmwareInfo) {
+    if settings.platform_profile.is_none() && info.platform_profiles.is_some() {
+        settings.platform_profile = info.platform_profiles.as_ref().unwrap()
+            [info.platform_profiles.as_ref().unwrap().len() / 2]
+            .to_string()
+            .into();
     }
 }

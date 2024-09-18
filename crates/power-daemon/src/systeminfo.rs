@@ -15,6 +15,7 @@ pub struct SystemInfo {
     pub pci_info: PCIInfo,
     pub usb_info: USBInfo,
     pub sata_info: SATAInfo,
+    pub firmware_info: FirmwareInfo,
     pub opt_features_info: OptionalFeaturesInfo,
 }
 
@@ -27,6 +28,7 @@ impl SystemInfo {
             pci_info: PCIInfo::obtain(),
             usb_info: USBInfo::obtain(),
             sata_info: SATAInfo::obtain(),
+            firmware_info: FirmwareInfo::obtain(),
             opt_features_info: OptionalFeaturesInfo::obtain(),
         }
     }
@@ -479,6 +481,25 @@ impl SATAInfo {
             Err(e) => {
                 panic!("Could not read sysfs dir: {e:?}")
             }
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct FirmwareInfo {
+    /// None if unsupported
+    pub platform_profiles: Option<Vec<String>>,
+}
+
+impl FirmwareInfo {
+    pub fn obtain() -> FirmwareInfo {
+        let supports_acpi_profiles = fs::metadata("/sys/firmware/acpi/platform_profile").is_ok();
+        FirmwareInfo {
+            platform_profiles: if supports_acpi_profiles {
+                file_content_to_list("/sys/firmware/acpi/platform_profile_choices").into()
+            } else {
+                None
+            },
         }
     }
 }

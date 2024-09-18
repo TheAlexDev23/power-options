@@ -40,16 +40,6 @@ pub const HWP_DYN_BOOST_MODE_ACTIVE_TT: &str =
 pub const HWP_DYN_BOOST_UNAVAILABLE_TT: &str =
     "HWP Dynamic Boost is only available on Intel Core i-series 6th gen or newer.";
 
-pub const DIS_NMI_TITLE: &str = "Disable NMI watchdog";
-pub const DIS_NMI_TT: &str = "Disables the Kernel's NMI watchdog. A logging tool often used in Kernel development/debugging, it is often recommended to disable this feature";
-
-pub const VM_WR_TITLE: &str = "VM writeback in seconds";
-pub const VM_WR_TT: &str = "In modern operating systems data is first written to memory and then written to disk in predefined intervals for performance and power saving reasons. This option defines the interval for memory flushing to disk.";
-
-pub const LAPTOP_MODE_TITLE: &str = "Laptop Mode";
-pub const LAPTOP_MODE_TT: &str =
-    "Overrides VM Writeback and other Kernel parameters when the system is in laptop-mode, i.e. off the wall. Requires ACPI to be installed.";
-
 pub const DIS_ETH_TITLE: &str = "Disable Ethernet";
 pub const DIS_ETH_TT: &str = "Some tools such as powertop report that the ethernet port uses 2-3 watts when not connected. While these values may be incorrect, disabling ethernet completely if not in use is common in users looking for best power savings in their devices.";
 
@@ -79,3 +69,18 @@ pub const NO_WIFI_DRIVER_TT: &str = "This option is unsupported for you network 
 pub const NO_XRANDR_TT: &str = "This option requires xrandr to be installed in your system. Install xorg-xrandr with you system's package manager.";
 pub const NO_BRIGHTNESSCTL_TT: &str =
     "This option requires brightnessctl to be installed in your system. Install brightnessctl with your system's package manager.";
+
+pub const DIS_NMI_TITLE: &str = "Disable NMI watchdog";
+pub const DIS_NMI_TT: &str = "Disables the Kernel's NMI watchdog. A logging tool often used in Kernel development/debugging, it is often recommended to disable this feature";
+
+pub const VM_WR_TITLE: &str = "VM writeback in seconds";
+pub const VM_WR_TT: &str = "In modern operating systems data is first written to memory and then written to disk in predefined intervals for performance and power saving reasons. This option defines the interval for memory flushing to disk.";
+
+pub const LAPTOP_MODE_TITLE: &str = "Laptop Mode";
+pub const LAPTOP_MODE_TT: &str =
+    "Overrides VM Writeback and other Kernel parameters when the system is in laptop-mode, i.e. off the wall. Requires ACPI to be installed.";
+
+pub const ACPI_PLATFORM_PROFILE_TITLE: &str = "ACPI platform profile";
+pub const ACPI_PLATFORM_PROFILE_TT: &str = "Platform profiles is a feature in some Lenovo and newer laptops that controls characteristics around power-performance ratio, thermals and fan speed.";
+pub const ACPI_PLATFORM_PROFILE_MISSING_TT: &str =
+    "Platform profiles are not available in your system.";

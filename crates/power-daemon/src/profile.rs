@@ -53,6 +53,7 @@ pub struct Profile {
     pub usb_settings: USBSettings,
     pub sata_settings: SATASettings,
     pub kernel_settings: KernelSettings,
+    pub firmware_settings: FirmwareSettings,
 }
 
 impl Profile {
@@ -111,6 +112,7 @@ impl Profile {
             ReducedUpdate::USB => self.usb_settings.apply(),
             ReducedUpdate::SATA => self.sata_settings.apply(),
             ReducedUpdate::Kernel => self.kernel_settings.apply(),
+            ReducedUpdate::Firmware => self.firmware_settings.apply(),
         }
     }
 
@@ -892,6 +894,22 @@ impl KernelSettings {
         }
         if let Some(lm) = self.laptop_mode {
             run_command(&format!("echo {} > /proc/sys/vm/laptop_mode", lm))
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Default)]
+pub struct FirmwareSettings {
+    /// Supported values: performance, balanced, low-power
+    pub platform_profile: Option<String>,
+}
+
+impl FirmwareSettings {
+    pub fn apply(&self) {
+        if let Some(ref profile) = self.platform_profile {
+            run_command(&format!(
+                "echo {profile} > /sys/firmware/acpi/platform_profile"
+            ));
         }
     }
 }

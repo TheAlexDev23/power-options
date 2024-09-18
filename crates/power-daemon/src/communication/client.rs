@@ -1,6 +1,6 @@
 use crate::{
     systeminfo::{CPUInfo, SystemInfo},
-    Config, DefaultProfileType, OptionalFeaturesInfo, PCIInfo, Profile, ProfilesInfo,
+    Config, DefaultProfileType, FirmwareInfo, OptionalFeaturesInfo, PCIInfo, Profile, ProfilesInfo,
     ReducedUpdate, SATAInfo, USBInfo,
 };
 use zbus::proxy;
@@ -25,6 +25,9 @@ trait SystemInfoDBus {
 
     /// Returns a JSON encoded `SATAInfo`
     fn get_sata_info(&self) -> zbus::Result<String>;
+
+    /// Returns a JSON encoded `FirmwareInfo`
+    fn get_firmware_info(&self) -> zbus::Result<String>;
 
     /// Returns a JSON encoded `OptionalFeaturesInfo`
     fn get_optional_features_info(&self) -> zbus::Result<String>;
@@ -54,6 +57,9 @@ impl SystemInfoClient {
         Ok(serde_json::from_str(&self.get_proxy().await?.get_usb_info().await?).unwrap())
     }
     pub async fn get_sata_info(&self) -> zbus::Result<SATAInfo> {
+        Ok(serde_json::from_str(&self.get_proxy().await?.get_sata_info().await?).unwrap())
+    }
+    pub async fn get_firmware_info(&self) -> zbus::Result<FirmwareInfo> {
         Ok(serde_json::from_str(&self.get_proxy().await?.get_sata_info().await?).unwrap())
     }
     pub async fn get_optional_features_info(&self) -> zbus::Result<OptionalFeaturesInfo> {

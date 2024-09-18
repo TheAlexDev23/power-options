@@ -80,7 +80,6 @@ impl From<RootRequest> for SleepInput {
     }
 }
 
-#[tracker::track]
 #[derive(Debug, Default)]
 pub struct SleepGroup {
     settings_obtained: bool,
@@ -88,14 +87,10 @@ pub struct SleepGroup {
     supports_xautolock: bool,
     supports_xset: bool,
 
-    #[do_not_track]
     suspend: U32Binding,
-    #[do_not_track]
     turn_off_screen: U32Binding,
 
-    #[do_not_track]
     last_sleep_settings: Option<SleepSettings>,
-    #[do_not_track]
     active_profile: Option<(usize, Profile)>,
 }
 
@@ -109,8 +104,8 @@ impl SleepGroup {
 
     #[allow(clippy::wrong_self_convention)]
     fn from_opt_info(&mut self, opt_info: &OptionalFeaturesInfo) {
-        self.set_supports_xautolock(opt_info.supports_xautolock);
-        self.set_supports_xset(opt_info.supports_xset);
+        self.supports_xautolock = opt_info.supports_xautolock;
+        self.supports_xset = opt_info.supports_xset;
     }
 
     fn to_sleep_settings(&self) -> SleepSettings {
@@ -174,9 +169,9 @@ impl SimpleComponent for SleepGroup {
                     adw::PreferencesGroup {
                         adw::ComboRow {
                             set_title: labels::SCREEN_TURN_OFF_TITLE,
-                            #[track(model.changed(SleepGroup::supports_xset()))]
+                            #[watch]
                             set_sensitive: model.supports_xset,
-                            #[track(model.changed(SleepGroup::supports_xset()))]
+                            #[watch]
                             set_tooltip_text: if !model.supports_xset {
                                 Some(labels::SCREEN_TURN_OFF_XSET_MISSING)
                             } else {
@@ -188,9 +183,9 @@ impl SimpleComponent for SleepGroup {
                         },
                         adw::ComboRow {
                             set_title: labels::SUSPEND_TITLE,
-                            #[track(model.changed(SleepGroup::supports_xautolock()))]
+                            #[watch]
                             set_sensitive: model.supports_xautolock,
-                            #[track(model.changed(SleepGroup::supports_xautolock()))]
+                            #[watch]
                             set_tooltip_text: if !model.supports_xautolock {
                                 Some(labels::SUSPEND_XAUTOLOCK_MISSING)
                             } else {
