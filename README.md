@@ -205,6 +205,24 @@ want to keep your profiles**
 - Settings for resolution and refresh rate control are only available on the
   webview frontend.
 
+## Contributing
+
+One of the easiest ways to help, is by opening issues when you encounter errors.
+This lets the developers know what to fix, and allows future users with the same
+issue find a fix for their problem.
+
+Linux is a large ecosystem, there are alternatives for almost everything. And
+while power-options was built to be used with the most popular Linux software,
+you can still help by porting power-options to other alternatives that you use
+by opening PRS. Examples could include, porting power-options away from systemd, 
+adding some X exclusive features to wayland, etc. 
+
+The `dev` branch will almost always have some experimental features that still
+remain to be merged into the `main` branch. If your hardware supports those
+features, the developers will be really greatful if you could test them in your
+system and inform of potential issues. Using the power-options Discord server is 
+recommended for those use cases.
+
 ## Acknowledgements
 - Arch Linux Wiki (https://wiki.archlinux.org)
 - TLP (https://github.com/linrunner/TLP)
