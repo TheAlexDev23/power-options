@@ -39,6 +39,7 @@ pub enum ReducedUpdate {
     USB,
     SATA,
     Kernel,
+    Firmware,
 }
 
 pub struct Instance {

@@ -1,5 +1,6 @@
 pub mod cpu;
 pub mod cpu_cores;
+pub mod firmware;
 pub mod kernel;
 pub mod network;
 pub mod pci;

@@ -12,8 +12,9 @@ use communication_services::{
     system_info_service, ControlAction, ControlRoutine, SystemInfoSyncType,
 };
 use setting_groups::{
-    cpu::CPUGroup, kernel::KernelGroup, network::NetworkGroup, pci::PCIAndASPMGroup,
-    radio::RadioGroup, sata::SATAGroup, screen::ScreenGroup, sleep::SleepGroup, usb::USBGroup,
+    cpu::CPUGroup, firmware::FirmwareGroup, kernel::KernelGroup, network::NetworkGroup,
+    pci::PCIAndASPMGroup, radio::RadioGroup, sata::SATAGroup, screen::ScreenGroup,
+    sleep::SleepGroup, usb::USBGroup,
 };
 use settings::SettingsMenu;
 
@@ -255,6 +256,7 @@ fn SettingGroupsNav(current_tab: Signal<u8>) -> Element {
         ("assets/icons/navbar-usb.svg", "USB"),
         ("assets/icons/navbar-sata.svg", "SATA"),
         ("assets/icons/linux-tux.svg", "Kernel"),
+        ("assets/icons/navbar-firmware.svg", "Firmware"),
     ];
 
     rsx! {
@@ -339,6 +341,13 @@ fn SettingGroup(
                 }
             } else if current_tab_val == 8 {
                 KernelGroup { profiles_info, control_routine, system_info_routine }
+            } else if current_tab_val == 9 {
+                FirmwareGroup {
+                    system_info,
+                    profiles_info,
+                    control_routine,
+                    system_info_routine
+                }
             } else {
                 PlaceholderGroup { current_tab }
             }

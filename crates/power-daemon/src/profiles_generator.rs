@@ -13,10 +13,11 @@ use crate::{
         Profile, RadioSettings, SATASettings, ScreenSettings, USBSettings,
     },
     systeminfo::{CPUFreqDriver, SystemInfo},
-    SleepSettings,
+    FirmwareSettings, SleepSettings,
 };
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq)]
+#[repr(usize)]
 pub enum DefaultProfileType {
     Superpowersave,
     Powersave,
@@ -129,6 +130,7 @@ pub fn create_default(
         usb_settings: usb_settings_default(&profile_type),
         sata_settings: sata_settings_default(&profile_type),
         kernel_settings: kernel_settings_default(&profile_type),
+        firmware_settings: firmware_settings_default(&profile_type, &system_info),
     }
 }
 
@@ -138,6 +140,31 @@ pub fn create_empty(name: &str) -> Profile {
         base_profile: None,
 
         ..Default::default()
+    }
+}
+
+fn sleep_settings_default(profile_type: &DefaultProfileType) -> SleepSettings {
+    match profile_type {
+        DefaultProfileType::Superpowersave => SleepSettings {
+            turn_off_screen_after: Some(10),
+            suspend_after: Some(15),
+        },
+        DefaultProfileType::Powersave => SleepSettings {
+            turn_off_screen_after: Some(15),
+            suspend_after: Some(20),
+        },
+        DefaultProfileType::Balanced => SleepSettings {
+            turn_off_screen_after: Some(20),
+            suspend_after: Some(30),
+        },
+        DefaultProfileType::Performance => SleepSettings {
+            turn_off_screen_after: Some(30),
+            suspend_after: Some(45),
+        },
+        DefaultProfileType::Ultraperformance => SleepSettings {
+            turn_off_screen_after: Some(45),
+            suspend_after: Some(60),
+        },
     }
 }
 
@@ -399,27 +426,24 @@ pub fn kernel_settings_default(profile_type: &DefaultProfileType) -> KernelSetti
         },
     }
 }
-fn sleep_settings_default(profile_type: &DefaultProfileType) -> SleepSettings {
-    match profile_type {
-        DefaultProfileType::Superpowersave => SleepSettings {
-            turn_off_screen_after: Some(10),
-            suspend_after: Some(15),
-        },
-        DefaultProfileType::Powersave => SleepSettings {
-            turn_off_screen_after: Some(15),
-            suspend_after: Some(20),
-        },
-        DefaultProfileType::Balanced => SleepSettings {
-            turn_off_screen_after: Some(20),
-            suspend_after: Some(30),
-        },
-        DefaultProfileType::Performance => SleepSettings {
-            turn_off_screen_after: Some(30),
-            suspend_after: Some(45),
-        },
-        DefaultProfileType::Ultraperformance => SleepSettings {
-            turn_off_screen_after: Some(45),
-            suspend_after: Some(60),
-        },
+
+fn firmware_settings_default(
+    profile_type: &DefaultProfileType,
+    system_info: &SystemInfo,
+) -> FirmwareSettings {
+    let firmware_info = &system_info.firmware_info;
+    if let Some(ref profiles) = firmware_info.platform_profiles {
+        let step = profiles.len() as f64 / (5 - 1) as f64;
+        let equally_spaced_values: Vec<String> = (0..5)
+            .map(|i| profiles[(i as f64 * step) as usize].clone())
+            .collect();
+
+        FirmwareSettings {
+            platform_profile: equally_spaced_values[*profile_type as usize].clone().into(),
+        }
+    } else {
+        FirmwareSettings {
+            platform_profile: None,
+        }
     }
 }

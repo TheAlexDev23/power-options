@@ -1,4 +1,5 @@
 pub mod cpu;
+pub mod firmware;
 pub mod kernel;
 pub mod network;
 pub mod pci;
