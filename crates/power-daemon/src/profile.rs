@@ -159,7 +159,7 @@ impl Profile {
     }
 
     pub fn get_original_values(&self, system_info: &SystemInfo) -> Profile {
-        if let Some(base_profile_type) = self.base_profile.clone() {
+        if let Some(base_profile_type) = self.base_profile {
             profiles_generator::create_default(&self.profile_name, base_profile_type, system_info)
         } else {
             profiles_generator::create_empty(&self.profile_name)

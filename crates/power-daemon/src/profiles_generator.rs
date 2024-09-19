@@ -117,7 +117,7 @@ pub fn create_default(
 ) -> Profile {
     Profile {
         profile_name: String::from(name),
-        base_profile: profile_type.clone().into(),
+        base_profile: profile_type.into(),
 
         sleep_settings: sleep_settings_default(&profile_type),
         cpu_settings: cpu_settings_default(&profile_type, system_info),
@@ -130,7 +130,7 @@ pub fn create_default(
         usb_settings: usb_settings_default(&profile_type),
         sata_settings: sata_settings_default(&profile_type),
         kernel_settings: kernel_settings_default(&profile_type),
-        firmware_settings: firmware_settings_default(&profile_type, &system_info),
+        firmware_settings: firmware_settings_default(&profile_type, system_info),
     }
 }
 
