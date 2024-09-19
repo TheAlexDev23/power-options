@@ -52,36 +52,68 @@ pub struct NetworkGroup {
 impl NetworkGroup {
     #[allow(clippy::wrong_self_convention)]
     fn from_network_settings(&mut self, network_settings: &NetworkSettings) {
-        *self.disable_ethernet.guard() = network_settings.disable_ethernet.unwrap();
-        *self.disable_wifi_7.guard() = network_settings.disable_wifi_7.unwrap();
-        *self.disable_wifi_6.guard() = network_settings.disable_wifi_6.unwrap();
-        *self.disable_wifi_5.guard() = network_settings.disable_wifi_5.unwrap();
-        *self.enable_power_save.guard() = network_settings.enable_power_save.unwrap();
-        *self.enable_uapsd.guard() = network_settings.enable_uapsd.unwrap();
+        *self.disable_ethernet.guard() = network_settings.disable_ethernet.unwrap_or_default();
+        *self.disable_wifi_7.guard() = network_settings.disable_wifi_7.unwrap_or_default();
+        *self.disable_wifi_6.guard() = network_settings.disable_wifi_6.unwrap_or_default();
+        *self.disable_wifi_5.guard() = network_settings.disable_wifi_5.unwrap_or_default();
+        *self.enable_power_save.guard() = network_settings.enable_power_save.unwrap_or_default();
+        *self.enable_uapsd.guard() = network_settings.enable_uapsd.unwrap_or_default();
 
         let power_scheme = self.power_scheme.guard();
         power_scheme.set_upper(3.0);
         power_scheme.set_lower(1.0);
         power_scheme.set_step_increment(1.0);
-        power_scheme.set_value(network_settings.power_scheme.unwrap() as f64);
+        power_scheme.set_value(network_settings.power_scheme.unwrap_or_default() as f64);
 
         let power_level = self.power_level.guard();
         power_level.set_upper(5.0);
         power_level.set_lower(0.0);
         power_level.set_step_increment(1.0);
-        power_level.set_value(network_settings.power_level.unwrap() as f64);
+        power_level.set_value(network_settings.power_level.unwrap_or_default() as f64);
     }
 
     fn to_network_settings(&self) -> NetworkSettings {
         NetworkSettings {
-            disable_ethernet: self.disable_ethernet.value().into(),
-            disable_wifi_7: self.disable_wifi_7.value().into(),
-            disable_wifi_6: self.disable_wifi_6.value().into(),
-            disable_wifi_5: self.disable_wifi_5.value().into(),
-            enable_power_save: self.enable_power_save.value().into(),
-            enable_uapsd: self.enable_uapsd.value().into(),
-            power_level: (self.power_level.value().value() as u8).into(),
-            power_scheme: (self.power_scheme.value().value() as u8).into(),
+            disable_ethernet: if self.supports_ifconfig {
+                self.disable_ethernet.value().into()
+            } else {
+                None
+            },
+            disable_wifi_7: if self.supports_wifi_drivers {
+                self.disable_wifi_7.value().into()
+            } else {
+                None
+            },
+            disable_wifi_6: if self.supports_wifi_drivers {
+                self.disable_wifi_6.value().into()
+            } else {
+                None
+            },
+            disable_wifi_5: if self.supports_wifi_drivers {
+                self.disable_wifi_5.value().into()
+            } else {
+                None
+            },
+            enable_power_save: if self.supports_wifi_drivers {
+                self.enable_power_save.value().into()
+            } else {
+                None
+            },
+            enable_uapsd: if self.supports_wifi_drivers {
+                self.enable_uapsd.value().into()
+            } else {
+                None
+            },
+            power_level: if self.supports_wifi_drivers {
+                (self.power_level.value().value() as u8).into()
+            } else {
+                None
+            },
+            power_scheme: if self.supports_wifi_drivers {
+                (self.power_scheme.value().value() as u8).into()
+            } else {
+                None
+            },
         }
     }
 }
