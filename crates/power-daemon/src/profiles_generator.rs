@@ -433,7 +433,7 @@ fn firmware_settings_default(
 ) -> FirmwareSettings {
     let firmware_info = &system_info.firmware_info;
     if let Some(ref profiles) = firmware_info.platform_profiles {
-        let step = profiles.len() as f64 / (5 - 1) as f64;
+        let step = (profiles.len() - 1) as f64 / (5 - 1) as f64;
         let equally_spaced_values: Vec<String> = (0..5)
             .map(|i| profiles[(i as f64 * step) as usize].clone())
             .collect();
