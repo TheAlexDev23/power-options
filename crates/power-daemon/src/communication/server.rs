@@ -111,7 +111,7 @@ impl ControlServer {
     }
 
     async fn get_active_profile_name(&mut self) -> String {
-        info!(target: "D-BUS", "get_active_profile_name");
+        debug!(target: "D-BUS", "get_active_profile_name");
         self.instance.get_mut().get_active_profile_name()
     }
 
@@ -162,7 +162,7 @@ impl ControlServer {
         }
     }
     async fn update_profile_reduced(&mut self, idx: u32, updated: String, reduced_update: String) {
-        info!(target: "D-BUS", "update_profile_redced: {idx} {reduced_update}");
+        info!(target: "D-BUS", "update_profile_reduced: {idx} {reduced_update}");
         trace!("New profile: {updated}");
 
         let reduced_update = match serde_json::from_str(&reduced_update) {
