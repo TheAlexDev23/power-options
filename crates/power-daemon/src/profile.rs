@@ -54,6 +54,7 @@ pub struct Profile {
     pub sata_settings: SATASettings,
     pub kernel_settings: KernelSettings,
     pub firmware_settings: FirmwareSettings,
+    pub audio_settings: AudioSettings,
 }
 
 impl Profile {
@@ -74,6 +75,8 @@ impl Profile {
             Box::new(|| self.usb_settings.apply()),
             Box::new(|| self.sata_settings.apply()),
             Box::new(|| self.kernel_settings.apply()),
+            Box::new(|| self.firmware_settings.apply()),
+            Box::new(|| self.audio_settings.apply()),
         ];
 
         settings_functions.into_par_iter().for_each(|f| f());
@@ -113,6 +116,7 @@ impl Profile {
             ReducedUpdate::SATA => self.sata_settings.apply(),
             ReducedUpdate::Kernel => self.kernel_settings.apply(),
             ReducedUpdate::Firmware => self.firmware_settings.apply(),
+            ReducedUpdate::Audio => self.audio_settings.apply(),
         }
     }
 
@@ -908,6 +912,29 @@ impl FirmwareSettings {
             run_command(&format!(
                 "echo {profile} > /sys/firmware/acpi/platform_profile"
             ));
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Default)]
+pub struct AudioSettings {
+    pub idle_timeout: Option<u32>,
+}
+
+impl AudioSettings {
+    pub fn apply(&self) {
+        if let Some(ref time) = self.idle_timeout {
+            if fs::metadata("/sys/module/snd_hda_intel/").is_ok() {
+                run_command(&format!(
+                    "modprobe -r snd_hda_intel && modprobe snd_hda_intel power_save={time}"
+                ));
+            } else if fs::metadata("/sys/module/snd_ac97_codec/").is_ok() {
+                run_command(&format!(
+                    "modprobe -r snd_ac97_codec && modprobe snd_ac97_codec power_save={time}"
+                ));
+            } else {
+                error!("Attempted to set audio idle timeout but only snd_hda_intel and snd_ac97_codec modules are supported for this feature.");
+            }
         }
     }
 }

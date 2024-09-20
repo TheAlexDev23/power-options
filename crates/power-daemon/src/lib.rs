@@ -40,6 +40,7 @@ pub enum ReducedUpdate {
     SATA,
     Kernel,
     Firmware,
+    Audio,
 }
 
 pub struct Instance {

@@ -13,7 +13,7 @@ use crate::{
         Profile, RadioSettings, SATASettings, ScreenSettings, USBSettings,
     },
     systeminfo::{CPUFreqDriver, SystemInfo},
-    FirmwareSettings, SleepSettings,
+    AudioModule, AudioSettings, FirmwareSettings, SleepSettings,
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq)]
@@ -131,6 +131,7 @@ pub fn create_default(
         sata_settings: sata_settings_default(&profile_type),
         kernel_settings: kernel_settings_default(&profile_type),
         firmware_settings: firmware_settings_default(&profile_type, system_info),
+        audio_settings: audio_settings_default(&profile_type, system_info),
     }
 }
 
@@ -445,5 +446,24 @@ fn firmware_settings_default(
         FirmwareSettings {
             platform_profile: None,
         }
+    }
+}
+
+fn audio_settings_default(
+    profile_type: &DefaultProfileType,
+    system_info: &SystemInfo,
+) -> AudioSettings {
+    AudioSettings {
+        idle_timeout: if system_info.opt_features_info.audio_module == AudioModule::Other {
+            None
+        } else {
+            match profile_type {
+                DefaultProfileType::Superpowersave => Some(2),
+                DefaultProfileType::Powersave => Some(5),
+                DefaultProfileType::Balanced => Some(10),
+                DefaultProfileType::Performance => Some(15),
+                DefaultProfileType::Ultraperformance => Some(25),
+            }
+        },
     }
 }

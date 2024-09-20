@@ -1,3 +1,4 @@
+pub mod audio;
 pub mod cpu;
 pub mod firmware;
 pub mod kernel;

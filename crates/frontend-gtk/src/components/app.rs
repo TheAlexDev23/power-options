@@ -13,6 +13,7 @@ use relm4::Controller;
 use enumflags2::BitFlags;
 use power_daemon::{Config, ProfilesInfo, SystemInfo};
 
+use super::audio::AudioGroup;
 use super::firmware::FirmwareGroup;
 use super::groups::{
     cpu::CPUGroup, cpu_cores::CPUCoresGroup, kernel::KernelGroup, network::NetworkGroup,
@@ -42,6 +43,7 @@ pub enum SettingsGroup {
     Kernel,
     Sleep,
     Firmware,
+    Audio,
 }
 
 impl SettingsGroup {
@@ -57,6 +59,7 @@ impl SettingsGroup {
             "Kernel" => SettingsGroup::Kernel,
             "Sleep" => SettingsGroup::Sleep,
             "Firmware" => SettingsGroup::Firmware,
+            "Audio" => SettingsGroup::Audio,
             _ => panic!("Unkown settings group"),
         }
     }
@@ -75,6 +78,7 @@ impl Display for SettingsGroup {
             SettingsGroup::Kernel => "Kernel",
             SettingsGroup::Sleep => "Sleep",
             SettingsGroup::Firmware => "Firmware",
+            SettingsGroup::Audio => "Audio",
         })
     }
 }
@@ -130,6 +134,7 @@ pub struct App {
     sata_group: Controller<SATAGroup>,
     kernel_group: Controller<KernelGroup>,
     firmware_group: Controller<FirmwareGroup>,
+    audio_group: Controller<AudioGroup>,
 }
 
 impl App {
@@ -237,6 +242,9 @@ impl SimpleAsyncComponent for App {
         let firmware_group = FirmwareGroup::builder()
             .launch(())
             .forward(sender.input_sender(), identity);
+        let audio_group = AudioGroup::builder()
+            .launch(())
+            .forward(sender.input_sender(), identity);
 
         let settings_group_stack = gtk::Stack::new();
         settings_group_stack.set_transition_type(gtk::StackTransitionType::SlideUpDown);
@@ -311,6 +319,13 @@ impl SimpleAsyncComponent for App {
             Some("Firmware"),
             "Firmware",
         );
+        settings_group_stack.add_titled(
+            &gtk::ScrolledWindow::builder()
+                .child(audio_group.widget())
+                .build(),
+            Some("Audio"),
+            "Audio",
+        );
 
         {
             let sender = sender.clone();
@@ -341,6 +356,7 @@ impl SimpleAsyncComponent for App {
             kernel_group,
             sleep_group,
             firmware_group,
+            audio_group,
         };
 
         let widgets = view_output!();
@@ -373,6 +389,7 @@ impl SimpleAsyncComponent for App {
                 SettingsGroup::Firmware => {
                     self.firmware_group.sender().send(request.into()).unwrap()
                 }
+                SettingsGroup::Audio => self.audio_group.sender().send(request.into()).unwrap(),
             },
             AppInput::SendRootRequestToAll(request) => {
                 self.header.sender().send(request.clone().into()).unwrap();
@@ -414,6 +431,10 @@ impl SimpleAsyncComponent for App {
                     .send(request.clone().into())
                     .unwrap();
                 self.firmware_group
+                    .sender()
+                    .send(request.clone().into())
+                    .unwrap();
+                self.audio_group
                     .sender()
                     .send(request.clone().into())
                     .unwrap();

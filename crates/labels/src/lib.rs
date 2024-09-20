@@ -84,3 +84,9 @@ pub const ACPI_PLATFORM_PROFILE_TITLE: &str = "ACPI platform profile";
 pub const ACPI_PLATFORM_PROFILE_TT: &str = "Platform profiles is a feature in some Lenovo and newer laptops that controls characteristics around power-performance ratio, thermals and fan speed.";
 pub const ACPI_PLATFORM_PROFILE_MISSING_TT: &str =
     "Platform profiles are not available in your system.";
+
+pub const AUDIO_IDLE_TIMEOUT_TITLE: &str = "Audio Module Timeout in Seconds";
+pub const AUDIO_IDLE_TIMEOUT_TT: &str =
+    "Time in seconds of audio inactivity for the audio driver to go into idle mode.";
+pub const AUDIO_IDLE_TIMEOUT_MODULE_UNSPORTED_TT: &str =
+    "Audio Module Idle Timeout is only available on systems with the snd_hda_intel and snd_ac97_codec audio drivers.";

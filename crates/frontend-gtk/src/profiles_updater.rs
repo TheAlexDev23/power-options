@@ -1,7 +1,7 @@
 use log::debug;
 use power_daemon::{
-    ASPMInfo, ASPMSettings, CPUInfo, CPUSettings, KernelSettings, NetworkSettings, PCISettings,
-    RadioSettings, SATASettings, USBSettings,
+    ASPMInfo, ASPMSettings, AudioModule, AudioSettings, CPUInfo, CPUSettings, KernelSettings,
+    NetworkSettings, PCISettings, RadioSettings, SATASettings, USBSettings,
 };
 
 use power_daemon::FirmwareInfo;
@@ -52,6 +52,7 @@ pub async fn remove_all_none_options() -> bool {
         default_sata_settings(&mut profile.sata_settings);
         default_kernel_settings(&mut profile.kernel_settings);
         default_firmware_settings(&mut profile.firmware_settings, &info.firmware_info);
+        default_audio_settings(&mut profile.audio_settings, &info.opt_features_info);
 
         if initial != profile {
             changed_any = true;
@@ -202,5 +203,12 @@ fn default_firmware_settings(settings: &mut FirmwareSettings, info: &FirmwareInf
             [info.platform_profiles.as_ref().unwrap().len() / 2]
             .to_string()
             .into();
+    }
+}
+
+fn default_audio_settings(settings: &mut AudioSettings, info: &OptionalFeaturesInfo) {
+    if settings.idle_timeout.is_none() && info.audio_module != AudioModule::Other {
+        // Usually the default
+        settings.idle_timeout = Some(10);
     }
 }

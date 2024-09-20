@@ -513,6 +513,15 @@ pub struct OptionalFeaturesInfo {
 
     pub supports_wifi_drivers: bool,
     pub supports_ifconfig: bool,
+
+    pub audio_module: AudioModule,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub enum AudioModule {
+    SndHdaIntel,
+    SndAc9Codec,
+    Other,
 }
 
 impl OptionalFeaturesInfo {
@@ -526,6 +535,13 @@ impl OptionalFeaturesInfo {
                 && (fs::metadata("/sys/module/iwlmvm").is_ok()
                     || fs::metadata("/sys/module/iwldvm").is_ok()),
             supports_ifconfig: command_exists("ifconfig"),
+            audio_module: if fs::metadata("/sys/module/snd_hda_intel/").is_ok() {
+                AudioModule::SndHdaIntel
+            } else if fs::metadata("/sys/module/snd_ac97_codec/").is_ok() {
+                AudioModule::SndAc9Codec
+            } else {
+                AudioModule::Other
+            },
         }
     }
 }
