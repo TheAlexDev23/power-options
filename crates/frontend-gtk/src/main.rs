@@ -3,6 +3,7 @@
 pub mod communications;
 pub mod components;
 pub mod helpers;
+pub mod profiles_updater;
 
 use std::fs;
 
