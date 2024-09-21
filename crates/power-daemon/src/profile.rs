@@ -1,4 +1,8 @@
-use std::{fs, io, sync::Mutex};
+use std::{
+    fs::{self},
+    io,
+    sync::Mutex,
+};
 
 use log::{debug, error, info, warn};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
@@ -6,10 +10,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     helpers::{
-        command_exists, file_content_to_string, run_command, run_graphical_command,
-        run_graphical_command_in_background, WhiteBlackList,
+        command_exists, run_command, run_graphical_command, run_graphical_command_in_background,
+        WhiteBlackList,
     },
     profiles_generator::{self, DefaultProfileType},
+    sysfs::{gpu::*, reading::file_content_to_string},
     ReducedUpdate, SystemInfo,
 };
 
@@ -55,6 +60,7 @@ pub struct Profile {
     pub kernel_settings: KernelSettings,
     pub firmware_settings: FirmwareSettings,
     pub audio_settings: AudioSettings,
+    pub gpu_settings: GpuSettings,
 }
 
 impl Profile {
@@ -77,6 +83,7 @@ impl Profile {
             Box::new(|| self.kernel_settings.apply()),
             Box::new(|| self.firmware_settings.apply()),
             Box::new(|| self.audio_settings.apply()),
+            Box::new(|| self.gpu_settings.apply()),
         ];
 
         settings_functions.into_par_iter().for_each(|f| f());
@@ -117,6 +124,7 @@ impl Profile {
             ReducedUpdate::Kernel => self.kernel_settings.apply(),
             ReducedUpdate::Firmware => self.firmware_settings.apply(),
             ReducedUpdate::Audio => self.audio_settings.apply(),
+            ReducedUpdate::Gpu => self.gpu_settings.apply(),
         }
     }
 
@@ -934,6 +942,50 @@ impl AudioSettings {
                 ));
             } else {
                 error!("Attempted to set audio idle timeout but only snd_hda_intel and snd_ac97_codec modules are supported for this feature.");
+            }
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Default)]
+pub struct GpuSettings {
+    pub intel_min: Option<u32>,
+    pub intel_max: Option<u32>,
+    pub intel_boost: Option<u32>,
+}
+
+impl GpuSettings {
+    pub fn apply(&self) {
+        if self.intel_min.is_some() || self.intel_max.is_some() || self.intel_boost.is_some() {
+            self.apply_intel_settings();
+        }
+    }
+
+    fn apply_intel_settings(&self) {
+        assert!(self.intel_min.is_some() || self.intel_max.is_some() || self.intel_boost.is_some());
+
+        for gpu in iterate_intel_gpus() {
+            match (self.intel_min, self.intel_max) {
+                (Some(min), None) => {
+                    gpu.set_min(min);
+                }
+                (None, Some(max)) => {
+                    gpu.set_max(max);
+                }
+                (Some(min), Some(max)) => {
+                    if min > gpu.max_frequency {
+                        gpu.set_max(max);
+                        gpu.set_min(min);
+                    } else {
+                        gpu.set_min(min);
+                        gpu.set_max(max);
+                    }
+                }
+                (None, None) => unreachable!(),
+            }
+
+            if let Some(boost) = self.intel_boost {
+                gpu.set_boost(boost);
             }
         }
     }

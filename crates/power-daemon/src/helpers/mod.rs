@@ -3,10 +3,8 @@ use std::fs;
 use serde::{Deserialize, Serialize};
 
 pub mod commands;
-pub mod sysfs;
 
 pub use commands::*;
-pub use sysfs::*;
 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Default)]
 pub struct WhiteBlackList {

@@ -4,9 +4,15 @@ use log::{error, trace};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
-use crate::helpers::{
-    command_exists, file_content_to_bool, file_content_to_list, file_content_to_string,
-    file_content_to_u32, run_command_with_output,
+use crate::{
+    helpers::{command_exists, run_command_with_output},
+    sysfs::gpu::IntelGpu,
+    sysfs::{
+        gpu::*,
+        reading::{
+            file_content_to_bool, file_content_to_list, file_content_to_string, file_content_to_u32,
+        },
+    },
 };
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -16,6 +22,7 @@ pub struct SystemInfo {
     pub usb_info: USBInfo,
     pub sata_info: SATAInfo,
     pub firmware_info: FirmwareInfo,
+    pub gpu_info: GpuInfo,
     pub opt_features_info: OptionalFeaturesInfo,
 }
 
@@ -29,6 +36,7 @@ impl SystemInfo {
             usb_info: USBInfo::obtain(),
             sata_info: SATAInfo::obtain(),
             firmware_info: FirmwareInfo::obtain(),
+            gpu_info: GpuInfo::obtain(),
             opt_features_info: OptionalFeaturesInfo::obtain(),
         }
     }
@@ -541,6 +549,42 @@ impl OptionalFeaturesInfo {
                 AudioModule::SndAc9Codec
             } else {
                 AudioModule::Other
+            },
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct GpuInfo {
+    pub intel_info: Option<IntelInfo>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct IntelInfo {
+    pub min_frequency: u32,
+    pub max_frequency: u32,
+    pub boost_frequency: u32,
+}
+
+impl IntelInfo {
+    fn from_gpu_entry(gpu: IntelGpu) -> IntelInfo {
+        IntelInfo {
+            min_frequency: gpu.min_frequency,
+            max_frequency: gpu.max_frequency,
+            boost_frequency: gpu.boost_frequency,
+        }
+    }
+}
+
+impl GpuInfo {
+    pub fn obtain() -> GpuInfo {
+        GpuInfo {
+            // 99% of users will have a single intel GPU, complicating the UI
+            // for the 1% is a bit suboptimal at least for now
+            intel_info: if let Some(entry) = iterate_intel_gpus().into_iter().next() {
+                Some(IntelInfo::from_gpu_entry(entry))
+            } else {
+                None
             },
         }
     }

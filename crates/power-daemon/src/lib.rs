@@ -3,6 +3,7 @@ pub mod communication;
 pub mod config;
 pub mod profile;
 pub mod profiles_generator;
+pub mod sysfs;
 pub mod systeminfo;
 
 mod helpers;
@@ -41,6 +42,7 @@ pub enum ReducedUpdate {
     Kernel,
     Firmware,
     Audio,
+    Gpu,
 }
 
 pub struct Instance {

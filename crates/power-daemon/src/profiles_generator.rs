@@ -13,7 +13,7 @@ use crate::{
         Profile, RadioSettings, SATASettings, ScreenSettings, USBSettings,
     },
     systeminfo::{CPUFreqDriver, SystemInfo},
-    AudioModule, AudioSettings, FirmwareSettings, SleepSettings,
+    AudioModule, AudioSettings, FirmwareSettings, GpuSettings, SleepSettings,
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq)]
@@ -132,6 +132,7 @@ pub fn create_default(
         kernel_settings: kernel_settings_default(&profile_type),
         firmware_settings: firmware_settings_default(&profile_type, system_info),
         audio_settings: audio_settings_default(&profile_type, system_info),
+        gpu_settings: gpu_settings_default(&profile_type, system_info),
     }
 }
 
@@ -466,4 +467,55 @@ fn audio_settings_default(
             }
         },
     }
+}
+
+fn gpu_settings_default(
+    profile_type: &DefaultProfileType,
+    system_info: &SystemInfo,
+) -> GpuSettings {
+    let mut gpu_settings = GpuSettings::default();
+
+    if let Some(ref intel_info) = system_info.gpu_info.intel_info {
+        match profile_type {
+            DefaultProfileType::Superpowersave => {
+                gpu_settings.intel_min = Some(intel_info.min_frequency);
+                gpu_settings.intel_max = Some(
+                    intel_info.min_frequency
+                        + ((intel_info.max_frequency - intel_info.min_frequency) as f64 * 0.6)
+                            as u32,
+                );
+                gpu_settings.intel_boost = Some((intel_info.boost_frequency as f64 * 0.7) as u32);
+            }
+            DefaultProfileType::Powersave => {
+                gpu_settings.intel_min = Some(intel_info.min_frequency);
+                gpu_settings.intel_max = Some(
+                    intel_info.min_frequency
+                        + ((intel_info.max_frequency - intel_info.min_frequency) as f64 * 0.8)
+                            as u32,
+                );
+                gpu_settings.intel_boost = Some((intel_info.boost_frequency as f64 * 0.8) as u32);
+            }
+            DefaultProfileType::Balanced => {
+                gpu_settings.intel_min = Some(intel_info.min_frequency);
+                gpu_settings.intel_max = Some(intel_info.max_frequency);
+                gpu_settings.intel_boost = Some(intel_info.boost_frequency);
+            }
+            DefaultProfileType::Performance => {
+                gpu_settings.intel_min = Some(intel_info.min_frequency);
+                gpu_settings.intel_max = Some(intel_info.max_frequency);
+                gpu_settings.intel_boost = Some(intel_info.boost_frequency);
+            }
+            DefaultProfileType::Ultraperformance => {
+                gpu_settings.intel_min = Some(
+                    intel_info.min_frequency
+                        + ((intel_info.max_frequency - intel_info.min_frequency) as f64 * 0.4)
+                            as u32,
+                );
+                gpu_settings.intel_max = Some(intel_info.max_frequency);
+                gpu_settings.intel_boost = Some(intel_info.boost_frequency);
+            }
+        }
+    }
+
+    gpu_settings
 }
