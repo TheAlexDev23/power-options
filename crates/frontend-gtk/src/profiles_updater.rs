@@ -226,4 +226,30 @@ fn default_gpu_settings(settings: &mut GpuSettings, info: &GpuInfo) {
             settings.intel_boost = Some(info.boost_frequency);
         }
     }
+
+    if let Some(ref info) = info.amd_info {
+        match info {
+            power_daemon::AmdGpuInfo::AmdGpu { dpm_perf } => {
+                if settings.amd_dpm_perf_level.is_none() {
+                    settings.amd_dpm_perf_level = dpm_perf.clone().into();
+                }
+            }
+            power_daemon::AmdGpuInfo::Radeon {
+                dpm_perf,
+                dpm_state,
+            } => {
+                if settings.amd_dpm_perf_level.is_none() {
+                    settings.amd_dpm_perf_level = dpm_perf.clone().into();
+                }
+                if settings.amd_dpm_power_state.is_none() {
+                    settings.amd_dpm_power_state = dpm_state.clone().into();
+                }
+            }
+            power_daemon::AmdGpuInfo::Legacy { power_profile } => {
+                if settings.amd_power_profile.is_none() {
+                    settings.amd_power_profile = power_profile.clone().into();
+                }
+            }
+        }
+    }
 }

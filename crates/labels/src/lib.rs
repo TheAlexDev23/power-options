@@ -96,3 +96,19 @@ pub const INTEL_GPU_MAX: &str = "Maximum frequency of Intel GPU";
 pub const INTEL_GPU_BOOST: &str = "Boost frequency of Intel GPU";
 pub const INTEL_GPU_MISSING_TT: &str =
     "This setting is only available on Intel GPUs with the i915 kernel module.";
+
+pub const AMD_GPU_PERF_LEVEL: &str = "AMD GPU DPM Performance Level";
+pub const AMD_GPU_STATE: &str = "AMD GPU DPM State";
+pub const AMD_GPU_POWER_PROFILE: &str = "AMD GPU Power Profile";
+
+pub const AMD_GPU_MISSING_TT: &str = "This setting is only available on AMD GPUs.";
+
+pub const AMD_GPU_PERF_LEVEL_TT: &str = "Standard setting for AMD GPU power management.";
+pub const AMD_GPU_STATE_TT: &str = "Dynamic Power Management method. Available on Radeon module.";
+pub const AMD_GPU_POWER_PROFILE_TT: &str = "Configures AMD GPU graphics clock speed. Only available in AMD GPU legacy Radeon module where other options are unsupported.";
+
+pub const AMD_GPU_PERF_LEVEL_UNAVAILABLE: &str = "AMD GPU DPM Performance Levels are only available on AMD GPUs with AMDGPU or non-legacy Radeon modules.";
+pub const AMD_GPU_STATE_UNAVAILABLE: &str =
+    "AMD GPU DPM States are only available on AMD GPUs with non-legacy Radeon module.";
+pub const AMD_GPU_POWER_PROFILE_UNAVAILABLE: &str =
+    "AMD GPU Power Profiles are only available on AMD GPUs with legacy Radeon module.";
