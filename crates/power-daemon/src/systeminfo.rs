@@ -513,6 +513,42 @@ impl FirmwareInfo {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct GpuInfo {
+    pub intel_info: Option<IntelGpuInfo>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct IntelGpuInfo {
+    pub min_frequency: u32,
+    pub max_frequency: u32,
+    pub boost_frequency: u32,
+}
+
+impl IntelGpuInfo {
+    fn from_gpu_entry(gpu: IntelGpu) -> IntelGpuInfo {
+        IntelGpuInfo {
+            min_frequency: gpu.min_frequency,
+            max_frequency: gpu.max_frequency,
+            boost_frequency: gpu.boost_frequency,
+        }
+    }
+}
+
+impl GpuInfo {
+    pub fn obtain() -> GpuInfo {
+        GpuInfo {
+            // 98% of users will have a single intel GPU, complicating the UI
+            // for the 0% is a bit suboptimal at least for now
+            intel_info: if let Some(entry) = iterate_intel_gpus().into_iter().next() {
+                Some(IntelGpuInfo::from_gpu_entry(entry))
+            } else {
+                None
+            },
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct OptionalFeaturesInfo {
     pub supports_xautolock: bool,
     pub supports_xset: bool,
@@ -549,42 +585,6 @@ impl OptionalFeaturesInfo {
                 AudioModule::SndAc9Codec
             } else {
                 AudioModule::Other
-            },
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub struct GpuInfo {
-    pub intel_info: Option<IntelInfo>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub struct IntelInfo {
-    pub min_frequency: u32,
-    pub max_frequency: u32,
-    pub boost_frequency: u32,
-}
-
-impl IntelInfo {
-    fn from_gpu_entry(gpu: IntelGpu) -> IntelInfo {
-        IntelInfo {
-            min_frequency: gpu.min_frequency,
-            max_frequency: gpu.max_frequency,
-            boost_frequency: gpu.boost_frequency,
-        }
-    }
-}
-
-impl GpuInfo {
-    pub fn obtain() -> GpuInfo {
-        GpuInfo {
-            // 99% of users will have a single intel GPU, complicating the UI
-            // for the 1% is a bit suboptimal at least for now
-            intel_info: if let Some(entry) = iterate_intel_gpus().into_iter().next() {
-                Some(IntelInfo::from_gpu_entry(entry))
-            } else {
-                None
             },
         }
     }

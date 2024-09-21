@@ -90,3 +90,9 @@ pub const AUDIO_IDLE_TIMEOUT_TT: &str =
     "Time in seconds of audio inactivity for the audio driver to go into idle mode.";
 pub const AUDIO_IDLE_TIMEOUT_MODULE_UNSPORTED_TT: &str =
     "Audio Module Idle Timeout is only available on systems with the snd_hda_intel and snd_ac97_codec audio drivers.";
+
+pub const INTEL_GPU_MIN: &str = "Minimum frequency of Intel GPU";
+pub const INTEL_GPU_MAX: &str = "Maximum frequency of Intel GPU";
+pub const INTEL_GPU_BOOST: &str = "Boost frequency of Intel GPU";
+pub const INTEL_GPU_MISSING_TT: &str =
+    "This setting is only available on Intel GPUs with the i915 kernel module.";

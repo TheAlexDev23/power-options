@@ -2,6 +2,7 @@ pub mod audio;
 pub mod cpu;
 pub mod cpu_cores;
 pub mod firmware;
+pub mod gpu;
 pub mod kernel;
 pub mod network;
 pub mod pci;

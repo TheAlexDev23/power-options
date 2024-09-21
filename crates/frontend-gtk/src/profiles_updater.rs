@@ -1,7 +1,7 @@
 use log::debug;
 use power_daemon::{
-    ASPMInfo, ASPMSettings, AudioModule, AudioSettings, CPUInfo, CPUSettings, KernelSettings,
-    NetworkSettings, PCISettings, RadioSettings, SATASettings, USBSettings,
+    ASPMInfo, ASPMSettings, AudioModule, AudioSettings, CPUInfo, CPUSettings, GpuInfo, GpuSettings,
+    KernelSettings, NetworkSettings, PCISettings, RadioSettings, SATASettings, USBSettings,
 };
 
 use power_daemon::FirmwareInfo;
@@ -53,6 +53,7 @@ pub async fn remove_all_none_options() -> bool {
         default_kernel_settings(&mut profile.kernel_settings);
         default_firmware_settings(&mut profile.firmware_settings, &info.firmware_info);
         default_audio_settings(&mut profile.audio_settings, &info.opt_features_info);
+        default_gpu_settings(&mut profile.gpu_settings, &info.gpu_info);
 
         if initial != profile {
             changed_any = true;
@@ -210,5 +211,19 @@ fn default_audio_settings(settings: &mut AudioSettings, info: &OptionalFeaturesI
     if settings.idle_timeout.is_none() && info.audio_module != AudioModule::Other {
         // Usually the default
         settings.idle_timeout = Some(10);
+    }
+}
+
+fn default_gpu_settings(settings: &mut GpuSettings, info: &GpuInfo) {
+    if let Some(ref info) = info.intel_info {
+        if settings.intel_min.is_none() {
+            settings.intel_min = Some(info.min_frequency);
+        }
+        if settings.intel_max.is_none() {
+            settings.intel_max = Some(info.max_frequency);
+        }
+        if settings.intel_boost.is_none() {
+            settings.intel_boost = Some(info.boost_frequency);
+        }
     }
 }

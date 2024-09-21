@@ -5,7 +5,7 @@ use zbus::{conn::Builder, interface, Connection, Error};
 
 use crate::{
     systeminfo::{CPUInfo, SystemInfo},
-    FirmwareInfo, Instance, OptionalFeaturesInfo, PCIInfo, SATAInfo, USBInfo,
+    FirmwareInfo, GpuInfo, Instance, OptionalFeaturesInfo, PCIInfo, SATAInfo, USBInfo,
 };
 
 pub struct CommunicationServer {
@@ -60,6 +60,10 @@ impl SystemInfoServer {
 
     async fn get_firmware_info(&self) -> String {
         serde_json::to_string(&FirmwareInfo::obtain()).unwrap()
+    }
+
+    async fn get_gpu_info(&self) -> String {
+        serde_json::to_string(&GpuInfo::obtain()).unwrap()
     }
 
     async fn get_optional_features_info(&self) -> String {

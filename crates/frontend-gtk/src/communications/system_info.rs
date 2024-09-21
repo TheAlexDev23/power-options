@@ -21,6 +21,7 @@ pub enum SystemInfoSyncType {
     USB,
     SATA,
     Firmware,
+    Gpu,
     Opt,
 }
 
@@ -89,6 +90,12 @@ pub fn start_system_info_sync_routine() {
                         let updated = system_info_client.get_firmware_info().await.unwrap();
                         SYSTEM_INFO
                             .set_mut(move |v| v.as_mut().unwrap().firmware_info = updated.clone())
+                            .await
+                    }
+                    SystemInfoSyncType::Gpu => {
+                        let updated = system_info_client.get_gpu_info().await.unwrap();
+                        SYSTEM_INFO
+                            .set_mut(move |v| v.as_mut().unwrap().gpu_info = updated.clone())
                             .await
                     }
                     SystemInfoSyncType::Opt => {
