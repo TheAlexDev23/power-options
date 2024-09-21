@@ -103,6 +103,9 @@ impl GpuGroup {
             } else {
                 None
             },
+            amd_dpm_perf_level: todo!(),
+            amd_dpm_power_state: todo!(),
+            amd_power_profile: todo!(),
         }
     }
 }

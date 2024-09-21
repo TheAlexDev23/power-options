@@ -952,12 +952,26 @@ pub struct GpuSettings {
     pub intel_min: Option<u32>,
     pub intel_max: Option<u32>,
     pub intel_boost: Option<u32>,
+
+    /// Available for amdgpu and radeon modules
+    pub amd_dpm_perf_level: Option<String>,
+    /// Available for radeon module
+    pub amd_dpm_power_state: Option<String>,
+    /// Available for legacy radeon module
+    pub amd_power_profile: Option<String>,
 }
 
 impl GpuSettings {
     pub fn apply(&self) {
         if self.intel_min.is_some() || self.intel_max.is_some() || self.intel_boost.is_some() {
             self.apply_intel_settings();
+        }
+
+        if self.amd_dpm_perf_level.is_some()
+            || self.amd_dpm_power_state.is_some()
+            || self.amd_power_profile.is_some()
+        {
+            self.apply_amd_settings();
         }
     }
 
@@ -986,6 +1000,26 @@ impl GpuSettings {
 
             if let Some(boost) = self.intel_boost {
                 gpu.set_boost(boost);
+            }
+        }
+    }
+
+    fn apply_amd_settings(&self) {
+        assert!(
+            self.amd_dpm_perf_level.is_some()
+                || self.amd_dpm_power_state.is_some()
+                || self.amd_power_profile.is_some()
+        );
+
+        for gpu in iterate_amd_gpus() {
+            if let Some(ref perf_level) = self.amd_dpm_perf_level {
+                gpu.set_dpm_perf_level(perf_level);
+            }
+            if let Some(ref power_state) = self.amd_dpm_power_state {
+                gpu.set_dpm_power_state(power_state);
+            }
+            if let Some(ref power_profile) = self.amd_power_profile {
+                gpu.set_power_profile(power_profile);
             }
         }
     }

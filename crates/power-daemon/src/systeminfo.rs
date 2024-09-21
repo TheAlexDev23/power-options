@@ -515,6 +515,7 @@ impl FirmwareInfo {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct GpuInfo {
     pub intel_info: Option<IntelGpuInfo>,
+    pub amd_info: Option<AmdGpuInfo>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -534,6 +535,29 @@ impl IntelGpuInfo {
     }
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub enum AmdGpuInfo {
+    AmdGpu { dpm_perf: String },
+    Radeon { dpm_perf: String, dpm_state: String },
+    Legacy { power_profile: String },
+}
+
+impl AmdGpuInfo {
+    fn from_gpu_entry(gpu: AmdGpu) -> AmdGpuInfo {
+        match gpu.driver {
+            AmdGpuDriver::AmdGpu { dpm_perf } => AmdGpuInfo::AmdGpu { dpm_perf },
+            AmdGpuDriver::Radeon {
+                dpm_perf,
+                dpm_state,
+            } => AmdGpuInfo::Radeon {
+                dpm_perf,
+                dpm_state,
+            },
+            AmdGpuDriver::Legacy { power_profile } => AmdGpuInfo::Legacy { power_profile },
+        }
+    }
+}
+
 impl GpuInfo {
     pub fn obtain() -> GpuInfo {
         GpuInfo {
@@ -543,6 +567,11 @@ impl GpuInfo {
                 .into_iter()
                 .next()
                 .map(IntelGpuInfo::from_gpu_entry),
+
+            amd_info: iterate_amd_gpus()
+                .into_iter()
+                .next()
+                .map(AmdGpuInfo::from_gpu_entry),
         }
     }
 }

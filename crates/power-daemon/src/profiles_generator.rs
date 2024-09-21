@@ -13,7 +13,7 @@ use crate::{
         Profile, RadioSettings, SATASettings, ScreenSettings, USBSettings,
     },
     systeminfo::{CPUFreqDriver, SystemInfo},
-    AudioModule, AudioSettings, FirmwareSettings, GpuSettings, SleepSettings,
+    AmdGpuInfo, AudioModule, AudioSettings, FirmwareSettings, GpuSettings, SleepSettings,
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq)]
@@ -513,6 +513,80 @@ fn gpu_settings_default(
                 );
                 gpu_settings.intel_max = Some(intel_info.max_frequency);
                 gpu_settings.intel_boost = Some(intel_info.boost_frequency);
+            }
+        }
+    }
+
+    if let Some(ref amd_info) = system_info.gpu_info.amd_info {
+        if let AmdGpuInfo::Legacy { power_profile: _ } = amd_info {
+            match profile_type {
+                DefaultProfileType::Superpowersave => {
+                    gpu_settings.amd_power_profile = "low".to_string().into();
+                }
+                DefaultProfileType::Powersave => {
+                    gpu_settings.amd_power_profile = "mid".to_string().into();
+                }
+                DefaultProfileType::Balanced => {
+                    gpu_settings.amd_power_profile = "default".to_string().into();
+                }
+                DefaultProfileType::Performance => {
+                    gpu_settings.amd_power_profile = "high".to_string().into();
+                }
+                DefaultProfileType::Ultraperformance => {
+                    gpu_settings.amd_power_profile = "high".to_string().into();
+                }
+            }
+        }
+
+        if matches!(amd_info, AmdGpuInfo::AmdGpu { dpm_perf: _ })
+            || matches!(
+                amd_info,
+                AmdGpuInfo::Radeon {
+                    dpm_perf: _,
+                    dpm_state: _
+                }
+            )
+        {
+            match profile_type {
+                DefaultProfileType::Superpowersave => {
+                    gpu_settings.amd_dpm_perf_level = "low".to_string().into();
+                }
+                DefaultProfileType::Powersave => {
+                    gpu_settings.amd_dpm_perf_level = "low".to_string().into();
+                }
+                DefaultProfileType::Balanced => {
+                    gpu_settings.amd_dpm_perf_level = "auto".to_string().into();
+                }
+                DefaultProfileType::Performance => {
+                    gpu_settings.amd_dpm_perf_level = "high".to_string().into();
+                }
+                DefaultProfileType::Ultraperformance => {
+                    gpu_settings.amd_dpm_perf_level = "high".to_string().into();
+                }
+            }
+        }
+
+        if let AmdGpuInfo::Radeon {
+            dpm_perf: _,
+            dpm_state: _,
+        } = amd_info
+        {
+            match profile_type {
+                DefaultProfileType::Superpowersave => {
+                    gpu_settings.amd_dpm_power_state = "battery".to_string().into();
+                }
+                DefaultProfileType::Powersave => {
+                    gpu_settings.amd_dpm_perf_level = "battery".to_string().into();
+                }
+                DefaultProfileType::Balanced => {
+                    gpu_settings.amd_dpm_perf_level = "balanced".to_string().into();
+                }
+                DefaultProfileType::Performance => {
+                    gpu_settings.amd_dpm_perf_level = "performance".to_string().into();
+                }
+                DefaultProfileType::Ultraperformance => {
+                    gpu_settings.amd_dpm_perf_level = "performance".to_string().into();
+                }
             }
         }
     }
