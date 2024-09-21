@@ -934,11 +934,11 @@ impl AudioSettings {
         if let Some(ref time) = self.idle_timeout {
             if fs::metadata("/sys/module/snd_hda_intel/").is_ok() {
                 run_command(&format!(
-                    "modprobe -r snd_hda_intel && modprobe snd_hda_intel power_save={time}"
+                    "echo {time} > /sys/module/snd_hda_intel/parameters/power_save"
                 ));
             } else if fs::metadata("/sys/module/snd_ac97_codec/").is_ok() {
                 run_command(&format!(
-                    "modprobe -r snd_ac97_codec && modprobe snd_ac97_codec power_save={time}"
+                    "echo {time} > /sys/module/snd_ac97_codec/parameters/power_save"
                 ));
             } else {
                 error!("Attempted to set audio idle timeout but only snd_hda_intel and snd_ac97_codec modules are supported for this feature.");
