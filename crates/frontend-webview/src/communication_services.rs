@@ -22,6 +22,7 @@ pub enum SystemInfoSyncType {
     USB,
     SATA,
     Firmware,
+    Gpu,
     Opt,
 }
 
@@ -87,6 +88,12 @@ pub async fn system_info_service(
                 SystemInfoSyncType::Firmware => {
                     system_info.as_mut().unwrap().firmware_info = client
                         .get_firmware_info()
+                        .await
+                        .expect("Could not get system info")
+                }
+                SystemInfoSyncType::Gpu => {
+                    system_info.as_mut().unwrap().gpu_info = client
+                        .get_gpu_info()
                         .await
                         .expect("Could not get system info")
                 }
