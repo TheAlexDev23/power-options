@@ -539,11 +539,10 @@ impl GpuInfo {
         GpuInfo {
             // 98% of users will have a single intel GPU, complicating the UI
             // for the 0% is a bit suboptimal at least for now
-            intel_info: if let Some(entry) = iterate_intel_gpus().into_iter().next() {
-                Some(IntelGpuInfo::from_gpu_entry(entry))
-            } else {
-                None
-            },
+            intel_info: iterate_intel_gpus()
+                .into_iter()
+                .next()
+                .map(IntelGpuInfo::from_gpu_entry),
         }
     }
 }

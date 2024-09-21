@@ -52,16 +52,13 @@ pub fn iterate_intel_gpus() -> impl IntoIterator<Item = IntelGpu> {
         .filter(|entry| {
             if !entry.file_name().into_string().unwrap().starts_with("card") {
                 false
-            } else if !run_command_with_output(&format!(
-                "readlink {}",
-                entry.path().join("device/driver").display()
-            ))
-            .0
-            .contains("i915")
-            {
-                false
             } else {
-                true
+                run_command_with_output(&format!(
+                    "readlink {}",
+                    entry.path().join("device/driver").display()
+                ))
+                .0
+                .contains("i915")
             }
         })
         .map(IntelGpu::from_dir)
