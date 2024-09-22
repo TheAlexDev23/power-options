@@ -14,7 +14,7 @@ pub fn command_exists(command: &str) -> bool {
 
 pub fn run_command(command: &str) {
     debug!("running: {command}");
-    let output = Command::new("zsh")
+    let output = Command::new("sh")
         .args(["-c", command])
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
@@ -56,7 +56,7 @@ pub fn run_command_with_output(command: &str) -> (String, String) {
 pub fn run_graphical_command(command: &str) {
     debug!("running graphical command: {command}");
 
-    let output = Command::new("zsh")
+    let output = Command::new("sh")
         .args(["-c", command])
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
@@ -81,7 +81,7 @@ pub fn run_graphical_command(command: &str) {
 
 pub fn run_graphical_command_in_background(command: &str) -> std::process::Child {
     debug!("running graphical command in background: {command}");
-    Command::new("zsh")
+    Command::new("sh")
         .args(["-c", command])
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
