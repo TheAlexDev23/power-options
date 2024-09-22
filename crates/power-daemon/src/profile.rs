@@ -1,15 +1,22 @@
 use std::{fs, io};
 use std::path::Path;
+use std::sync::Mutex; 
 
 use log::{debug, error, info, warn};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    helpers::{command_exists, file_content_to_string, run_command, WhiteBlackList},
+    helpers::{
+        command_exists, run_command, run_graphical_command, run_graphical_command_in_background,
+        WhiteBlackList,
+    },
     profiles_generator::{self, DefaultProfileType},
+    sysfs::{gpu::*, reading::file_content_to_string},
     ReducedUpdate, SystemInfo,
 };
+
+use lazy_static::lazy_static;
 
 #[derive(Serialize, Deserialize, Default, Clone, Debug, PartialEq)]
 pub struct ProfilesInfo {
@@ -32,12 +39,13 @@ impl ProfilesInfo {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Default)]
 pub struct Profile {
     /// Name of the profile. Should match the profile filename
     pub profile_name: String,
-    pub base_profile: DefaultProfileType,
+    pub base_profile: Option<DefaultProfileType>,
 
+    pub sleep_settings: SleepSettings,
     pub cpu_settings: CPUSettings,
     pub cpu_core_settings: CPUCoreSettings,
     pub screen_settings: ScreenSettings,
@@ -48,6 +56,9 @@ pub struct Profile {
     pub usb_settings: USBSettings,
     pub sata_settings: SATASettings,
     pub kernel_settings: KernelSettings,
+    pub firmware_settings: FirmwareSettings,
+    pub audio_settings: AudioSettings,
+    pub gpu_settings: GpuSettings,
 }
 
 impl Profile {
@@ -55,6 +66,7 @@ impl Profile {
         info!("Applying profile: {}", self.profile_name);
 
         let settings_functions: Vec<Box<dyn FnOnce() + Send>> = vec![
+            Box::new(|| self.sleep_settings.apply()),
             Box::new(|| {
                 self.cpu_settings.apply();
                 self.cpu_core_settings.apply();
@@ -67,6 +79,9 @@ impl Profile {
             Box::new(|| self.usb_settings.apply()),
             Box::new(|| self.sata_settings.apply()),
             Box::new(|| self.kernel_settings.apply()),
+            Box::new(|| self.firmware_settings.apply()),
+            Box::new(|| self.audio_settings.apply()),
+            Box::new(|| self.gpu_settings.apply()),
         ];
 
         settings_functions.into_par_iter().for_each(|f| f());
@@ -77,6 +92,9 @@ impl Profile {
 
         match reduced_update {
             ReducedUpdate::None => {}
+            ReducedUpdate::Sleep => {
+                self.sleep_settings.apply();
+            }
             ReducedUpdate::CPU => {
                 self.cpu_settings.apply();
                 self.cpu_core_settings.apply();
@@ -102,6 +120,9 @@ impl Profile {
             ReducedUpdate::USB => self.usb_settings.apply(),
             ReducedUpdate::SATA => self.sata_settings.apply(),
             ReducedUpdate::Kernel => self.kernel_settings.apply(),
+            ReducedUpdate::Firmware => self.firmware_settings.apply(),
+            ReducedUpdate::Audio => self.audio_settings.apply(),
+            ReducedUpdate::Gpu => self.gpu_settings.apply(),
         }
     }
 
@@ -111,20 +132,24 @@ impl Profile {
             Err(_) => {
                 #[derive(Deserialize)]
                 struct ProfileTypeOnly {
-                    pub base_profile: DefaultProfileType,
+                    pub base_profile: Option<DefaultProfileType>,
                 }
 
                 warn!("Could not parse profile {profile_name}. Attempting to migrate to newer version.");
 
-                let profile_type: DefaultProfileType = toml::from_str::<ProfileTypeOnly>(contents)
+                let profile_type = toml::from_str::<ProfileTypeOnly>(contents)
                     .expect("Could not parse base profile type")
                     .base_profile;
 
-                let base_profile = toml::to_string(&profiles_generator::create_default(
-                    profile_name,
-                    profile_type,
-                    &SystemInfo::obtain(),
-                ))
+                let base_profile = toml::to_string(&if let Some(profile_type) = profile_type {
+                    profiles_generator::create_default(
+                        profile_name,
+                        profile_type,
+                        &SystemInfo::obtain(),
+                    )
+                } else {
+                    profiles_generator::create_empty(profile_name)
+                })
                 .expect("Could not merge default profile and user profile");
 
                 let merged = serde_toml_merge::merge(
@@ -144,15 +169,80 @@ impl Profile {
     }
 
     pub fn get_original_values(&self, system_info: &SystemInfo) -> Profile {
-        profiles_generator::create_default(
-            &self.profile_name,
-            self.base_profile.clone(),
-            system_info,
-        )
+        if let Some(base_profile_type) = self.base_profile {
+            profiles_generator::create_default(&self.profile_name, base_profile_type, system_info)
+        } else {
+            profiles_generator::create_empty(&self.profile_name)
+        }
     }
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Default)]
+pub struct SleepSettings {
+    /// Time to turn off screen after N minutes of inactivity
+    pub turn_off_screen_after: Option<u32>,
+    /// Time to suspend the device after N mintues of inactivity
+    pub suspend_after: Option<u32>,
+}
+
+lazy_static! {
+    pub static ref AUTOLOCK_INSTANCE: Mutex<Option<std::process::Child>> = Mutex::new(None);
+}
+
+impl SleepSettings {
+    pub fn apply(&self) {
+        info!(
+            "Applying Sleep settings on {:?}",
+            std::thread::current().id()
+        );
+
+        if let Some(turn_off_screen_after) = self.turn_off_screen_after {
+            if command_exists("xset") {
+                let time_in_secs = turn_off_screen_after * 60;
+                run_graphical_command(&format!(
+                    "xset dpms {time_in_secs} {time_in_secs} {time_in_secs}"
+                ));
+            } else {
+                error!("Attempted to set screen turn off timeout when xset is not installed");
+            }
+        } else if command_exists("xset") {
+            run_graphical_command("xset -dpms");
+        }
+
+        Self::kill_previous_autolock_instance();
+
+        if let Some(suspend_after) = self.suspend_after {
+            if command_exists("xautolock") {
+                *AUTOLOCK_INSTANCE.lock().unwrap() = run_graphical_command_in_background(&format!(
+                    "xautolock -time {suspend_after} -locker 'systemctl suspend'"
+                ))
+                .into();
+            } else {
+                error!("Attempted to set suspend time when xautolock is not installed");
+            }
+        }
+    }
+
+    fn kill_previous_autolock_instance() {
+        debug!("Killing previous autolock instance");
+
+        let mut instance_lock = AUTOLOCK_INSTANCE.lock().unwrap();
+
+        if let Some(instance) = instance_lock.as_mut() {
+            if command_exists("xautolock") {
+                run_graphical_command("xautolock -exit");
+            }
+
+            instance
+                .wait()
+                .expect("Could not wait for xautolock process to exit after killing.");
+        }
+
+        *instance_lock = None;
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Default)]
 pub struct CPUSettings {
     // Scaling driver mode (active, passive) for intel_pstate (active, passive, guided) for amd_pstate
     pub mode: Option<String>,
@@ -473,7 +563,7 @@ impl ScreenSettings {
 
     pub fn try_run_xrandr(command: &str) {
         if command_exists("xrandr") {
-            run_command(command);
+            run_graphical_command(command);
         } else {
             error!("xrandr is not present in the system. Ignoring settings utilizing it...");
         }
@@ -488,7 +578,7 @@ impl ScreenSettings {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Default)]
 pub struct RadioSettings {
     pub block_wifi: Option<bool>,
     pub block_nfc: Option<bool>,
@@ -523,7 +613,7 @@ impl RadioSettings {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Default)]
 pub struct NetworkSettings {
     pub disable_ethernet: Option<bool>,
 
@@ -651,7 +741,7 @@ impl NetworkSettings {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Default)]
 
 pub struct ASPMSettings {
     pub mode: Option<String>,
@@ -673,7 +763,7 @@ impl ASPMSettings {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Default)]
 pub struct PCISettings {
     pub enable_power_management: Option<bool>,
     // whitelist or blacklist device to exlude/include.
@@ -713,7 +803,7 @@ impl PCISettings {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Default)]
 pub struct USBSettings {
     pub enable_pm: Option<bool>,
     pub autosuspend_delay_ms: Option<u32>,
@@ -769,7 +859,7 @@ impl USBSettings {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Default)]
 pub struct SATASettings {
     pub active_link_pm_policy: Option<String>,
 }
@@ -805,7 +895,7 @@ impl SATASettings {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Default)]
 pub struct KernelSettings {
     pub disable_nmi_watchdog: Option<bool>,
     pub vm_writeback: Option<u32>,
@@ -833,6 +923,123 @@ impl KernelSettings {
         }
         if let Some(lm) = self.laptop_mode {
             run_command(&format!("echo {} > /proc/sys/vm/laptop_mode", lm))
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Default)]
+pub struct FirmwareSettings {
+    /// Supported values: performance, balanced, low-power
+    pub platform_profile: Option<String>,
+}
+
+impl FirmwareSettings {
+    pub fn apply(&self) {
+        if let Some(ref profile) = self.platform_profile {
+            run_command(&format!(
+                "echo {profile} > /sys/firmware/acpi/platform_profile"
+            ));
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Default)]
+pub struct AudioSettings {
+    pub idle_timeout: Option<u32>,
+}
+
+impl AudioSettings {
+    pub fn apply(&self) {
+        if let Some(ref time) = self.idle_timeout {
+            if fs::metadata("/sys/module/snd_hda_intel/").is_ok() {
+                run_command(&format!(
+                    "echo {time} > /sys/module/snd_hda_intel/parameters/power_save"
+                ));
+            } else if fs::metadata("/sys/module/snd_ac97_codec/").is_ok() {
+                run_command(&format!(
+                    "echo {time} > /sys/module/snd_ac97_codec/parameters/power_save"
+                ));
+            } else {
+                error!("Attempted to set audio idle timeout but only snd_hda_intel and snd_ac97_codec modules are supported for this feature.");
+            }
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Default)]
+pub struct GpuSettings {
+    pub intel_min: Option<u32>,
+    pub intel_max: Option<u32>,
+    pub intel_boost: Option<u32>,
+
+    /// Available for amdgpu and radeon modules
+    pub amd_dpm_perf_level: Option<String>,
+    /// Available for radeon module
+    pub amd_dpm_power_state: Option<String>,
+    /// Available for legacy radeon module
+    pub amd_power_profile: Option<String>,
+}
+
+impl GpuSettings {
+    pub fn apply(&self) {
+        if self.intel_min.is_some() || self.intel_max.is_some() || self.intel_boost.is_some() {
+            self.apply_intel_settings();
+        }
+
+        if self.amd_dpm_perf_level.is_some()
+            || self.amd_dpm_power_state.is_some()
+            || self.amd_power_profile.is_some()
+        {
+            self.apply_amd_settings();
+        }
+    }
+
+    fn apply_intel_settings(&self) {
+        assert!(self.intel_min.is_some() || self.intel_max.is_some() || self.intel_boost.is_some());
+
+        for gpu in iterate_intel_gpus() {
+            match (self.intel_min, self.intel_max) {
+                (Some(min), None) => {
+                    gpu.set_min(min);
+                }
+                (None, Some(max)) => {
+                    gpu.set_max(max);
+                }
+                (Some(min), Some(max)) => {
+                    if min > gpu.max_frequency {
+                        gpu.set_max(max);
+                        gpu.set_min(min);
+                    } else {
+                        gpu.set_min(min);
+                        gpu.set_max(max);
+                    }
+                }
+                (None, None) => unreachable!(),
+            }
+
+            if let Some(boost) = self.intel_boost {
+                gpu.set_boost(boost);
+            }
+        }
+    }
+
+    fn apply_amd_settings(&self) {
+        assert!(
+            self.amd_dpm_perf_level.is_some()
+                || self.amd_dpm_power_state.is_some()
+                || self.amd_power_profile.is_some()
+        );
+
+        for gpu in iterate_amd_gpus() {
+            if let Some(ref perf_level) = self.amd_dpm_perf_level {
+                gpu.set_dpm_perf_level(perf_level);
+            }
+            if let Some(ref power_state) = self.amd_dpm_power_state {
+                gpu.set_dpm_power_state(power_state);
+            }
+            if let Some(ref power_profile) = self.amd_power_profile {
+                gpu.set_power_profile(power_profile);
+            }
         }
     }
 }

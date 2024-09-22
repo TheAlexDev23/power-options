@@ -24,8 +24,14 @@ arch=('x86_64')
 url="{url}"
 license=('MIT')
 
-depends=('acpid' 'zsh' 'pciutils' 'usbutils')
-optdepends=('xorg-xrandr: needed for screen settings' 'brightnessctl: needed for brightness settings' 'net-tools: needed to disable ethernet cards')
+depends=('acpid' 'zsh' 'pciutils' 'usbutils' 'yad')
+optdepends=(
+'brightnessctl: needed for brightness settings' 
+'net-tools: needed to disable ethernet cards' 'net-tools: needed to disable ethernet cards'
+'xorg-xrandr: needed for screen settings' 
+'xorg-xset: needed to configure screen turn off timeout'
+'xautolock: needed to configure system suspend timeout'
+)
 makedepends=('cargo' 'git')
 
 provides=('power-options-daemon')
@@ -61,6 +67,7 @@ package() {{
 
 def create_install_file():
     return f"""post_install() {{
+  power-daemon-mgr setup
   systemctl daemon-reload
   systemctl restart acpid.service
   systemctl enable --now power-options.service

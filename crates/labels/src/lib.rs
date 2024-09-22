@@ -1,3 +1,11 @@
+pub const SUSPEND_TITLE: &str = "Minutes of inactivity before the system goes into suspend mode.";
+pub const SCREEN_TURN_OFF_TITLE: &str = "Minutes of inactivity before the display turns off.";
+
+pub const SUSPEND_XAUTOLOCK_MISSING: &str =
+    "System suspend settings require xautolock to be installed.";
+pub const SCREEN_TURN_OFF_XSET_MISSING: &str =
+    "Screen turn off settings require xset to be installed.";
+
 pub const DRIVER_OPMODE_TITLE: &str = "Scaling driver operation mode";
 pub const DRIVER_OPMODE_TT: &str = "The operation mode of the CPU frequency scaling driver. Passive will give control of frequency scaling to the CPUFreq kernel driver. In active mode the CPU manages frequencies.";
 pub const DRIVER_OPMODE_UNAVAILABLE_TT: &str = "The ability to change the scaling driver operation mode is only available on intel_pstate and amd_pstate drivers.";
@@ -32,16 +40,6 @@ pub const HWP_DYN_BOOST_MODE_ACTIVE_TT: &str =
 pub const HWP_DYN_BOOST_UNAVAILABLE_TT: &str =
     "HWP Dynamic Boost is only available on Intel Core i-series 6th gen or newer.";
 
-pub const DIS_NMI_TITLE: &str = "Disable NMI watchdog";
-pub const DIS_NMI_TT: &str = "Disables the Kernel's NMI watchdog. A logging tool often used in Kernel development/debugging, it is often recommended to disable this feature";
-
-pub const VM_WR_TITLE: &str = "VM writeback in seconds";
-pub const VM_WR_TT: &str = "In modern operating systems data is first written to memory and then written to disk in predefined intervals for performance and power saving reasons. This option defines the interval for memory flushing to disk.";
-
-pub const LAPTOP_MODE_TITLE: &str = "Laptop Mode";
-pub const LAPTOP_MODE_TT: &str =
-    "Overrides VM Writeback and other Kernel parameters when the system is in laptop-mode, i.e. off the wall. Requires ACPI to be installed.";
-
 pub const DIS_ETH_TITLE: &str = "Disable Ethernet";
 pub const DIS_ETH_TT: &str = "Some tools such as powertop report that the ethernet port uses 2-3 watts when not connected. While these values may be incorrect, disabling ethernet completely if not in use is common in users looking for best power savings in their devices.";
 
@@ -71,3 +69,46 @@ pub const NO_WIFI_DRIVER_TT: &str = "This option is unsupported for you network 
 pub const NO_XRANDR_TT: &str = "This option requires xrandr to be installed in your system. Install xorg-xrandr with you system's package manager.";
 pub const NO_BRIGHTNESSCTL_TT: &str =
     "This option requires brightnessctl to be installed in your system. Install brightnessctl with your system's package manager.";
+
+pub const DIS_NMI_TITLE: &str = "Disable NMI watchdog";
+pub const DIS_NMI_TT: &str = "Disables the Kernel's NMI watchdog. A logging tool often used in Kernel development/debugging, it is often recommended to disable this feature";
+
+pub const VM_WR_TITLE: &str = "VM writeback in seconds";
+pub const VM_WR_TT: &str = "In modern operating systems data is first written to memory and then written to disk in predefined intervals for performance and power saving reasons. This option defines the interval for memory flushing to disk.";
+
+pub const LAPTOP_MODE_TITLE: &str = "Laptop Mode";
+pub const LAPTOP_MODE_TT: &str =
+    "Overrides VM Writeback and other Kernel parameters when the system is in laptop-mode, i.e. off the wall. Requires ACPI to be installed.";
+
+pub const ACPI_PLATFORM_PROFILE_TITLE: &str = "ACPI platform profile";
+pub const ACPI_PLATFORM_PROFILE_TT: &str = "Platform profiles is a feature in some Lenovo and newer laptops that controls characteristics around power-performance ratio, thermals and fan speed.";
+pub const ACPI_PLATFORM_PROFILE_MISSING_TT: &str =
+    "Platform profiles are not available in your system.";
+
+pub const AUDIO_IDLE_TIMEOUT_TITLE: &str = "Audio Module Timeout in Seconds";
+pub const AUDIO_IDLE_TIMEOUT_TT: &str =
+    "Time in seconds of audio inactivity for the audio driver to go into idle mode.";
+pub const AUDIO_IDLE_TIMEOUT_MODULE_UNSPORTED_TT: &str =
+    "Audio Module Idle Timeout is only available on systems with the snd_hda_intel and snd_ac97_codec audio drivers.";
+
+pub const INTEL_GPU_MIN: &str = "Minimum frequency of Intel GPU";
+pub const INTEL_GPU_MAX: &str = "Maximum frequency of Intel GPU";
+pub const INTEL_GPU_BOOST: &str = "Boost frequency of Intel GPU";
+pub const INTEL_GPU_MISSING_TT: &str =
+    "This setting is only available on Intel GPUs with the i915 kernel module.";
+
+pub const AMD_GPU_PERF_LEVEL: &str = "AMD GPU DPM Performance Level";
+pub const AMD_GPU_STATE: &str = "AMD GPU DPM State";
+pub const AMD_GPU_POWER_PROFILE: &str = "AMD GPU Power Profile";
+
+pub const AMD_GPU_MISSING_TT: &str = "This setting is only available on AMD GPUs.";
+
+pub const AMD_GPU_PERF_LEVEL_TT: &str = "Standard setting for AMD GPU power management.";
+pub const AMD_GPU_STATE_TT: &str = "Dynamic Power Management method. Available on Radeon module.";
+pub const AMD_GPU_POWER_PROFILE_TT: &str = "Configures AMD GPU graphics clock speed. Only available in AMD GPU legacy Radeon module where other options are unsupported.";
+
+pub const AMD_GPU_PERF_LEVEL_UNAVAILABLE: &str = "AMD GPU DPM Performance Levels are only available on AMD GPUs with AMDGPU or non-legacy Radeon modules.";
+pub const AMD_GPU_STATE_UNAVAILABLE: &str =
+    "AMD GPU DPM States are only available on AMD GPUs with non-legacy Radeon module.";
+pub const AMD_GPU_POWER_PROFILE_UNAVAILABLE: &str =
+    "AMD GPU Power Profiles are only available on AMD GPUs with legacy Radeon module.";

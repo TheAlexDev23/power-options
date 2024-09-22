@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use dioxus::prelude::*;
-use power_daemon::{ProfilesInfo, ReducedUpdate, SATASettings, SystemInfo};
+use power_daemon::{FirmwareSettings, ProfilesInfo, ReducedUpdate, SystemInfo};
 
 use crate::communication_services::{
     control_routine_send_multiple, ControlAction, ControlRoutine, SystemInfoRoutine,
@@ -11,41 +11,41 @@ use crate::helpers::toggleable_components::ToggleableDropdown;
 use crate::helpers::toggleable_types::ToggleableString;
 
 #[component]
-pub fn SATAGroup(
+pub fn FirmwareGroup(
     system_info: Signal<Option<SystemInfo>>,
     profiles_info: Signal<Option<ProfilesInfo>>,
     control_routine: ControlRoutine,
     system_info_routine: SystemInfoRoutine,
 ) -> Element {
-    system_info_routine.send((Duration::from_secs_f32(5.0), SystemInfoSyncType::SATA));
+    system_info_routine.send((Duration::from_secs_f32(5.0), SystemInfoSyncType::Firmware));
 
     if profiles_info().is_none() || system_info().is_none() {
         return rsx! { "Connecting to the daemon.." };
     }
 
-    let sata_info = system_info().as_ref().unwrap().sata_info.clone();
+    let firmware_info = system_info().as_ref().unwrap().firmware_info.clone();
 
-    let sata_settings = profiles_info()
+    let firmware_settings = profiles_info()
         .as_ref()
         .unwrap()
         .get_active_profile()
-        .sata_settings
+        .firmware_settings
         .clone();
 
-    let mut used_settings = use_signal(|| sata_settings.clone());
-    let mut active_link_pm_policty = ToggleableString(
-        use_signal(|| sata_settings.active_link_pm_policy.is_some()),
+    let mut used_settings = use_signal(|| firmware_settings.clone());
+    let mut platform_profile = ToggleableString(
+        use_signal(|| firmware_settings.platform_profile.is_some()),
         use_signal(|| {
-            sata_settings
-                .active_link_pm_policy
+            firmware_settings
+                .platform_profile
                 .clone()
-                .unwrap_or("med_power_with_dipm".to_string())
+                .unwrap_or("default".to_string())
         }),
     );
 
-    if used_settings() != sata_settings {
-        active_link_pm_policty.from(sata_settings.active_link_pm_policy.clone());
-        used_settings.set(sata_settings.clone());
+    if used_settings() != firmware_settings {
+        platform_profile.from(firmware_settings.platform_profile.clone());
+        used_settings.set(firmware_settings.clone());
     }
 
     let mut changed = use_signal(|| false);
@@ -59,8 +59,8 @@ pub fn SATAGroup(
             .get_active_profile()
             .clone();
 
-        active_profile.sata_settings = SATASettings {
-            active_link_pm_policy: active_link_pm_policty.into_base(),
+        active_profile.firmware_settings = FirmwareSettings {
+            platform_profile: platform_profile.1().into(),
         };
 
         control_routine_send_multiple(
@@ -69,7 +69,7 @@ pub fn SATAGroup(
                 ControlAction::UpdateProfileReduced(
                     active_profile_idx as u32,
                     active_profile.into(),
-                    ReducedUpdate::SATA,
+                    ReducedUpdate::Firmware,
                 ),
                 ControlAction::GetProfilesInfo,
             ],
@@ -87,20 +87,18 @@ pub fn SATAGroup(
                 changed.set(false);
             },
 
-            p { "{sata_info.hosts} SATA hosts present" }
-
             div { class: "option-group",
                 div { class: "option",
                     ToggleableDropdown {
-                        name: labels::SATA_ACTIVE_LINK_TITLE,
-                        tooltip: labels::SATA_ACTIVE_LINK_TT,
-                        items: vec![
-                            "max_performance".to_string(),
-                            "medium_power".to_string(),
-                            "med_power_with_dipm".to_string(),
-                            "min_power".to_string(),
-                        ],
-                        value: active_link_pm_policty
+                        name: labels::ACPI_PLATFORM_PROFILE_TITLE,
+                        disabled: firmware_info.platform_profiles.is_none(),
+                        tooltip: if firmware_info.platform_profiles.is_some() {
+                            Some(labels::ACPI_PLATFORM_PROFILE_TT.to_string())
+                        } else {
+                            Some(labels::ACPI_PLATFORM_PROFILE_MISSING_TT.to_string())
+                        },
+                        items: firmware_info.platform_profiles.unwrap_or(vec!["default".to_string()]),
+                        value: platform_profile
                     }
                 }
             }
@@ -115,7 +113,7 @@ pub fn SATAGroup(
                 }
                 input {
                     onclick: move |_| {
-                        active_link_pm_policty.from(sata_settings.active_link_pm_policy.clone());
+                        platform_profile.from(firmware_settings.platform_profile.clone());
                         changed.set(false);
                     },
                     r#type: "button",

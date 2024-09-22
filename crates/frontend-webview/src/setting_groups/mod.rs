@@ -1,8 +1,12 @@
+pub mod audio;
 pub mod cpu;
+pub mod firmware;
+pub mod gpu;
 pub mod kernel;
 pub mod network;
 pub mod pci;
 pub mod radio;
 pub mod sata;
 pub mod screen;
+pub mod sleep;
 pub mod usb;

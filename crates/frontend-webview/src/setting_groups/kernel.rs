@@ -101,7 +101,7 @@ pub fn KernelGroup(
                 div { class: "option",
                     ToggleableToggle {
                         name: labels::DIS_NMI_TITLE,
-                        toggle_tooltip: labels::DIS_NMI_TT,
+                        tooltip: labels::DIS_NMI_TT,
                         value: form.disable_nmi_watchdog
                     }
                 }

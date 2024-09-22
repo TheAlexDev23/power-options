@@ -24,24 +24,25 @@ pub fn ToggleableNumericField(
                 }
             }
             label { "{name}" }
-        }
-        div { class: "tooltip-parent",
             if tooltip.is_some() {
-                span {
-                    class: "tooltip",
-                    class: TooltipDirection::Left.to_class_name(),
-                    "{tooltip.clone().unwrap()}"
+                div { class: "tooltip-parent",
+                    img { src: "assets/icons/icon-info.svg" }
+                    span {
+                        class: "tooltip",
+                        class: TooltipDirection::Right.to_class_name(),
+                        "{tooltip.clone().unwrap()}"
+                    }
                 }
             }
-            input {
-                class: "numeric-input",
-                r#type: "text",
-                onchange: move |v| {
-                    value.1.set(v.value().parse().unwrap_or_default());
-                },
-                value: "{value.1}",
-                disabled: !value.0.cloned() || disabled.unwrap_or_default()
-            }
+        }
+        input {
+            class: "numeric-input",
+            r#type: "text",
+            onchange: move |v| {
+                value.1.set(v.value().parse().unwrap_or_default());
+            },
+            value: "{value.1}",
+            disabled: !value.0.cloned() || disabled.unwrap_or_default()
         }
     }
 }
@@ -63,23 +64,24 @@ pub fn ToggleableTextField(
                 }
             }
             label { "{name}" }
-        }
-        div { class: "tooltip-parent",
             if tooltip.is_some() {
-                span {
-                    class: "tooltip",
-                    class: TooltipDirection::Left.to_class_name(),
-                    "{tooltip.clone().unwrap()}"
+                div { class: "tooltip-parent",
+                    img { src: "assets/icons/icon-info.svg" }
+                    span {
+                        class: "tooltip",
+                        class: TooltipDirection::Right.to_class_name(),
+                        "{tooltip.clone().unwrap()}"
+                    }
                 }
             }
-            input {
-                r#type: "text",
-                onchange: move |v| {
-                    value.1.set(v.value());
-                },
-                value: "{value.1}",
-                disabled: !value.0.cloned() || disabled.unwrap_or_default()
-            }
+        }
+        input {
+            r#type: "text",
+            onchange: move |v| {
+                value.1.set(v.value());
+            },
+            value: "{value.1}",
+            disabled: !value.0.cloned() || disabled.unwrap_or_default()
         }
     }
 }
@@ -90,7 +92,7 @@ pub fn ToggleableDropdown(
     items: Vec<String>,
     value: ToggleableString,
     disabled: Option<bool>,
-    dropdown_tooltip: Option<String>,
+    tooltip: Option<String>,
 ) -> Element {
     rsx! {
         div {
@@ -102,6 +104,16 @@ pub fn ToggleableDropdown(
                 }
             }
             label { "{name}" }
+            if tooltip.is_some() {
+                div { class: "tooltip-parent",
+                    img { src: "assets/icons/icon-info.svg" }
+                    span {
+                        class: "tooltip",
+                        class: TooltipDirection::Right.to_class_name(),
+                        "{tooltip.clone().unwrap()}"
+                    }
+                }
+            }
         }
         Dropdown {
             selected: value.1(),
@@ -109,10 +121,7 @@ pub fn ToggleableDropdown(
                 value.1.set(v);
             },
             disabled: !value.0() || disabled.unwrap_or_default(),
-            items,
-            tooltip: dropdown_tooltip
-                .as_ref()
-                .map(|dropdown_tooltip| (TooltipDirection::Left, dropdown_tooltip.clone()))
+            items
         }
     }
 }
@@ -122,7 +131,7 @@ pub fn ToggleableToggle(
     name: String,
     value: ToggleableBool,
     disabled: Option<bool>,
-    toggle_tooltip: Option<String>,
+    tooltip: Option<String>,
 ) -> Element {
     rsx! {
         div {
@@ -134,22 +143,22 @@ pub fn ToggleableToggle(
                 }
             }
             label { "{name}" }
-        }
-        div { class: "tooltip-parent",
-            if toggle_tooltip.is_some() {
-                span {
-                    class: "tooltip",
-                    class: TooltipDirection::Left.to_class_name(),
-                    "{toggle_tooltip.unwrap()}"
+            if tooltip.is_some() {
+                div { class: "tooltip-parent",
+                    img { src: "assets/icons/icon-info.svg" }
+                    span {
+                        class: "tooltip",
+                        class: TooltipDirection::Right.to_class_name(),
+                        "{tooltip.clone().unwrap()}"
+                    }
                 }
             }
-
-            input {
-                r#type: "checkbox",
-                onchange: move |v| { value.1.set(v.value() == "true") },
-                checked: "{value.1}",
-                disabled: !value.0() || disabled.unwrap_or_default()
-            }
+        }
+        input {
+            r#type: "checkbox",
+            onchange: move |v| { value.1.set(v.value() == "true") },
+            checked: "{value.1}",
+            disabled: !value.0() || disabled.unwrap_or_default()
         }
     }
 }

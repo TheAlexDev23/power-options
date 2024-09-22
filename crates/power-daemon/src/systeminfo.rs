@@ -4,9 +4,15 @@ use log::{error, trace};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
-use crate::helpers::{
-    command_exists, file_content_to_bool, file_content_to_list, file_content_to_string,
-    file_content_to_u32, run_command_with_output,
+use crate::{
+    helpers::{command_exists, run_command_with_output},
+    sysfs::gpu::IntelGpu,
+    sysfs::{
+        gpu::*,
+        reading::{
+            file_content_to_bool, file_content_to_list, file_content_to_string, file_content_to_u32,
+        },
+    },
 };
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -15,6 +21,8 @@ pub struct SystemInfo {
     pub pci_info: PCIInfo,
     pub usb_info: USBInfo,
     pub sata_info: SATAInfo,
+    pub firmware_info: FirmwareInfo,
+    pub gpu_info: GpuInfo,
     pub opt_features_info: OptionalFeaturesInfo,
 }
 
@@ -27,6 +35,8 @@ impl SystemInfo {
             pci_info: PCIInfo::obtain(),
             usb_info: USBInfo::obtain(),
             sata_info: SATAInfo::obtain(),
+            firmware_info: FirmwareInfo::obtain(),
+            gpu_info: GpuInfo::obtain(),
             opt_features_info: OptionalFeaturesInfo::obtain(),
         }
     }
@@ -484,22 +494,126 @@ impl SATAInfo {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct FirmwareInfo {
+    /// None if unsupported
+    pub platform_profiles: Option<Vec<String>>,
+}
+
+impl FirmwareInfo {
+    pub fn obtain() -> FirmwareInfo {
+        let supports_acpi_profiles = fs::metadata("/sys/firmware/acpi/platform_profile").is_ok();
+        FirmwareInfo {
+            platform_profiles: if supports_acpi_profiles {
+                file_content_to_list("/sys/firmware/acpi/platform_profile_choices").into()
+            } else {
+                None
+            },
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct GpuInfo {
+    pub intel_info: Option<IntelGpuInfo>,
+    pub amd_info: Option<AmdGpuInfo>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct IntelGpuInfo {
+    pub min_frequency: u32,
+    pub max_frequency: u32,
+    pub boost_frequency: u32,
+}
+
+impl IntelGpuInfo {
+    fn from_gpu_entry(gpu: IntelGpu) -> IntelGpuInfo {
+        IntelGpuInfo {
+            min_frequency: gpu.min_frequency,
+            max_frequency: gpu.max_frequency,
+            boost_frequency: gpu.boost_frequency,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub enum AmdGpuInfo {
+    AmdGpu { dpm_perf: String },
+    Radeon { dpm_perf: String, dpm_state: String },
+    Legacy { power_profile: String },
+}
+
+impl AmdGpuInfo {
+    fn from_gpu_entry(gpu: AmdGpu) -> AmdGpuInfo {
+        match gpu.driver {
+            AmdGpuDriver::AmdGpu { dpm_perf } => AmdGpuInfo::AmdGpu { dpm_perf },
+            AmdGpuDriver::Radeon {
+                dpm_perf,
+                dpm_state,
+            } => AmdGpuInfo::Radeon {
+                dpm_perf,
+                dpm_state,
+            },
+            AmdGpuDriver::Legacy { power_profile } => AmdGpuInfo::Legacy { power_profile },
+        }
+    }
+}
+
+impl GpuInfo {
+    pub fn obtain() -> GpuInfo {
+        GpuInfo {
+            // 98% of users will have a single intel GPU, complicating the UI
+            // for the 0% is a bit suboptimal at least for now
+            intel_info: iterate_intel_gpus()
+                .into_iter()
+                .next()
+                .map(IntelGpuInfo::from_gpu_entry),
+
+            amd_info: iterate_amd_gpus()
+                .into_iter()
+                .next()
+                .map(AmdGpuInfo::from_gpu_entry),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct OptionalFeaturesInfo {
-    pub supports_wifi_drivers: bool,
-    pub supports_ifconfig: bool,
+    pub supports_xautolock: bool,
+    pub supports_xset: bool,
     pub supports_xrandr: bool,
     pub supports_brightnessctl: bool,
+
+    pub supports_wifi_drivers: bool,
+    pub supports_ifconfig: bool,
+
+    pub audio_module: AudioModule,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub enum AudioModule {
+    SndHdaIntel,
+    SndAc9Codec,
+    Other,
 }
 
 impl OptionalFeaturesInfo {
     pub fn obtain() -> OptionalFeaturesInfo {
         OptionalFeaturesInfo {
+            supports_xautolock: command_exists("xautolock"),
+            supports_xset: command_exists("xset"),
+            supports_xrandr: command_exists("xrandr"),
+            supports_brightnessctl: command_exists("brightnessctl"),
             supports_wifi_drivers: fs::metadata("/sys/module/iwlwifi").is_ok()
                 && (fs::metadata("/sys/module/iwlmvm").is_ok()
                     || fs::metadata("/sys/module/iwldvm").is_ok()),
             supports_ifconfig: command_exists("ifconfig"),
-            supports_xrandr: command_exists("xrandr"),
-            supports_brightnessctl: command_exists("brightnessctl"),
+            audio_module: if fs::metadata("/sys/module/snd_hda_intel/").is_ok() {
+                AudioModule::SndHdaIntel
+            } else if fs::metadata("/sys/module/snd_ac97_codec/").is_ok() {
+                AudioModule::SndAc9Codec
+            } else {
+                AudioModule::Other
+            },
         }
     }
 }

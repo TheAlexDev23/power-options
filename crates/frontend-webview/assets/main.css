@@ -170,10 +170,6 @@ body {
     flex-direction: column;
 }
 
-#cpu-form label {
-    width: 300px;
-}
-
 #cpu-form select {
     width: 170px;
 }

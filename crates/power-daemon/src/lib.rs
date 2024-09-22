@@ -3,6 +3,7 @@ pub mod communication;
 pub mod config;
 pub mod profile;
 pub mod profiles_generator;
+pub mod sysfs;
 pub mod systeminfo;
 
 mod helpers;
@@ -26,6 +27,7 @@ use log::{debug, error, trace};
 #[derive(Clone, Deserialize, Serialize, PartialEq, Debug)]
 pub enum ReducedUpdate {
     None,
+    Sleep,
     CPU,
     CPUCores,
     SingleCPUCore(u32),
@@ -38,6 +40,9 @@ pub enum ReducedUpdate {
     USB,
     SATA,
     Kernel,
+    Firmware,
+    Audio,
+    Gpu,
 }
 
 pub struct Instance {

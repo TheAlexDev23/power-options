@@ -1,10 +1,14 @@
+pub mod audio;
 pub mod cpu;
 pub mod cpu_cores;
+pub mod firmware;
+pub mod gpu;
 pub mod kernel;
 pub mod network;
 pub mod pci;
 pub mod radio;
 pub mod sata;
+pub mod sleep;
 pub mod usb;
 
 pub use cpu::*;
@@ -21,7 +25,7 @@ lazy_static::lazy_static! {
         "power",
     ];
     pub static ref CPU_GOVERNORS_ACTIVE: Vec<&'static str> = vec!["performance", "powersave"];
-    pub static ref CPU_GOVERNORS_PASSIVE: Vec<&'static str> = vec![
+    pub static ref CPU_GOVERNORS_GENERIC: Vec<&'static str> = vec![
         "conservative",
         "ondemand",
         "userspace",

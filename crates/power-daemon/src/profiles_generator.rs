@@ -13,9 +13,11 @@ use crate::{
         Profile, RadioSettings, SATASettings, ScreenSettings, USBSettings,
     },
     systeminfo::{CPUFreqDriver, SystemInfo},
+    AmdGpuInfo, AudioModule, AudioSettings, FirmwareSettings, GpuSettings, SleepSettings,
 };
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq)]
+#[repr(usize)]
 pub enum DefaultProfileType {
     Superpowersave,
     Powersave,
@@ -70,6 +72,23 @@ pub fn create_profile_file<P: AsRef<Path>>(
     create_profile_file_with_name(name, directory_path, profile_type, system_info);
 }
 
+pub fn create_empty_profile_file_with_name<P: AsRef<Path>>(directory_path: P, name: &str) {
+    debug!("Generating empty profile");
+
+    let profile = create_empty(name);
+
+    let path = PathBuf::from(directory_path.as_ref()).join(format!("{name}.toml"));
+
+    let mut file = File::create(path).expect("Could not create profile file");
+
+    let content = toml::to_string_pretty(&profile).unwrap();
+
+    trace!("{content}");
+
+    file.write_all(content.as_bytes())
+        .expect("Could not write to profile file");
+}
+
 pub fn create_profile_file_with_name<P: AsRef<Path>>(
     name: String,
     directory_path: P,
@@ -98,8 +117,9 @@ pub fn create_default(
 ) -> Profile {
     Profile {
         profile_name: String::from(name),
-        base_profile: profile_type.clone(),
+        base_profile: profile_type.into(),
 
+        sleep_settings: sleep_settings_default(&profile_type),
         cpu_settings: cpu_settings_default(&profile_type, system_info),
         cpu_core_settings: CPUCoreSettings::default(),
         screen_settings: ScreenSettings::default(),
@@ -110,6 +130,43 @@ pub fn create_default(
         usb_settings: usb_settings_default(&profile_type),
         sata_settings: sata_settings_default(&profile_type),
         kernel_settings: kernel_settings_default(&profile_type),
+        firmware_settings: firmware_settings_default(&profile_type, system_info),
+        audio_settings: audio_settings_default(&profile_type, system_info),
+        gpu_settings: gpu_settings_default(&profile_type, system_info),
+    }
+}
+
+pub fn create_empty(name: &str) -> Profile {
+    Profile {
+        profile_name: String::from(name),
+        base_profile: None,
+
+        ..Default::default()
+    }
+}
+
+fn sleep_settings_default(profile_type: &DefaultProfileType) -> SleepSettings {
+    match profile_type {
+        DefaultProfileType::Superpowersave => SleepSettings {
+            turn_off_screen_after: Some(10),
+            suspend_after: Some(15),
+        },
+        DefaultProfileType::Powersave => SleepSettings {
+            turn_off_screen_after: Some(15),
+            suspend_after: Some(20),
+        },
+        DefaultProfileType::Balanced => SleepSettings {
+            turn_off_screen_after: Some(20),
+            suspend_after: Some(30),
+        },
+        DefaultProfileType::Performance => SleepSettings {
+            turn_off_screen_after: Some(30),
+            suspend_after: Some(45),
+        },
+        DefaultProfileType::Ultraperformance => SleepSettings {
+            turn_off_screen_after: Some(45),
+            suspend_after: Some(60),
+        },
     }
 }
 
@@ -185,8 +242,12 @@ pub fn cpu_settings_default(
         },
         DefaultProfileType::Performance => CPUSettings {
             mode,
-            // To set EPP balance_performance we cannot set governor to performance. idk why the scaling driver behaves like that
-            governor: Some(String::from("powersave")),
+            governor: Some(String::from(if widespread_driver {
+                // To set EPP balance_performance we cannot set governor to performance. idk why the scaling driver behaves like that
+                "powersave"
+            } else {
+                "performance"
+            })),
             energy_perf_ratio: if widespread_driver {
                 Some(String::from("balance_performance"))
             } else {
@@ -366,4 +427,169 @@ pub fn kernel_settings_default(profile_type: &DefaultProfileType) -> KernelSetti
             laptop_mode: Some(2),
         },
     }
+}
+
+fn firmware_settings_default(
+    profile_type: &DefaultProfileType,
+    system_info: &SystemInfo,
+) -> FirmwareSettings {
+    let firmware_info = &system_info.firmware_info;
+    if let Some(ref profiles) = firmware_info.platform_profiles {
+        let step = (profiles.len() - 1) as f64 / (5 - 1) as f64;
+        let equally_spaced_values: Vec<String> = (0..5)
+            .map(|i| profiles[(i as f64 * step) as usize].clone())
+            .collect();
+
+        FirmwareSettings {
+            platform_profile: equally_spaced_values[*profile_type as usize].clone().into(),
+        }
+    } else {
+        FirmwareSettings {
+            platform_profile: None,
+        }
+    }
+}
+
+fn audio_settings_default(
+    profile_type: &DefaultProfileType,
+    system_info: &SystemInfo,
+) -> AudioSettings {
+    AudioSettings {
+        idle_timeout: if system_info.opt_features_info.audio_module == AudioModule::Other {
+            None
+        } else {
+            match profile_type {
+                DefaultProfileType::Superpowersave => Some(2),
+                DefaultProfileType::Powersave => Some(5),
+                DefaultProfileType::Balanced => Some(10),
+                DefaultProfileType::Performance => Some(15),
+                DefaultProfileType::Ultraperformance => Some(25),
+            }
+        },
+    }
+}
+
+fn gpu_settings_default(
+    profile_type: &DefaultProfileType,
+    system_info: &SystemInfo,
+) -> GpuSettings {
+    let mut gpu_settings = GpuSettings::default();
+
+    if let Some(ref intel_info) = system_info.gpu_info.intel_info {
+        match profile_type {
+            DefaultProfileType::Superpowersave => {
+                gpu_settings.intel_min = Some(intel_info.min_frequency);
+                gpu_settings.intel_max = Some(
+                    intel_info.min_frequency
+                        + ((intel_info.max_frequency - intel_info.min_frequency) as f64 * 0.6)
+                            as u32,
+                );
+                gpu_settings.intel_boost = Some((intel_info.boost_frequency as f64 * 0.7) as u32);
+            }
+            DefaultProfileType::Powersave => {
+                gpu_settings.intel_min = Some(intel_info.min_frequency);
+                gpu_settings.intel_max = Some(
+                    intel_info.min_frequency
+                        + ((intel_info.max_frequency - intel_info.min_frequency) as f64 * 0.8)
+                            as u32,
+                );
+                gpu_settings.intel_boost = Some((intel_info.boost_frequency as f64 * 0.8) as u32);
+            }
+            DefaultProfileType::Balanced => {
+                gpu_settings.intel_min = Some(intel_info.min_frequency);
+                gpu_settings.intel_max = Some(intel_info.max_frequency);
+                gpu_settings.intel_boost = Some(intel_info.boost_frequency);
+            }
+            DefaultProfileType::Performance => {
+                gpu_settings.intel_min = Some(intel_info.min_frequency);
+                gpu_settings.intel_max = Some(intel_info.max_frequency);
+                gpu_settings.intel_boost = Some(intel_info.boost_frequency);
+            }
+            DefaultProfileType::Ultraperformance => {
+                gpu_settings.intel_min = Some(
+                    intel_info.min_frequency
+                        + ((intel_info.max_frequency - intel_info.min_frequency) as f64 * 0.4)
+                            as u32,
+                );
+                gpu_settings.intel_max = Some(intel_info.max_frequency);
+                gpu_settings.intel_boost = Some(intel_info.boost_frequency);
+            }
+        }
+    }
+
+    if let Some(ref amd_info) = system_info.gpu_info.amd_info {
+        if let AmdGpuInfo::Legacy { power_profile: _ } = amd_info {
+            match profile_type {
+                DefaultProfileType::Superpowersave => {
+                    gpu_settings.amd_power_profile = "low".to_string().into();
+                }
+                DefaultProfileType::Powersave => {
+                    gpu_settings.amd_power_profile = "mid".to_string().into();
+                }
+                DefaultProfileType::Balanced => {
+                    gpu_settings.amd_power_profile = "default".to_string().into();
+                }
+                DefaultProfileType::Performance => {
+                    gpu_settings.amd_power_profile = "high".to_string().into();
+                }
+                DefaultProfileType::Ultraperformance => {
+                    gpu_settings.amd_power_profile = "high".to_string().into();
+                }
+            }
+        }
+
+        if matches!(amd_info, AmdGpuInfo::AmdGpu { dpm_perf: _ })
+            || matches!(
+                amd_info,
+                AmdGpuInfo::Radeon {
+                    dpm_perf: _,
+                    dpm_state: _
+                }
+            )
+        {
+            match profile_type {
+                DefaultProfileType::Superpowersave => {
+                    gpu_settings.amd_dpm_perf_level = "low".to_string().into();
+                }
+                DefaultProfileType::Powersave => {
+                    gpu_settings.amd_dpm_perf_level = "low".to_string().into();
+                }
+                DefaultProfileType::Balanced => {
+                    gpu_settings.amd_dpm_perf_level = "auto".to_string().into();
+                }
+                DefaultProfileType::Performance => {
+                    gpu_settings.amd_dpm_perf_level = "high".to_string().into();
+                }
+                DefaultProfileType::Ultraperformance => {
+                    gpu_settings.amd_dpm_perf_level = "high".to_string().into();
+                }
+            }
+        }
+
+        if let AmdGpuInfo::Radeon {
+            dpm_perf: _,
+            dpm_state: _,
+        } = amd_info
+        {
+            match profile_type {
+                DefaultProfileType::Superpowersave => {
+                    gpu_settings.amd_dpm_power_state = "battery".to_string().into();
+                }
+                DefaultProfileType::Powersave => {
+                    gpu_settings.amd_dpm_perf_level = "battery".to_string().into();
+                }
+                DefaultProfileType::Balanced => {
+                    gpu_settings.amd_dpm_perf_level = "balanced".to_string().into();
+                }
+                DefaultProfileType::Performance => {
+                    gpu_settings.amd_dpm_perf_level = "performance".to_string().into();
+                }
+                DefaultProfileType::Ultraperformance => {
+                    gpu_settings.amd_dpm_perf_level = "performance".to_string().into();
+                }
+            }
+        }
+    }
+
+    gpu_settings
 }

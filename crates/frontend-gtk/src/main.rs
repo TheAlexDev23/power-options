@@ -3,6 +3,9 @@
 pub mod communications;
 pub mod components;
 pub mod helpers;
+pub mod profiles_updater;
+
+use std::fs;
 
 use clap::{command, Parser};
 use clap_verbosity_flag::{InfoLevel, Verbosity};
@@ -52,6 +55,8 @@ struct Args {
 }
 
 fn main() {
+    initial_warning();
+
     let args = Args::parse();
 
     log::set_logger(&LOGGER).expect("Could not set logger");
@@ -62,6 +67,28 @@ fn main() {
     RelmApp::new("io.github.thealexdev23.power-options.frontend")
         .with_args(Vec::new())
         .run_async::<App>(());
+}
+
+fn initial_warning() {
+    let warning_lock_dir = std::env::home_dir().unwrap().join(".local/share/power-options-gtk");
+    fs::create_dir_all(&warning_lock_dir).expect("Could not create app directory");
+    let warning_lock_path = warning_lock_dir.join("user-consent.lock");
+
+    if fs::metadata(&warning_lock_path).is_err() {
+        let agreed = std::process::Command::new("yad").args([
+            "--selectable-labels",
+            "--title",
+            "Warning: the GTK frontend might change your settings",
+            "--text",
+            "While power-options supports the ability to disable some options, the GTK frontend doesn't.\nThe GTK frontend likely <b>will update and reaply</b> your profiles to make sure that the values for all options are set (unless those features are unsupported).\nDo you want to continue?"
+        ]).spawn().expect("Could not spawn popup").wait().expect("Could not wait from popup").success();
+
+        if !agreed {
+            std::process::exit(-1);
+        } else {
+            fs::write(warning_lock_path, "").expect("Could not user agreement lock file");
+        }
+    }
 }
 
 fn set_panic_dialog() {
