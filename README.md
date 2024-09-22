@@ -76,10 +76,10 @@ saving applications. Some examples include:
 Power Option includes the following features:
 - More profile types than alternatives
 - Can smartly generate profiles by analyzing the user's system.
+- System Sleep Options (suspend, screen turn off)
 - CPU Options
 - Individual CPU Core Options. Most power saving tools lack this option and was
   one of the main motivations for this project.
-- System Sleep Options (suspend, screen turn off)
 - Screen Options
 - Options for disabling radio components (e.g Bluetooth, WiFi, NFC)
 - Network Options. Allows WAY greater control than alternative applications, but
@@ -90,6 +90,9 @@ Power Option includes the following features:
 - USB Options
 - SATA Options
 - Kernel Options
+- Firmware settings
+- Audio Options
+- GPU Options
 
 ## Installation
 
@@ -174,6 +177,8 @@ Mandatory:
 
 Optional:
 - iwlwifi compatible network card for network configuration
+- Intel sound card for audio configuration
+- Intel/AMD GPU for GPU configuration
 - xrandr: resolution/refresh rate control
 - brightnessctl: brightness control
 - ifconfig: ethernet blocking
@@ -199,9 +204,13 @@ re-run the install scripts again and `./update.sh`. **Important, do not run
 want to keep your profiles**
 
 ## Limitations
-- Network configuration only works on intel cards and cards that use iwlwifi
+- Network configuration only works on Intel cards and cards that use iwlwifi
 - Resolution and refresh rate control only works on X11 (other options should
   work though).
+- Audio configuration only works on Intel cards and cards that use `snd_hda_intel`
+  or `snd_ac97_codec`
+- GPU configuration only works on Intel and AMD cards or cards that use `i915`,
+  `amdgpu` or `radeon` drivers/modules.
 - Settings for resolution and refresh rate control are only available on the
   webview frontend.
 
