@@ -1,6 +1,6 @@
-use std::{fs, io};
 use std::path::Path;
-use std::sync::Mutex; 
+use std::sync::Mutex;
+use std::{fs, io};
 
 use log::{debug, error, info, warn};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
@@ -452,15 +452,11 @@ impl CPUCoreSettings {
 impl CoreSetting {
     pub fn apply(&self) {
         if let Some(online) = self.online {
-            if fs::metadata(format!("/sys/devices/system/cpu/cpu{}/online", self.cpu_id)).is_ok() {
-                run_command(&format!(
-                    "echo {} > /sys/devices/system/cpu/cpu{}/online",
-                    if online { "1" } else { "0" },
-                    self.cpu_id,
-                ));
-            } else {
-                warn!("System does not support toggling CPU {} online or offline but attempted to set anyways. Ignoring...", self.cpu_id);
-            }
+            run_command(&format!(
+                "echo {} > /sys/devices/system/cpu/cpu{}/online",
+                if online { "1" } else { "0" },
+                self.cpu_id,
+            ));
         }
 
         if let Some(ref epp) = self.epp {
