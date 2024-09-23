@@ -1,9 +1,7 @@
 use std::{
-    fs::{self, DirEntry},
+    fs::{self, read_link, DirEntry},
     path::PathBuf,
 };
-
-use crate::helpers::run_command_with_output;
 
 use super::{
     reading::{file_content_to_string, file_content_to_u32},
@@ -53,11 +51,9 @@ pub enum AmdGpuDriver {
 
 impl AmdGpu {
     pub fn from_dir(entry: DirEntry) -> AmdGpu {
-        let driver = run_command_with_output(&format!(
-            "readlink {}",
-            entry.path().join("device/driver").display()
-        ))
-        .0;
+        let driver_link = entry.path().join("device/driver");
+        let driver_resolved = read_link(&driver_link).unwrap_or(driver_link);
+        let driver = driver_resolved.to_string_lossy();
 
         AmdGpu {
             path: entry.path(),
@@ -151,12 +147,10 @@ pub fn iterate_intel_gpus() -> impl IntoIterator<Item = IntelGpu> {
             if !entry.file_name().into_string().unwrap().starts_with("card") {
                 false
             } else {
-                run_command_with_output(&format!(
-                    "readlink {}",
-                    entry.path().join("device/driver").display()
-                ))
-                .0
-                .contains("i915")
+                let driver_link = entry.path().join("device/driver");
+                let driver_resolved = read_link(&driver_link).unwrap_or(driver_link);
+                let driver = driver_resolved.to_string_lossy();
+                driver.contains("i915")
             }
         })
         .map(IntelGpu::from_dir)
@@ -170,12 +164,9 @@ pub fn iterate_amd_gpus() -> impl IntoIterator<Item = AmdGpu> {
             if !entry.file_name().into_string().unwrap().starts_with("card") {
                 false
             } else {
-                let driver = run_command_with_output(&format!(
-                    "readlink {}",
-                    entry.path().join("device/driver").display()
-                ))
-                .0;
-
+                let driver_link = entry.path().join("device/driver");
+                let driver_resolved = read_link(&driver_link).unwrap_or(driver_link);
+                let driver = driver_resolved.to_string_lossy();
                 driver.contains("amdgpu") || driver.contains("radeon")
             }
         })
