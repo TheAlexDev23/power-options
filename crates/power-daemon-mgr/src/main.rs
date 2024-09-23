@@ -39,6 +39,13 @@ enum OpMode {
         #[arg(long, action=clap::ArgAction::SetTrue)]
         verbose_daemon: bool,
     },
+    /// Lists the profile names
+    ListProfiles,
+    /// Creates a temporary override for a certain profile
+    SetProfileOverride {
+        profile_name: String,
+    },
+    ResetProfileOverride,
     Daemon,
     RefreshFull,
     RefreshUSB,
@@ -95,6 +102,30 @@ async fn main() {
             program_path,
             verbose_daemon,
         } => generate_base_files(path, program_path, verbose_daemon),
+        OpMode::ListProfiles => {
+            println!(
+                "{:?}",
+                ControlClient::new()
+                    .await
+                    .expect("Could not create control client")
+                    .get_config()
+                    .await
+                    .expect("Could not obtain config")
+                    .profiles
+            );
+        }
+        OpMode::SetProfileOverride { profile_name } => ControlClient::new()
+            .await
+            .expect("Could not create control client")
+            .set_profile_override(profile_name)
+            .await
+            .expect("Could not set profile override"),
+        OpMode::ResetProfileOverride => ControlClient::new()
+            .await
+            .expect("Could not create control client")
+            .remove_profile_override()
+            .await
+            .expect("Could not reset profile override"),
         OpMode::RefreshFull => refresh_full().await,
         OpMode::RefreshUSB => refresh_reduced(ReducedUpdate::USB).await,
         OpMode::RefreshPCI => {
