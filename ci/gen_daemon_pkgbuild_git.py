@@ -24,7 +24,7 @@ arch=('x86_64')
 url="{url}"
 license=('MIT')
 
-depends=('acpid' 'zsh' 'pciutils' 'usbutils' 'yad')
+depends=('acpid' 'pciutils' 'usbutils' 'yad')
 optdepends=(
 'brightnessctl: needed for brightness settings' 
 'net-tools: needed to disable ethernet cards' 'net-tools: needed to disable ethernet cards'

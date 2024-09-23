@@ -170,7 +170,6 @@ chmod +x *.sh
 For *build* dependendencies, refer to the installation guide above.
 
 Mandatory:
-- zsh
 - lspci
 - lsusb
 - acpi
