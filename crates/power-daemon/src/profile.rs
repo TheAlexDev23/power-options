@@ -1,4 +1,3 @@
-use std::path::Path;
 use std::sync::Mutex;
 use std::{fs, io};
 
@@ -15,7 +14,7 @@ use crate::{
     sysfs::{
         gpu::*,
         reading::file_content_to_string,
-        writing::{write_bool, write_str, write_u32},
+        writing::{write_all_cores, write_bool, write_str, write_u32},
     },
     ReducedUpdate, SystemInfo,
 };
@@ -494,33 +493,6 @@ impl CoreSetting {
             );
             write_u32(path, max_frequency * 1000);
         }
-    }
-}
-
-/// Writes a value to all CPU paths under /sys/devices/cpu/cpu* that are
-/// actually single CPU core management directories (which end in numbers),
-/// warning if any of the individual cores can't have that value set.
-fn write_all_cores(path: impl AsRef<Path>, data: &str) {
-    let path = path.as_ref();
-    let raw = fs::read_dir("/sys/devices/system/cpu/").expect("Error reading CPU list");
-    let relevant = raw.filter_map(Result::ok).filter(|ent| {
-        let raw_filename = ent.file_name();
-        let name = raw_filename.to_string_lossy();
-        let Some((_, suffix)) = name.split_once("cpu") else {
-            return false;
-        };
-        suffix.parse::<u32>().is_ok()
-    });
-    let to_write = relevant.map(|ent| ent.path().join(path));
-    for target in to_write {
-        if !target.exists() {
-            warn!(
-                "Attempted to write {data} to CPU sysfs path {}, but that path does not exist!",
-                target.display()
-            );
-            continue;
-        }
-        write_str(target, data);
     }
 }
 

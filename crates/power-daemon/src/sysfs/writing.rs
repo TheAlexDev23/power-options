@@ -9,7 +9,7 @@ use log::{debug, error, warn};
 /// Writes a bool value to a /sys path, mapping `true` to "1" and `false` to
 /// "0".
 ///
-/// Logs when encountering an error but does not crash. 
+/// Logs when encountering an error but does not crash.
 pub fn write_bool(path: impl AsRef<Path>, value: bool) {
     let payload = if value { "1" } else { "0" };
     write_str(path, payload)
@@ -17,7 +17,7 @@ pub fn write_bool(path: impl AsRef<Path>, value: bool) {
 
 /// Writes a u32 value to a /sys path.
 ///
-/// Logs when encountering an error but does not crash. 
+/// Logs when encountering an error but does not crash.
 pub fn write_u32(path: impl AsRef<Path>, value: u32) {
     let payload = value.to_string();
     write_str(path, &payload)
@@ -25,7 +25,7 @@ pub fn write_u32(path: impl AsRef<Path>, value: u32) {
 
 /// Writes a string value to a /sys path.
 ///
-/// Logs when encountering an error but does not crash. 
+/// Logs when encountering an error but does not crash.
 pub fn write_str(path: impl AsRef<Path>, payload: &str) {
     let path = path.as_ref();
     match write_str_inner(path, payload) {
@@ -45,6 +45,32 @@ pub fn write_str(path: impl AsRef<Path>, payload: &str) {
     }
 }
 
+/// Writes a value to all CPU paths under /sys/devices/cpu/cpu* that are
+/// actually single CPU core management directories (which end in numbers),
+/// warning if any of the individual cores can't have that value set.
+pub fn write_all_cores(path: impl AsRef<Path>, data: &str) {
+    let path = path.as_ref();
+    let raw = fs::read_dir("/sys/devices/system/cpu/").expect("Error reading CPU list");
+    let relevant = raw.filter_map(Result::ok).filter(|ent| {
+        let raw_filename = ent.file_name();
+        let name = raw_filename.to_string_lossy();
+        let Some((_, suffix)) = name.split_once("cpu") else {
+            return false;
+        };
+        suffix.parse::<u32>().is_ok()
+    });
+    let to_write = relevant.map(|ent| ent.path().join(path));
+    for target in to_write {
+        if !target.exists() {
+            warn!(
+                "Attempted to write {data} to CPU sysfs path {}, but that path does not exist!",
+                target.display()
+            );
+            continue;
+        }
+        write_str(target, data);
+    }
+}
 
 fn write_str_inner(path: impl AsRef<Path>, payload: &str) -> io::Result<()> {
     let path = path.as_ref();
