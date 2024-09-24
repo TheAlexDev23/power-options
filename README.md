@@ -13,11 +13,6 @@
 
 <br/>
 
-*Warning: power options **will** enable usb autosuspend on first-run if you are on
-battery power, potentially disabling some input devices during inactivity. Go
-into the frontend of your choice and include in the blacklist devices that you
-do not want to follow usb autsuspend.*
-
 All-In-One blazingly fast Linux GUI Application for simple and advanced power
 management on any device.
 
