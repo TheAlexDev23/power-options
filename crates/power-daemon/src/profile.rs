@@ -1,4 +1,3 @@
-use std::path::Path;
 use std::sync::Mutex;
 use std::{fs, io};
 
@@ -12,7 +11,11 @@ use crate::{
         WhiteBlackList,
     },
     profiles_generator::{self, DefaultProfileType},
-    sysfs::{gpu::*, reading::file_content_to_string},
+    sysfs::{
+        gpu::*,
+        reading::file_content_to_string,
+        writing::{write_all_cores, write_bool, write_str, write_u32},
+    },
     ReducedUpdate, SystemInfo,
 };
 
@@ -277,15 +280,9 @@ impl CPUSettings {
 
         if let Some(ref mode) = self.mode {
             if fs::metadata("/sys/devices/system/cpu/intel_pstate").is_ok() {
-                run_command(&format!(
-                    "echo {} > /sys/devices/system/cpu/intel_pstate/status",
-                    mode
-                ))
+                write_str("/sys/devices/system/cpu/intel_pstate/status", mode)
             } else if fs::metadata("/sys/devices/system/cpu/amd_pstate").is_ok() {
-                run_command(&format!(
-                    "echo {} > /sys/devices/system/cpu/amd_pstate/status",
-                    mode
-                ))
+                write_str("/sys/devices/system/cpu/amd_pstate/status", mode);
             } else {
                 error!("Scaling driver operation mode is only supported on intel_pstate and amd_pstate drivers.")
             }
@@ -293,12 +290,11 @@ impl CPUSettings {
 
         // Governor and hwp_dynaamic_boost needs to run before epp options because those determine if epp is changable
         if let Some(hwp_dynamic_boost) = self.hwp_dyn_boost {
-            let value = if hwp_dynamic_boost { "1" } else { "0" };
             if fs::metadata("/sys/devices/system/cpu/intel_pstate").is_ok() {
-                run_command(&format!(
-                    "echo {} > /sys/devices/system/cpu/intel_pstate/hwp_dynamic_boost",
-                    value
-                ))
+                write_bool(
+                    "/sys/devices/system/cpu/intel_pstate/hwp_dynamic_boost",
+                    hwp_dynamic_boost,
+                );
             } else {
                 error!("HWP dynamic boost is currently only supported for intel CPUs with intel_pstate");
             }
@@ -326,16 +322,10 @@ impl CPUSettings {
         if let Some(boost) = self.boost {
             if fs::metadata("/sys/devices/system/cpu/intel_pstate/no_turbo").is_ok() {
                 // using intel turbo
-                run_command(&format!(
-                    "echo {} > /sys/devices/system/cpu/intel_pstate/no_turbo",
-                    if boost { '0' } else { '1' }
-                ));
+                write_bool("/sys/devices/system/cpu/intel_pstate/no_turbo", !boost);
             } else if fs::metadata("/sys/devices/system/cpu/cpufreq/boost").is_ok() {
                 // using amd precission boost
-                run_command(&format!(
-                    "echo {} > /sys/devices/system/cpu/cpufreq/boost",
-                    if boost { '1' } else { '0' }
-                ));
+                write_bool("/sys/devices/system/cpu/cpufreq/boost", boost);
             } else {
                 error!("CPU boost technology is unsupported by your CPU/driver")
             }
@@ -356,20 +346,20 @@ impl CPUSettings {
 
         if let Some(min_perf_pct) = self.min_perf_pct {
             if fs::metadata("/sys/devices/system/cpu/intel_pstate").is_ok() {
-                run_command(&format!(
-                    "echo {} > /sys/devices/system/cpu/intel_pstate/min_perf_pct",
-                    min_perf_pct
-                ))
+                write_u32(
+                    "/sys/devices/system/cpu/intel_pstate/min_perf_pct",
+                    min_perf_pct as u32,
+                );
             } else {
                 error!("Min/Max scaling perf percentage is currently only supported for intel CPUs with intel_pstate");
             }
         }
         if let Some(max_perf_pct) = self.max_perf_pct {
             if fs::metadata("/sys/devices/system/cpu/intel_pstate").is_ok() {
-                run_command(&format!(
-                    "echo {} > /sys/devices/system/cpu/intel_pstate/max_perf_pct",
-                    max_perf_pct
-                ))
+                write_u32(
+                    "/sys/devices/system/cpu/intel_pstate/max_perf_pct",
+                    max_perf_pct as u32,
+                );
             } else {
                 error!("Min/Max scaling perf percentage is currently only supported for intel CPUs with intel_pstate");
             }
@@ -452,83 +442,57 @@ impl CPUCoreSettings {
 impl CoreSetting {
     pub fn apply(&self) {
         if let Some(online) = self.online {
-            run_command(&format!(
-                "echo {} > /sys/devices/system/cpu/cpu{}/online",
-                if online { "1" } else { "0" },
-                self.cpu_id,
-            ));
+            write_bool(
+                format!("/sys/devices/system/cpu/cpu{}/online", self.cpu_id),
+                online,
+            );
         }
 
         if let Some(ref epp) = self.epp {
             if fs::metadata("/sys/devices/system/cpu/cpu0/cpufreq/energy_performance_preference")
                 .is_ok()
             {
-                run_command(&format!(
-                    "echo {} > /sys/devices/system/cpu/cpu{}/cpufreq/energy_performance_preference",
-                    epp, self.cpu_id,
-                ));
+                let path = format!(
+                    "/sys/devices/system/cpu/cpu{}/cpufreq/energy_performance_preference",
+                    self.cpu_id
+                );
+                write_str(path, epp);
             } else if fs::metadata("/sys/devices/system/cpu/cpu0/power/energy_perf_bias").is_ok() {
                 debug!(
                     "System does not have EPP but EPB is present, translating and setting EPB..."
                 );
-                run_command(&format!(
-                    "echo {} > /sys/devices/system/cpu/cpu{}/power/energy_perf_bias",
-                    CPUSettings::translate_epp_to_epb(epp),
+                let path = format!(
+                    "/sys/devices/system/cpu/cpu{}/power/energy_perf_bias",
                     self.cpu_id
-                ));
+                );
+                write_str(path, &CPUSettings::translate_epp_to_epb(epp));
             } else {
                 warn!("System does not have EPP or EPB but configuration attempted to set anyways. Ignoring...");
             }
         }
 
         if let Some(ref governor) = self.governor {
-            run_command(&format!(
-                "echo {} > /sys/devices/system/cpu/cpu{}/cpufreq/scaling_governor",
-                governor, self.cpu_id,
-            ));
+            let path = format!(
+                "/sys/devices/system/cpu/cpu{}/cpufreq/scaling_governor",
+                self.cpu_id
+            );
+            write_str(path, governor);
         }
 
         if let Some(min_frequency) = self.min_frequency {
-            run_command(&format!(
-                "echo {} > /sys/devices/system/cpu/cpu{}/cpufreq/scaling_min_freq",
-                min_frequency * 1000,
-                self.cpu_id,
-            ));
+            let path = format!(
+                "/sys/devices/system/cpu/cpu{}/cpufreq/scaling_min_freq",
+                self.cpu_id
+            );
+            write_u32(path, min_frequency * 1000);
         }
         if let Some(max_frequency) = self.max_frequency {
-            run_command(&format!(
-                "echo {} > /sys/devices/system/cpu/cpu{}/cpufreq/scaling_max_freq",
-                max_frequency * 1000,
+            let path = format!(
+                "/sys/devices/system/cpu/cpu{}/cpufreq/scaling_max_freq",
                 self.cpu_id
-            ));
-        }
-    }
-}
-
-/// Writes a value to all CPU paths under /sys/devices/cpu/cpu* that are
-/// actually single CPU core management directories (which end in numbers),
-/// warning if any of the individual cores can't have that value set.
-fn write_all_cores(path: impl AsRef<Path>, data: &str) {
-    let path = path.as_ref();
-    let raw = fs::read_dir("/sys/devices/system/cpu/").expect("Error reading CPU list");
-    let relevant = raw.filter_map(Result::ok).filter(|ent| {
-        let raw_filename = ent.file_name();
-        let name = raw_filename.to_string_lossy();
-        let Some((_, suffix)) = name.split_once("cpu") else {
-            return false;
-        };
-        suffix.parse::<u32>().is_ok()
-    });
-    let to_write = relevant.map(|ent| ent.path().join(path));
-    for target in to_write {
-        if !target.exists() {
-            warn!(
-                "Attempted to write {data} to CPU sysfs path {}, but that path does not exist!",
-                target.display()
             );
-            continue;
+            write_u32(path, max_frequency * 1000);
         }
-        run_command(&format!("echo {} > {}", data, target.display()));
     }
 }
 
@@ -751,10 +715,7 @@ impl ASPMSettings {
         );
 
         if let Some(ref mode) = self.mode {
-            run_command(&format!(
-                "echo {} > /sys/module/pcie_aspm/parameters/policy",
-                mode
-            ));
+            write_str("/sys/module/pcie_aspm/parameters/policy", mode);
         }
     }
 }
@@ -790,11 +751,10 @@ impl PCISettings {
                 self.enable_power_management.unwrap(),
             );
 
-            run_command(&format!(
-                "echo {} > {}",
+            write_str(
+                path.join("power/control"),
                 if enable_pm { "auto" } else { "on" },
-                path.join("power/control").display()
-            ))
+            );
         }
     }
 }
@@ -836,18 +796,14 @@ impl USBSettings {
                     enable_power_management,
                 );
 
-                run_command(&format!(
-                    "echo {} > {}",
+                write_str(
+                    path.join("power/control"),
                     if enable_pm { "auto" } else { "on" },
-                    path.join("power/control").display()
-                ));
+                );
 
                 if enable_pm {
                     if let Some(auto_suspend_ms) = self.autosuspend_delay_ms {
-                        run_command(&format!(
-                            "echo {auto_suspend_ms} > {}",
-                            path.join("power/autosuspend_delay_ms").display()
-                        ));
+                        write_u32(path.join("power/autosuspend_delay_ms"), auto_suspend_ms);
                     }
                 }
             }
@@ -883,10 +839,7 @@ impl SATASettings {
             let entry = entry.expect("Could not read sysfs entry");
             let path = entry.path();
 
-            run_command(&format!(
-                "echo {pm_policy} > {}",
-                path.join("link_power_management_policy").display()
-            ))
+            write_str(path.join("link_power_management_policy"), pm_policy);
         }
     }
 }
@@ -906,19 +859,13 @@ impl KernelSettings {
         );
 
         if let Some(disable_wd) = self.disable_nmi_watchdog {
-            run_command(&format!(
-                "echo {} > /proc/sys/kernel/nmi_watchdog",
-                if disable_wd { "0" } else { "1" }
-            ))
+            write_bool("/proc/sys/kernel/nmi_watchdog", !disable_wd);
         }
         if let Some(vm_writeback) = self.vm_writeback {
-            run_command(&format!(
-                "echo {} > /proc/sys/vm/dirty_writeback_centisecs",
-                vm_writeback * 100
-            ))
+            write_u32("/proc/sys/vm/dirty_writeback_centisecs", vm_writeback * 100);
         }
         if let Some(lm) = self.laptop_mode {
-            run_command(&format!("echo {} > /proc/sys/vm/laptop_mode", lm))
+            write_u32("/proc/sys/vm/laptop_mode", lm);
         }
     }
 }
@@ -932,9 +879,7 @@ pub struct FirmwareSettings {
 impl FirmwareSettings {
     pub fn apply(&self) {
         if let Some(ref profile) = self.platform_profile {
-            run_command(&format!(
-                "echo {profile} > /sys/firmware/acpi/platform_profile"
-            ));
+            write_str("/sys/firmware/acpi/platform_profile", profile);
         }
     }
 }
@@ -948,13 +893,9 @@ impl AudioSettings {
     pub fn apply(&self) {
         if let Some(ref time) = self.idle_timeout {
             if fs::metadata("/sys/module/snd_hda_intel/").is_ok() {
-                run_command(&format!(
-                    "echo {time} > /sys/module/snd_hda_intel/parameters/power_save"
-                ));
+                write_u32("/sys/module/snd_hda_intel/parameters/power_save", *time);
             } else if fs::metadata("/sys/module/snd_ac97_codec/").is_ok() {
-                run_command(&format!(
-                    "echo {time} > /sys/module/snd_ac97_codec/parameters/power_save"
-                ));
+                write_u32("/sys/module/snd_ac97_codec/parameters/power_save", *time);
             } else {
                 error!("Attempted to set audio idle timeout but only snd_hda_intel and snd_ac97_codec modules are supported for this feature.");
             }

@@ -1,11 +1,12 @@
 use std::{
-    fs::{self, DirEntry},
+    fs::{self, read_link, DirEntry},
     path::PathBuf,
 };
 
-use crate::helpers::{run_command, run_command_with_output};
-
-use super::reading::{file_content_to_string, file_content_to_u32};
+use super::{
+    reading::{file_content_to_string, file_content_to_u32},
+    writing::{write_str, write_u32},
+};
 
 pub struct IntelGpu {
     pub min_frequency: u32,
@@ -26,22 +27,13 @@ impl IntelGpu {
     }
 
     pub fn set_min(&self, min: u32) {
-        run_command(&format!(
-            "echo {min} > {}",
-            self.path.join("gt_min_freq_mhz").display()
-        ));
+        write_u32(self.path.join("gt_min_freq_mhz"), min);
     }
     pub fn set_max(&self, max: u32) {
-        run_command(&format!(
-            "echo {max} > {}",
-            self.path.join("gt_max_freq_mhz").display()
-        ));
+        write_u32(self.path.join("gt_max_freq_mhz"), max);
     }
     pub fn set_boost(&self, boost: u32) {
-        run_command(&format!(
-            "echo {boost} > {}",
-            self.path.join("gt_boost_freq_mhz").display()
-        ));
+        write_u32(self.path.join("gt_boost_freq_mhz"), boost);
     }
 }
 
@@ -59,11 +51,9 @@ pub enum AmdGpuDriver {
 
 impl AmdGpu {
     pub fn from_dir(entry: DirEntry) -> AmdGpu {
-        let driver = run_command_with_output(&format!(
-            "readlink {}",
-            entry.path().join("device/driver").display()
-        ))
-        .0;
+        let driver_link = entry.path().join("device/driver");
+        let driver_resolved = read_link(&driver_link).unwrap_or(driver_link);
+        let driver = driver_resolved.to_string_lossy();
 
         AmdGpu {
             path: entry.path(),
@@ -103,23 +93,19 @@ impl AmdGpu {
     pub fn set_dpm_perf_level(&self, perf_level: &str) {
         match &self.driver {
             AmdGpuDriver::AmdGpu { dpm_perf: _ } => {
-                run_command(&format!(
-                    "echo {perf_level} > {}",
-                    self.path
-                        .join("device/power_dpm_force_performance_level")
-                        .display()
-                ));
+                write_str(
+                    self.path.join("device/power_dpm_force_performance_level"),
+                    perf_level,
+                );
             }
             AmdGpuDriver::Radeon {
                 dpm_perf: _,
                 dpm_state: _,
             } => {
-                run_command(&format!(
-                    "echo {perf_level} > {}",
-                    self.path
-                        .join("device/power_dpm_force_performance_level")
-                        .display()
-                ));
+                write_str(
+                    self.path.join("device/power_dpm_force_performance_level"),
+                    perf_level,
+                );
             }
             AmdGpuDriver::Legacy { power_profile: _ } => {}
         }
@@ -132,10 +118,7 @@ impl AmdGpu {
                 dpm_perf: _,
                 dpm_state: _,
             } => {
-                run_command(&format!(
-                    "echo {power_state} > {}",
-                    self.path.join("device/power_dpm_state").display()
-                ));
+                write_str(self.path.join("device/power_dpm_state"), power_state);
             }
             AmdGpuDriver::Legacy { power_profile: _ } => {}
         }
@@ -149,14 +132,8 @@ impl AmdGpu {
                 dpm_state: _,
             } => {}
             AmdGpuDriver::Legacy { power_profile: _ } => {
-                run_command(&format!(
-                    "echo profile > {}",
-                    self.path.join("device/power_method").display()
-                ));
-                run_command(&format!(
-                    "echo {power_profile} > {}",
-                    self.path.join("power_profile").display()
-                ));
+                write_str(self.path.join("device/power_method"), "profile");
+                write_str(self.path.join("power_profile"), power_profile);
             }
         }
     }
@@ -170,12 +147,10 @@ pub fn iterate_intel_gpus() -> impl IntoIterator<Item = IntelGpu> {
             if !entry.file_name().into_string().unwrap().starts_with("card") {
                 false
             } else {
-                run_command_with_output(&format!(
-                    "readlink {}",
-                    entry.path().join("device/driver").display()
-                ))
-                .0
-                .contains("i915")
+                let driver_link = entry.path().join("device/driver");
+                let driver_resolved = read_link(&driver_link).unwrap_or(driver_link);
+                let driver = driver_resolved.to_string_lossy();
+                driver.contains("i915")
             }
         })
         .map(IntelGpu::from_dir)
@@ -189,12 +164,9 @@ pub fn iterate_amd_gpus() -> impl IntoIterator<Item = AmdGpu> {
             if !entry.file_name().into_string().unwrap().starts_with("card") {
                 false
             } else {
-                let driver = run_command_with_output(&format!(
-                    "readlink {}",
-                    entry.path().join("device/driver").display()
-                ))
-                .0;
-
+                let driver_link = entry.path().join("device/driver");
+                let driver_resolved = read_link(&driver_link).unwrap_or(driver_link);
+                let driver = driver_resolved.to_string_lossy();
                 driver.contains("amdgpu") || driver.contains("radeon")
             }
         })
