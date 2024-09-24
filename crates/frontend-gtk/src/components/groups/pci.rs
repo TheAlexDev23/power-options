@@ -77,7 +77,10 @@ impl PCIGroup {
                         .map(|d| {
                             [
                                 d.pci_address,
-                                d.display_name.strip_suffix("\n").unwrap().to_string(),
+                                d.display_name
+                                    .strip_suffix("\n")
+                                    .unwrap_or(&d.display_name)
+                                    .to_string(),
                             ]
                         })
                         .collect(),

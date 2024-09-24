@@ -394,13 +394,19 @@ impl PCIInfo {
         });
 
         let mut pci_devices = Vec::new();
+        let label_re = Regex::new(r"^[0-9a-f]+:[0-9a-f]+.[0-9] (.+) \(rev.*\)").unwrap();
 
         for device in entries {
             let display_name = run_command_with_output(&format!(
-                "lspci -s \"{}\" | sed -E 's/^[0-9a-f]+:[0-9a-f]+.[0-9] //; s/ \\(rev.*\\)//'",
-                device.file_name().into_string().unwrap()
+                "lspci -s \"{}\"",
+                device.file_name().into_string().unwrap(),
             ))
             .0;
+
+            let display_name = label_re
+                .captures(&display_name)
+                .map(|cap| cap[1].to_string())
+                .unwrap_or_else(|| "Unknown device".to_string());
 
             let pci_address = device.file_name().into_string().unwrap();
 
