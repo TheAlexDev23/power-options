@@ -695,9 +695,10 @@ impl NetworkSettings {
 
         let firmware_name = if uses_iwlmvm { "iwlmvm" } else { "iwldvm" };
 
-        run_command(&format!(
-            "modprobe -r {firmware_name} && modprobe -r iwlwifi && modprobe {firmware_name} {} && modprobe iwlwifi {}", firmware_parameters, driver_parameters,
-        ));
+        run_command(&format!("modprobe -r {firmware_name}"));
+        run_command(&format!("modprobe -r iwlwifi"));
+        run_command(&format!("modprobe {firmware_name} {firmware_parameters}"));
+        run_command(&format!("modprobe iwlwifi {driver_parameters}"));
     }
 }
 
