@@ -6,9 +6,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     helpers::{command_exists, run_command_with_output},
-    sysfs::gpu::IntelGpu,
     sysfs::{
-        gpu::*,
+        gpu::{IntelGpu, *},
+        rapl::{iterate_rapl_interfaces, IntelRaplConstraint, IntelRaplInterface, InterfaceType},
         reading::{
             file_content_to_bool, file_content_to_list, file_content_to_string, file_content_to_u32,
         },
@@ -23,6 +23,7 @@ pub struct SystemInfo {
     pub sata_info: SATAInfo,
     pub firmware_info: FirmwareInfo,
     pub gpu_info: GpuInfo,
+    pub rapl_info: IntelRaplInfo,
     pub opt_features_info: OptionalFeaturesInfo,
 }
 
@@ -37,6 +38,7 @@ impl SystemInfo {
             sata_info: SATAInfo::obtain(),
             firmware_info: FirmwareInfo::obtain(),
             gpu_info: GpuInfo::obtain(),
+            rapl_info: IntelRaplInfo::obtain(),
             opt_features_info: OptionalFeaturesInfo::obtain(),
         }
     }
@@ -578,6 +580,73 @@ impl GpuInfo {
                 .into_iter()
                 .next()
                 .map(AmdGpuInfo::from_gpu_entry),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct IntelRaplInfo {
+    pub rapl_missing: bool,
+    pub package: Option<IntelRaplInterfaceInfo>,
+    pub core: Option<IntelRaplInterfaceInfo>,
+    pub uncore: Option<IntelRaplInterfaceInfo>,
+}
+
+impl IntelRaplInfo {
+    pub fn obtain() -> IntelRaplInfo {
+        let mut ret = IntelRaplInfo {
+            rapl_missing: true,
+            package: None,
+            core: None,
+            uncore: None,
+        };
+
+        if let Some(interfaces) = iterate_rapl_interfaces() {
+            ret.rapl_missing = false;
+
+            for interface in interfaces {
+                match interface.interface_type {
+                    InterfaceType::Package => ret.package = Some(interface.into()),
+                    InterfaceType::Core => ret.core = Some(interface.into()),
+                    InterfaceType::Uncore => ret.uncore = Some(interface.into()),
+                }
+            }
+        }
+
+        ret
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct IntelRaplInterfaceInfo {
+    pub long_term: Option<IntelRaplConstraintInfo>,
+    pub short_term: Option<IntelRaplConstraintInfo>,
+    pub peak_power: Option<IntelRaplConstraintInfo>,
+}
+
+impl From<IntelRaplInterface> for IntelRaplInterfaceInfo {
+    fn from(other: IntelRaplInterface) -> Self {
+        IntelRaplInterfaceInfo {
+            long_term: other.long_term.map(|c| c.into()),
+            short_term: other.short_term.map(|c| c.into()),
+            peak_power: other.peak_power.map(|c| c.into()),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct IntelRaplConstraintInfo {
+    pub power_limit_uw: u32,
+    /// Some constraints lack a time window because they are the fallback
+    /// constraints that are supposed to run infinetly
+    pub time_window_us: Option<u32>,
+}
+
+impl From<IntelRaplConstraint> for IntelRaplConstraintInfo {
+    fn from(other: IntelRaplConstraint) -> Self {
+        IntelRaplConstraintInfo {
+            power_limit_uw: other.power_limit_uw,
+            time_window_us: other.time_window_us,
         }
     }
 }

@@ -43,6 +43,7 @@ pub enum ReducedUpdate {
     Firmware,
     Audio,
     Gpu,
+    Rapl,
 }
 
 pub struct Instance {

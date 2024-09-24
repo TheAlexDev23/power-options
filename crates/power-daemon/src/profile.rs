@@ -5,6 +5,7 @@ use log::{debug, error, info, warn};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use serde::{Deserialize, Serialize};
 
+use crate::sysfs::rapl::{iterate_rapl_interfaces, IntelRaplInterface, InterfaceType};
 use crate::{
     helpers::{
         command_exists, run_command, run_graphical_command, run_graphical_command_in_background,
@@ -62,6 +63,7 @@ pub struct Profile {
     pub firmware_settings: FirmwareSettings,
     pub audio_settings: AudioSettings,
     pub gpu_settings: GpuSettings,
+    pub rapl_settings: IntelRaplSettings,
 }
 
 impl Profile {
@@ -85,6 +87,7 @@ impl Profile {
             Box::new(|| self.firmware_settings.apply()),
             Box::new(|| self.audio_settings.apply()),
             Box::new(|| self.gpu_settings.apply()),
+            Box::new(|| self.rapl_settings.apply()),
         ];
 
         settings_functions.into_par_iter().for_each(|f| f());
@@ -126,6 +129,7 @@ impl Profile {
             ReducedUpdate::Firmware => self.firmware_settings.apply(),
             ReducedUpdate::Audio => self.audio_settings.apply(),
             ReducedUpdate::Gpu => self.gpu_settings.apply(),
+            ReducedUpdate::Rapl => self.rapl_settings.apply(),
         }
     }
 
@@ -978,6 +982,65 @@ impl GpuSettings {
             if let Some(ref power_profile) = self.amd_power_profile {
                 gpu.set_power_profile(power_profile);
             }
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Default)]
+pub struct IntelRaplSettings {
+    pub package: Option<IntelRaplInterfaceSettings>,
+    pub core: Option<IntelRaplInterfaceSettings>,
+    pub uncore: Option<IntelRaplInterfaceSettings>,
+}
+
+impl IntelRaplSettings {
+    pub fn apply(&self) {
+        info!(
+            "Applying RAPL settings on {:?}",
+            std::thread::current().id()
+        );
+
+        if let Some(interfaces) = iterate_rapl_interfaces() {
+            for interface in interfaces {
+                match interface.interface_type {
+                    InterfaceType::Package => {
+                        if let Some(ref int) = self.package {
+                            int.apply(interface);
+                        }
+                    }
+                    InterfaceType::Core => {
+                        if let Some(ref int) = self.core {
+                            int.apply(interface);
+                        }
+                    }
+                    InterfaceType::Uncore => {
+                        if let Some(ref int) = self.core {
+                            int.apply(interface);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct IntelRaplInterfaceSettings {
+    pub long_term_limit: Option<u32>,
+    pub short_term_limit: Option<u32>,
+    pub peak_power_limit: Option<u32>,
+}
+
+impl IntelRaplInterfaceSettings {
+    pub fn apply(&self, internal: IntelRaplInterface) {
+        if let Some(limit) = self.long_term_limit {
+            internal.long_term.map(|c| c.set_power_limit(limit));
+        }
+        if let Some(limit) = self.short_term_limit {
+            internal.short_term.map(|c| c.set_power_limit(limit));
+        }
+        if let Some(limit) = self.peak_power_limit {
+            internal.peak_power.map(|c| c.set_power_limit(limit));
         }
     }
 }

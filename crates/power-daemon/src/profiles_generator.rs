@@ -13,7 +13,8 @@ use crate::{
         Profile, RadioSettings, SATASettings, ScreenSettings, USBSettings,
     },
     systeminfo::{CPUFreqDriver, SystemInfo},
-    AmdGpuInfo, AudioModule, AudioSettings, FirmwareSettings, GpuSettings, SleepSettings,
+    AmdGpuInfo, AudioModule, AudioSettings, FirmwareSettings, GpuSettings, IntelRaplSettings,
+    SleepSettings,
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq)]
@@ -133,6 +134,7 @@ pub fn create_default(
         firmware_settings: firmware_settings_default(&profile_type, system_info),
         audio_settings: audio_settings_default(&profile_type, system_info),
         gpu_settings: gpu_settings_default(&profile_type, system_info),
+        rapl_settings: IntelRaplSettings::default(),
     }
 }
 

@@ -139,7 +139,7 @@ impl AmdGpu {
     }
 }
 
-pub fn iterate_intel_gpus() -> impl IntoIterator<Item = IntelGpu> {
+pub fn iterate_intel_gpus() -> impl Iterator<Item = IntelGpu> {
     fs::read_dir("/sys/class/drm")
         .expect("Could not read sysfs drm directory")
         .flatten()
@@ -156,7 +156,7 @@ pub fn iterate_intel_gpus() -> impl IntoIterator<Item = IntelGpu> {
         .map(IntelGpu::from_dir)
 }
 
-pub fn iterate_amd_gpus() -> impl IntoIterator<Item = AmdGpu> {
+pub fn iterate_amd_gpus() -> impl Iterator<Item = AmdGpu> {
     fs::read_dir("/sys/class/drm")
         .expect("Could not read sysfs drm directory")
         .flatten()
