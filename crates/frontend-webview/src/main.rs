@@ -13,8 +13,8 @@ use communication_services::{
 };
 use setting_groups::{
     audio::AudioGroup, cpu::CPUGroup, firmware::FirmwareGroup, gpu::GpuGroup, kernel::KernelGroup,
-    network::NetworkGroup, pci::PCIAndASPMGroup, radio::RadioGroup, sata::SATAGroup,
-    screen::ScreenGroup, sleep::SleepGroup, usb::USBGroup,
+    network::NetworkGroup, pci::PCIAndASPMGroup, radio::RadioGroup, rapl::RaplGroup,
+    sata::SATAGroup, screen::ScreenGroup, sleep::SleepGroup, usb::USBGroup,
 };
 use settings::SettingsMenu;
 
@@ -224,7 +224,7 @@ fn PowerProfilesNav(
             }
         }
     } else {
-        rsx! {  }
+        rsx! {}
     }
 }
 
@@ -259,6 +259,7 @@ fn SettingGroupsNav(current_tab: Signal<u8>) -> Element {
         ("assets/icons/navbar-firmware.svg", "Firmware"),
         ("assets/icons/navbar-audio.svg", "Audio"),
         ("assets/icons/navbar-gpu.svg", "GPU"),
+        ("assets/icons/navbar-rapl.svg", "Intel RAPL"),
     ];
 
     rsx! {
@@ -359,6 +360,13 @@ fn SettingGroup(
                 }
             } else if current_tab_val == 11 {
                 GpuGroup {
+                    system_info,
+                    profiles_info,
+                    control_routine,
+                    system_info_routine
+                }
+            } else if current_tab_val == 12 {
+                RaplGroup {
                     system_info,
                     profiles_info,
                     control_routine,
