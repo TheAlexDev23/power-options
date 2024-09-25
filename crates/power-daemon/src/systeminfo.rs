@@ -572,14 +572,10 @@ impl GpuInfo {
             // 98% of users will have a single intel GPU, complicating the UI
             // for the 0% is a bit suboptimal at least for now
             intel_info: iterate_intel_gpus()
-                .into_iter()
                 .next()
                 .map(IntelGpuInfo::from_gpu_entry),
 
-            amd_info: iterate_amd_gpus()
-                .into_iter()
-                .next()
-                .map(AmdGpuInfo::from_gpu_entry),
+            amd_info: iterate_amd_gpus().next().map(AmdGpuInfo::from_gpu_entry),
         }
     }
 }

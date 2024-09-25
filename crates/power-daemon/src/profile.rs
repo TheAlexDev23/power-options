@@ -1034,13 +1034,19 @@ pub struct IntelRaplInterfaceSettings {
 impl IntelRaplInterfaceSettings {
     pub fn apply(&self, internal: IntelRaplInterface) {
         if let Some(limit) = self.long_term_limit {
-            internal.long_term.map(|c| c.set_power_limit(limit));
+            if let Some(c) = internal.long_term {
+                c.set_power_limit(limit)
+            }
         }
         if let Some(limit) = self.short_term_limit {
-            internal.short_term.map(|c| c.set_power_limit(limit));
+            if let Some(c) = internal.short_term {
+                c.set_power_limit(limit)
+            }
         }
         if let Some(limit) = self.peak_power_limit {
-            internal.peak_power.map(|c| c.set_power_limit(limit));
+            if let Some(c) = internal.peak_power {
+                c.set_power_limit(limit)
+            }
         }
     }
 }

@@ -48,7 +48,7 @@ impl IntelRaplInterface {
             }
 
             let interface = IntelRaplConstraint {
-                power_limit: (file_content_to_u32(&power_path) / 1_000_000).into(),
+                power_limit: file_content_to_u32(&power_path),
                 time_window: try_file_content_to_u32(&time_path).map(|v| v / 1_000_000),
                 power_path: power_path.clone(),
             };
@@ -100,8 +100,7 @@ pub fn iterate_rapl_interfaces() -> Option<impl Iterator<Item = IntelRaplInterfa
             .expect("Could not read powercap sysfs dir")
             .flatten()
             .filter(move |d| re.is_match(&d.file_name().into_string().unwrap()))
-            .map(|d| IntelRaplInterface::from_path(&d.path()))
-            .flatten()
+            .filter_map(|d| IntelRaplInterface::from_path(&d.path()))
             .into()
     }
 }

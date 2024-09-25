@@ -384,6 +384,7 @@ struct InterfaceSettings {
 }
 
 impl InterfaceSettings {
+    #[allow(clippy::wrong_self_convention)]
     pub fn from_daemon_settings(&mut self, interface: &IntelRaplInterfaceSettings) {
         *self.long_term.guard() = interface.long_term_limit.unwrap_or_default();
         *self.short_term.guard() = interface.short_term_limit.unwrap_or_default();
