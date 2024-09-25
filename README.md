@@ -88,6 +88,7 @@ Power Option includes the following features:
 - Firmware settings
 - Audio Options
 - GPU Options
+- Intel Running Average Power Limit (RAPL) settings
 
 ## Installation
 
