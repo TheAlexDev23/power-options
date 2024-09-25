@@ -21,6 +21,7 @@ use super::groups::{
     pci::PCIGroup, radio::RadioGroup, sata::SATAGroup, usb::USBGroup,
 };
 
+use super::rapl::RaplGroup;
 use super::settings::Settings;
 use super::sleep::SleepGroup;
 use super::Header;
@@ -46,6 +47,7 @@ pub enum SettingsGroup {
     Firmware,
     Audio,
     Gpu,
+    Rapl,
 }
 
 impl SettingsGroup {
@@ -63,6 +65,7 @@ impl SettingsGroup {
             "Firmware" => SettingsGroup::Firmware,
             "Audio" => SettingsGroup::Audio,
             "GPU" => SettingsGroup::Gpu,
+            "Intel RAPL" => SettingsGroup::Rapl,
             _ => panic!("Unkown settings group"),
         }
     }
@@ -83,6 +86,7 @@ impl Display for SettingsGroup {
             SettingsGroup::Firmware => "Firmware",
             SettingsGroup::Audio => "Audio",
             SettingsGroup::Gpu => "GPU",
+            SettingsGroup::Rapl => "Intel RAPL",
         })
     }
 }
@@ -140,6 +144,7 @@ pub struct App {
     firmware_group: Controller<FirmwareGroup>,
     audio_group: Controller<AudioGroup>,
     gpu_group: Controller<GpuGroup>,
+    rapl_group: Controller<RaplGroup>,
 }
 
 impl App {
@@ -253,6 +258,9 @@ impl SimpleAsyncComponent for App {
         let gpu_group = GpuGroup::builder()
             .launch(())
             .forward(sender.input_sender(), identity);
+        let rapl_group = RaplGroup::builder()
+            .launch(())
+            .forward(sender.input_sender(), identity);
 
         let settings_group_stack = gtk::Stack::new();
         settings_group_stack.set_transition_type(gtk::StackTransitionType::SlideUpDown);
@@ -341,6 +349,13 @@ impl SimpleAsyncComponent for App {
             Some("GPU"),
             "GPU",
         );
+        settings_group_stack.add_titled(
+            &gtk::ScrolledWindow::builder()
+                .child(rapl_group.widget())
+                .build(),
+            Some("Intel RAPL"),
+            "Intel RAPL",
+        );
 
         {
             let sender = sender.clone();
@@ -373,6 +388,7 @@ impl SimpleAsyncComponent for App {
             firmware_group,
             audio_group,
             gpu_group,
+            rapl_group,
         };
 
         let widgets = view_output!();
@@ -407,6 +423,7 @@ impl SimpleAsyncComponent for App {
                 }
                 SettingsGroup::Audio => self.audio_group.sender().send(request.into()).unwrap(),
                 SettingsGroup::Gpu => self.gpu_group.sender().send(request.into()).unwrap(),
+                SettingsGroup::Rapl => self.rapl_group.sender().send(request.into()).unwrap(),
             },
             AppInput::SendRootRequestToAll(request) => {
                 self.header.sender().send(request.clone().into()).unwrap();
@@ -456,6 +473,10 @@ impl SimpleAsyncComponent for App {
                     .send(request.clone().into())
                     .unwrap();
                 self.gpu_group
+                    .sender()
+                    .send(request.clone().into())
+                    .unwrap();
+                self.rapl_group
                     .sender()
                     .send(request.clone().into())
                     .unwrap();

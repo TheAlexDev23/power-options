@@ -636,17 +636,17 @@ impl From<IntelRaplInterface> for IntelRaplInterfaceInfo {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct IntelRaplConstraintInfo {
-    pub power_limit_uw: u32,
+    pub power_limit: u32,
     /// Some constraints lack a time window because they are the fallback
     /// constraints that are supposed to run infinetly
-    pub time_window_us: Option<u32>,
+    pub time_window: Option<u32>,
 }
 
 impl From<IntelRaplConstraint> for IntelRaplConstraintInfo {
     fn from(other: IntelRaplConstraint) -> Self {
         IntelRaplConstraintInfo {
-            power_limit_uw: other.power_limit_uw,
-            time_window_us: other.time_window_us,
+            power_limit: other.power_limit,
+            time_window: other.time_window,
         }
     }
 }

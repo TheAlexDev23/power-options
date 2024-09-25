@@ -1,6 +1,7 @@
 use log::debug;
 use power_daemon::{
     ASPMInfo, ASPMSettings, AudioModule, AudioSettings, CPUInfo, CPUSettings, GpuInfo, GpuSettings,
+    IntelRaplInfo, IntelRaplInterfaceInfo, IntelRaplInterfaceSettings, IntelRaplSettings,
     KernelSettings, NetworkSettings, PCISettings, RadioSettings, SATASettings, USBSettings,
 };
 
@@ -54,6 +55,7 @@ pub async fn remove_all_none_options() -> bool {
         default_firmware_settings(&mut profile.firmware_settings, &info.firmware_info);
         default_audio_settings(&mut profile.audio_settings, &info.opt_features_info);
         default_gpu_settings(&mut profile.gpu_settings, &info.gpu_info);
+        default_rapl_settings(&mut profile.rapl_settings, &info.rapl_info);
 
         if initial != profile {
             changed_any = true;
@@ -252,4 +254,35 @@ fn default_gpu_settings(settings: &mut GpuSettings, info: &GpuInfo) {
             }
         }
     }
+}
+
+fn default_rapl_settings(settings: &mut IntelRaplSettings, info: &IntelRaplInfo) {
+    fn set(
+        interface: &mut Option<IntelRaplInterfaceSettings>,
+        info: Option<&IntelRaplInterfaceInfo>,
+    ) {
+        if let Some(info) = info {
+            if interface.is_none() {
+                *interface = Some(IntelRaplInterfaceSettings::default());
+            }
+
+            if let Some(ref mut interface) = interface {
+                if interface.long_term_limit.is_none() && info.long_term.is_some() {
+                    interface.long_term_limit = info.long_term.as_ref().unwrap().power_limit.into();
+                }
+                if interface.short_term_limit.is_none() && info.short_term.is_some() {
+                    interface.short_term_limit =
+                        info.short_term.as_ref().unwrap().power_limit.into();
+                }
+                if interface.peak_power_limit.is_none() && info.peak_power.is_some() {
+                    interface.peak_power_limit =
+                        info.peak_power.as_ref().unwrap().power_limit.into();
+                }
+            }
+        }
+    }
+
+    set(&mut settings.package, info.package.as_ref());
+    set(&mut settings.core, info.core.as_ref());
+    set(&mut settings.uncore, info.uncore.as_ref());
 }

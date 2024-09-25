@@ -48,9 +48,9 @@ impl IntelRaplInterface {
             }
 
             let interface = IntelRaplConstraint {
-                power_limit_uw: file_content_to_u32(&power_path).into(),
-                time_window_us: try_file_content_to_u32(&time_path),
-                path: path.to_path_buf(),
+                power_limit: (file_content_to_u32(&power_path) / 1_000_000).into(),
+                time_window: try_file_content_to_u32(&time_path).map(|v| v / 1_000_000),
+                power_path: power_path.clone(),
             };
 
             let name = file_content_to_string(&name_path);
@@ -77,17 +77,17 @@ pub enum InterfaceType {
 }
 
 pub struct IntelRaplConstraint {
-    pub power_limit_uw: u32,
+    pub power_limit: u32,
     /// Some constraints lack a time window because they are the fallback
     /// constraints that are supposed to run infinetly
-    pub time_window_us: Option<u32>,
+    pub time_window: Option<u32>,
 
-    path: PathBuf,
+    power_path: PathBuf,
 }
 
 impl IntelRaplConstraint {
     pub fn set_power_limit(&self, limit: u32) {
-        write_u32(&self.path, limit);
+        write_u32(&self.power_path, limit * 1_000_000);
     }
 }
 

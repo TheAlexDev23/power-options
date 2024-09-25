@@ -1024,7 +1024,7 @@ impl IntelRaplSettings {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default)]
 pub struct IntelRaplInterfaceSettings {
     pub long_term_limit: Option<u32>,
     pub short_term_limit: Option<u32>,

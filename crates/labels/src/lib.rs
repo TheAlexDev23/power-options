@@ -112,3 +112,18 @@ pub const AMD_GPU_STATE_UNAVAILABLE: &str =
     "AMD GPU DPM States are only available on AMD GPUs with non-legacy Radeon module.";
 pub const AMD_GPU_POWER_PROFILE_UNAVAILABLE: &str =
     "AMD GPU Power Profiles are only available on AMD GPUs with legacy Radeon module.";
+
+pub const RAPL_LONG_TERM_TITLE: &str = "Long Term Power Limit (Watts)";
+pub const RAPL_SHORT_TERM_TITLE: &str = "Short Term Power Limit (Watts)";
+pub const RAPL_PEAK_POWER_TITLE: &str = "Peak Power Limit (Watts)";
+
+pub const RAPL_LONG_TERM_TT: &str =
+    "The power limit that the CPU will be outside of bursts, most of the time.";
+pub const RAPL_SHORT_TERM_TT: &str =
+    "The power limit that the CPU will shortly be within on longer bursts.";
+pub const RAPL_PEAK_POWER_TT: &str =
+    "Maximum CPU burst power, can only be sustained for fractions of a second.";
+
+pub const RAPL_CONSTRAINT_UNSUPPORTED: &str = "This RAPL constraint is not supported on your CPU";
+pub const RAPL_INTERFACE_UNSUPPORTED: &str = "This RAPL interface is not supported on your CPU";
+pub const RAPL_UNSUPPORTED: &str = "Intel RAPL is not supported on your CPU";

@@ -7,6 +7,7 @@ pub mod kernel;
 pub mod network;
 pub mod pci;
 pub mod radio;
+pub mod rapl;
 pub mod sata;
 pub mod sleep;
 pub mod usb;
