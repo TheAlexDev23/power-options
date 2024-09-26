@@ -48,7 +48,7 @@ impl IntelRaplInterface {
             }
 
             let interface = IntelRaplConstraint {
-                power_limit: file_content_to_u32(&power_path),
+                power_limit: file_content_to_u32(&power_path) / 1_000_000,
                 time_window: try_file_content_to_u32(&time_path).map(|v| v / 1_000_000),
                 power_path: power_path.clone(),
             };
