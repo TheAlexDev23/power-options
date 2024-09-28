@@ -99,6 +99,7 @@ There are 6 AUR packages for power-options.
 
 - GTK: `power-options-gtk` (stable) and `power-options-gtk-git` (bleeding edge)
 - Webview: `power-options-webview` (stable) and `power-options-webview-git` (bleeding edge)
+- System Tray: `power-options-tray` (stable) and `power-options-tray-git` (bleeding edge)
 - Just the daemon: `power-options-daemon` (stable) and `power-options-daemon-git` (bleeding edge)
 
 
@@ -141,6 +142,20 @@ cd power-options/scripts
 chmod +x *.sh
 # Run as local user, will require sudo password
 ./install-webview.sh
+# If installing for the first time
+./setup.sh
+# If updating
+./update.sh
+```
+
+- The system tray icon:
+
+```bash
+git clone https://github.com/TheAlexDev23/power-options/ --depth=1
+cd power-options/scripts
+chmod +x *.sh
+# Run as local user, will require sudo password
+./install-tray.sh
 # If installing for the first time
 ./setup.sh
 # If updating

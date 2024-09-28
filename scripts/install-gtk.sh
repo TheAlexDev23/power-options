@@ -11,7 +11,7 @@ popd
 
 sudo cp -f ../target/release/frontend-gtk /usr/bin/power-options-gtk
 
-sudo cp -f ../icon.png /usr/share/icons/power-options.png
+sudo cp -f ../icon.png /usr/share/icons/power-options-gtk.png
 
 sudo cp -f ../install/power-options-gtk.desktop /usr/share/applications/
 
