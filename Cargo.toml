@@ -1,9 +1,10 @@
 [workspace]
 members = [
-    "crates/power-daemon",
-    "crates/frontend-webview",
-    "crates/power-daemon-mgr",
-    "crates/frontend-gtk",
-    "crates/labels",
+  "crates/power-daemon",
+  "crates/frontend-webview",
+  "crates/power-daemon-mgr",
+  "crates/frontend-gtk",
+  "crates/labels",
+  "crates/power-applet",
 ]
 resolver = "2"
