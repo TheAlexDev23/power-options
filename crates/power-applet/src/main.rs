@@ -1,5 +1,6 @@
 use std::{
-    process::{Child, Command},
+    io::Write,
+    process::{Child, Command, Stdio},
     time::Duration,
 };
 
@@ -15,8 +16,12 @@ async fn main() {
         .get_profiles_info()
         .await
         .expect("Could not obtain profiles_info");
+    let mut profile_override = client
+        .get_profile_override()
+        .await
+        .expect("Could not get profile override");
 
-    let mut process = tray_process(&profiles_info);
+    let mut process = tray_process(&profiles_info, profile_override.is_some());
 
     loop {
         let new_profiles_info = client
@@ -26,28 +31,40 @@ async fn main() {
 
         if profiles_info != new_profiles_info {
             profiles_info = new_profiles_info;
-            process.kill().expect("Could not kill dialogue process");
-            process = tray_process(&profiles_info);
+            profile_override = client
+                .get_profile_override()
+                .await
+                .expect("Could not get profile override");
+
+            process
+                .stdin
+                .unwrap()
+                .write_all("quit".as_bytes())
+                .expect("Could not kill yad process");
+
+            process = tray_process(&profiles_info, profile_override.is_some());
         }
 
         std::thread::sleep(Duration::from_secs_f32(3.5));
     }
 }
 
-fn tray_process(profiles_info: &ProfilesInfo) -> Child {
+fn tray_process(profiles_info: &ProfilesInfo, has_profile_override: bool) -> Child {
     let mut menu = String::new();
 
-    menu.push_str("Reset profile override ! power-daemon-mgr reset-profile-override");
+    if has_profile_override {
+        menu.push_str("Reset profile override ! power-daemon-mgr reset-profile-override");
+    }
 
     for profile in &profiles_info.profiles {
         let name = &profile.profile_name;
         if profiles_info.get_active_profile() == profile {
             menu.push_str(&format!(
-                "| ▶ {name} ! power-daemon-mgr set-profile-override {name}",
+                "| ▶ {name} ! power-daemon-mgr set-profile-override \"{name}\"",
             ));
         } else {
             menu.push_str(&format!(
-                "| {name} ! power-daemon-mgr set-profile-override {name}"
+                "| {name} ! power-daemon-mgr set-profile-override \"{name}\""
             ));
         }
     }
@@ -55,11 +72,13 @@ fn tray_process(profiles_info: &ProfilesInfo) -> Child {
     Command::new("yad")
         .args([
             "--notification",
+            "--listen",
             "--image=power-options-tray",
             "--text=Manage Power Options",
             "--command=menu",
             &format!("--menu={menu}"),
         ])
+        .stdin(Stdio::piped())
         .spawn()
         .expect("Could not spawn yad notification dialogue")
 }

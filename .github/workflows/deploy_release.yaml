@@ -35,6 +35,7 @@ jobs:
                 python ./ci/gen_daemon_pkgbuild.py
                 python ./ci/gen_gtk_pkgbuild.py
                 python ./ci/gen_webview_pkgbuild.py
+                python ./ci/gen_tray_pkgbuild.py
 
             - name: Publish power-options-daemon to the AUR
               uses: KSXGitHub/github-actions-deploy-aur@v3.0.1
