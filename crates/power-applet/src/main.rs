@@ -53,7 +53,7 @@ fn tray_process(profiles_info: &ProfilesInfo) -> Child {
     }
 
     Command::new("yad")
-        .args(&[
+        .args([
             "--notification",
             "--image=power-options-tray",
             "--text=Manage Power Options",
