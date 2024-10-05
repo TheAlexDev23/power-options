@@ -6,7 +6,7 @@ Summary:   The core daemon for Power Options, a blazingly fast power management 
 License:   MIT
 URL:       https://github.com/thealexdev23/power-options
 
-Source0:   power-options-%{version}.tar.zst
+Source0:   power-options-%{version}.tar.gz
 Source1:   vendor.tar.zst
 
 BuildRequires:   cargo

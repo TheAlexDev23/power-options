@@ -57,23 +57,6 @@ package() {{
   # Generate files
   "$pkgdir/usr/bin/power-daemon-mgr" -v generate-base-files --path "$pkgdir" --program-path "/usr/bin/power-daemon-mgr"
 }}
-
-post_install() {{
-  systemctl daemon-reload
-  systemctl enable power-options.service
-  systemctl start power-options.service
-  systemctl restart acpid.service
-}}
-
-post_upgrade() {{
-  systemctl daemon-reload
-  systemctl restart power-options.service
-  systemctl restart acpid.service
-}}
-
-post_remove() {{
-  systemctl daemon-reload
-}}
 """
     return pkgbuild_content
 

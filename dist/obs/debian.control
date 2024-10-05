@@ -1,4 +1,4 @@
-Source: build
+Source: power-options-daemon
 Section: admin
 Priority: optional
 Maintainer: Alexander Karpukhin <thealexdev23@gmail.com>
@@ -9,8 +9,5 @@ Homepage: https://github.com/thealexdev23/power-options
 Package: power-options-daemon
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}, acpid, pciutils, usbutils, yad
-Conflicts: build
-Replaces: build
-Provides: build
 Recommends: brightnessctl, net-tools, xorg-xrandr, xorg-xset, xautolock
 Description: The core daemon for Power Options, a blazingly fast power management solution.

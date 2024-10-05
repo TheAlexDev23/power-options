@@ -18,8 +18,8 @@
 SHELL=/bin/bash
 
 build:
-	tar -xf vendor.tar.zst --directory .
-    cargo build --release --project power-daemon-mgr
+	cargo build --release --package power-daemon-mgr
+# tar -xf vendor.tar.zst --directory .
 
 clean:
 	dh_clean 
@@ -28,6 +28,6 @@ install: build
 	dh_clean -k 
 	dh_installdirs
 	install -Dm755 target/release/power-daemon-mgr $(DESTDIR)/usr/bin/power-daemon-mgr
-    $(DESTDIR)/usr/bin/power-daemon-mgr -v generate-base-files --path %{buildroot} --program-path "%{_bindir}/power-daemon-mgr"
+	$(DESTDIR)/usr/bin/power-daemon-mgr -v generate-base-files --path %{buildroot} --program-path "%{_bindir}/power-daemon-mgr"
 
 .PHONY: build clean install

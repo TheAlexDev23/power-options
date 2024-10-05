@@ -1,5 +1,5 @@
 Format: 1.0
-Source: build
+Source: power-options-daemon
 Version: 1.1.0
 Binary: build
 Maintainer: Alexander Karpukhin <thealexdev23@gmail.com>
