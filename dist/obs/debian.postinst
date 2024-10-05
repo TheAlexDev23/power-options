@@ -1,0 +1,11 @@
+#!/bin/sh
+set -e
+
+if [ "$1" = "configure" ]; then
+    power-daemon-mgr setup
+    systemctl daemon-reload
+    systemctl restart acpid.service
+    systemctl enable --now power-options.service
+fi
+
+exit 0

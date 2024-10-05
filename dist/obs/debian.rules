@@ -1,0 +1,32 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+# Sample debian/rules that uses debhelper.
+# This file was originally written by Joey Hess and Craig Small.
+# As a special exception, when this file is copied by dh-make into a
+# dh-make output file, you may use that output file without restriction.
+# This special exception was added by Craig Small in version 0.37 of dh-make.
+
+# Copyright (c) 2006 SUSE LINUX Products GmbH, Nuernberg, Germany
+# This file and all modifications and additions to the pristine package
+# are under the same license as the package itself.
+#
+# Please submit bugfixes or commens via http://bugs.opensuse.org
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+SHELL=/bin/bash
+
+build:
+    cargo build --release --project power-daemon-mgr
+
+clean:
+	dh_clean 
+
+install: build
+	dh_clean -k 
+	dh_installdirs
+	install -Dm755 target/release/power-daemon-mgr $(DESTDIR)/usr/bin/power-daemon-mgr
+    $(DESTDIR)/usr/bin/power-daemon-mgr -v generate-base-files --path %{buildroot} --program-path "%{_bindir}/power-daemon-mgr"
+
+.PHONY: build clean install
