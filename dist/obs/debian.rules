@@ -18,6 +18,7 @@
 SHELL=/bin/bash
 
 build:
+	tar -xf vendor.tar.zst --directory .
     cargo build --release --project power-daemon-mgr
 
 clean:
