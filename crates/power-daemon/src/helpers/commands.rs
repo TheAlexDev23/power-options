@@ -12,14 +12,14 @@ pub fn command_exists(command: &str) -> bool {
         .map_or(false, |output| output.status.success())
 }
 
-pub fn run_command(command: &str) {
-    debug!("running: {command}");
+pub fn run_command(command_name: &str) {
+    debug!("running: {command_name}");
 
-    let mut command = get_command_from_string(command);
+    let mut command = get_command_from_string(command_name);
 
     let output = command
         .spawn()
-        .expect("Could not spawn command")
+        .expect(&format!("Could not spawn command: {command_name}"))
         .wait_with_output()
         .expect("Could not wait command");
 
