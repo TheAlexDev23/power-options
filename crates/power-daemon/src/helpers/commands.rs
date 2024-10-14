@@ -19,7 +19,7 @@ pub fn run_command(command_name: &str) {
 
     let output = command
         .spawn()
-        .expect(&format!("Could not spawn command: {command_name}"))
+        .unwrap_or_else(|e| panic!("Could not run command {command_name}: {e}"))
         .wait_with_output()
         .expect("Could not wait command");
 
