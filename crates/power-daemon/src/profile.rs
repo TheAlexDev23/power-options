@@ -616,6 +616,7 @@ impl NetworkSettings {
     fn toggle_all_ethernet_cards(disable: bool) {
         if !command_exists("ifconfig") {
             error!("ifconfig is not present in the system, ignoring ethernet settings...");
+            return;
         }
 
         let entries = fs::read_dir("/sys/class/net").expect("Could not read sysfs path");
