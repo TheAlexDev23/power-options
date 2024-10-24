@@ -1,48 +1,39 @@
-use std::{
-    fs,
-    path::{Path, PathBuf},
-};
+use std::{fs, path::Path};
 
-use log::{debug, error, trace};
-use nix::unistd::Uid;
+use log::{debug, trace};
 use power_daemon::{profiles_generator, Config, DefaultProfileType, SystemInfo};
 
-pub fn setup() {
-    if !Uid::effective().is_root() {
-        error!("Root priviliges required");
-        return;
-    }
-
+pub fn setup(root: &Path) {
     let agreed = std::process::Command::new("yad").args([
         "--selectable-labels",
         "--title",
         "Warning: do you want power-options to generate profiles?",
         "--text",
-        "By default, power-options will generate profiles based on the features of your system, <b>and apply them</b>.\nPlease refer to the wiki (https://github.com/TheAlexDev23/power-options/wiki/Default-generated-settings) to be aware of potential issues that might arise.\nIf you click cancel, an empty default profile will be generated."
+        "By default, power-options will generate profiles based on the features of your system, <b>and it might apply them</b>.\nPlease refer to the wiki (https://github.com/TheAlexDev23/power-options/wiki/Default-generated-settings) to be aware of potential issues that might arise.\nIf you click cancel, an empty default profile will be generated."
     ]).spawn().expect("Could not spawn popup").wait().expect("Could not wait from popup").success();
 
     if agreed {
-        generate_config_files("/".into());
+        generate_config_files(root);
     } else {
-        generate_empty_config_files("/".into());
+        generate_empty_config_files(root);
     }
 }
 
-pub fn generate_base_files(path: PathBuf, program_path: PathBuf, verbose_daemon: bool) {
-    generate_udev_file(&path, &program_path);
-    generate_acpi_file(&path, &program_path);
-    generate_dbus_file(&path);
-    genereate_systemd_file(&path, &program_path, verbose_daemon);
+pub fn generate_base_files(path: &Path, program_path: &Path, verbose_daemon: bool) {
+    generate_udev_file(path, program_path);
+    generate_acpi_file(path, program_path);
+    generate_dbus_file(path);
+    genereate_systemd_file(path, program_path, verbose_daemon);
 }
 
-fn generate_config_files(path: PathBuf) {
-    create_config(&path, &Config::create_default());
-    generate_profiles(&path);
+fn generate_config_files(path: &Path) {
+    create_config(path, &Config::create_default());
+    generate_profiles(path);
 }
 
-fn generate_empty_config_files(path: PathBuf) {
-    create_config(&path, &Config::create_empty());
-    generate_empty_profile(&path);
+fn generate_empty_config_files(path: &Path) {
+    create_config(path, &Config::create_empty());
+    generate_empty_profile(path);
 }
 
 fn create_config(path: &Path, config: &Config) {

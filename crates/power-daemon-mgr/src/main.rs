@@ -28,7 +28,12 @@ struct Args {
 
 #[derive(Debug, Clone, Subcommand)]
 enum OpMode {
-    Setup,
+    Setup {
+        #[arg(default_value = "/")]
+        /// Use this parameter if you want to override the default root
+        /// installation directory
+        root: PathBuf,
+    },
     GenerateBaseFiles {
         #[arg(long)]
         path: PathBuf,
@@ -95,13 +100,13 @@ async fn main() {
     log::set_max_level(args.verbose.log_level_filter());
 
     match args.mode {
-        OpMode::Setup => setup(),
+        OpMode::Setup { root } => setup(&root),
         OpMode::Daemon => daemon().await,
         OpMode::GenerateBaseFiles {
             path,
             program_path,
             verbose_daemon,
-        } => generate_base_files(path, program_path, verbose_daemon),
+        } => generate_base_files(&path, &program_path, verbose_daemon),
         OpMode::ListProfiles => {
             println!(
                 "{:?}",
