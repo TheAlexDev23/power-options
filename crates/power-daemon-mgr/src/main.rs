@@ -1,3 +1,4 @@
+mod helpers;
 mod setup;
 
 use std::path::Path;

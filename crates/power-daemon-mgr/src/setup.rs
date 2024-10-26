@@ -3,14 +3,13 @@ use std::{fs, path::Path};
 use log::{debug, trace};
 use power_daemon::{profiles_generator, Config, DefaultProfileType, SystemInfo};
 
+use crate::helpers::yn_prompt;
+
 pub fn setup(root: &Path) {
-    let agreed = std::process::Command::new("yad").args([
-        "--selectable-labels",
-        "--title",
-        "Warning: do you want power-options to generate profiles?",
-        "--text",
-        "By default, power-options will generate profiles based on the features of your system, <b>and it might apply them</b>.\nPlease refer to the wiki (https://github.com/TheAlexDev23/power-options/wiki/Default-generated-settings) to be aware of potential issues that might arise.\nIf you click cancel, an empty default profile will be generated."
-    ]).spawn().expect("Could not spawn popup").wait().expect("Could not wait from popup").success();
+    println!("\nWarning: do you want power-options to generate profiles?");
+    println!("By default, power-options will generate profiles based on the features of your system, and it might apply them. \nPlease refer to the wiki (https://github.com/TheAlexDev23/power-options/wiki/Default-generated-settings) to be aware of potential issues that might arise.");
+
+    let agreed = yn_prompt("Are you sure you want to continue? If you answer no an empty default profile would be genereated.");
 
     if agreed {
         generate_config_files(root);
