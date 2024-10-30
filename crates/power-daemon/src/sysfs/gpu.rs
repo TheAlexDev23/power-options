@@ -70,9 +70,7 @@ impl AmdGpu {
                     .path()
                     .join("device/power_dpm_force_performance_level");
 
-                let dpm_performance_state_path = entry
-                    .path()
-                    .join("device/power_dpm_force_performance_level");
+                let dpm_performance_state_path = entry.path().join("device/power_dpm_state");
 
                 if fs::metadata(&dpm_performance_level_path).is_ok()
                     && fs::metadata(&dpm_performance_state_path).is_ok()
