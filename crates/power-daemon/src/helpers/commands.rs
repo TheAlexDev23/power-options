@@ -63,9 +63,9 @@ pub fn run_graphical_command(command: &str) {
         .env("DISPLAY", ":0")
         .env("XAUTHORITY", get_xauthority())
         .spawn()
-        .expect("Could not run command")
+        .unwrap_or_else(|_| panic!("Could not run graphical command: {command}"))
         .wait_with_output()
-        .expect("Could not wait command");
+        .unwrap_or_else(|_| panic!("Could not wait for graphical command: {command}"));
 
     trace!(
         "Command output: {}",
@@ -88,14 +88,15 @@ pub fn run_graphical_command_in_background(command: &str) -> std::process::Child
         .env("DISPLAY", ":0")
         .env("XAUTHORITY", get_xauthority())
         .spawn()
-        .expect("Could not run command")
+        .unwrap_or_else(|_| panic!("Could not run graphical command in background: {command}"))
 }
 
 fn get_command_from_string(command: &str) -> Command {
-    let parts = shellwords::split(command).expect("Could not parse command parts");
+    let parts = shellwords::split(command)
+        .unwrap_or_else(|_| panic!("Could not parse command parts: {command}"));
     let (cmd, args) = parts
         .split_first()
-        .expect("Could split first of arguments vector");
+        .unwrap_or_else(|| panic!("Could not split first of arguments vector: {command}"));
     let mut command = Command::new(cmd);
     command.args(args);
     command
