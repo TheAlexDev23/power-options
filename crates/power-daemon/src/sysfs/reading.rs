@@ -6,11 +6,11 @@ use std::{
 
 pub fn file_content_to_string<P: AsRef<Path>>(path: P) -> String {
     let mut file = File::open(&path)
-        .unwrap_or_else(|_| panic!("Could not open file {}", path.as_ref().display()));
+        .unwrap_or_else(|e| panic!("Could not open file {}: {e}", path.as_ref().display()));
 
     let mut content = String::new();
     file.read_to_string(&mut content)
-        .unwrap_or_else(|_| panic!("Could not read file {}", path.as_ref().display()));
+        .unwrap_or_else(|e| panic!("Could not read file {}: {e}", path.as_ref().display()));
 
     content = content.strip_suffix("\n").unwrap_or(&content).to_string();
     content = content.strip_suffix(" ").unwrap_or(&content).to_string();

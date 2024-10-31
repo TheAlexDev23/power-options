@@ -21,7 +21,7 @@ pub fn run_command(command_name: &str) {
         .spawn()
         .unwrap_or_else(|e| panic!("Could not run command {command_name}: {e}"))
         .wait_with_output()
-        .expect("Could not wait command");
+        .unwrap_or_else(|e| panic!("Could not wait command {command_name}: {e}"));
 
     if !output.stdout.is_empty() {
         trace!(
@@ -42,9 +42,11 @@ pub fn run_command(command_name: &str) {
 pub fn run_command_with_output(command: &str) -> (String, String) {
     trace!("getting output of: {command}");
 
-    let mut command = get_command_from_string(command);
+    let mut process = get_command_from_string(command);
 
-    let output = command.output().expect("Could not run command");
+    let output = process
+        .output()
+        .unwrap_or_else(|e| panic!("Could not get command output: {command}: {e}"));
 
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
@@ -63,9 +65,9 @@ pub fn run_graphical_command(command: &str) {
         .env("DISPLAY", ":0")
         .env("XAUTHORITY", get_xauthority())
         .spawn()
-        .unwrap_or_else(|_| panic!("Could not run graphical command: {command}"))
+        .unwrap_or_else(|e| panic!("Could not run graphical command: {command}: {e}"))
         .wait_with_output()
-        .unwrap_or_else(|_| panic!("Could not wait for graphical command: {command}"));
+        .unwrap_or_else(|e| panic!("Could not wait for graphical command: {command}: {e}"));
 
     trace!(
         "Command output: {}",
@@ -88,12 +90,12 @@ pub fn run_graphical_command_in_background(command: &str) -> std::process::Child
         .env("DISPLAY", ":0")
         .env("XAUTHORITY", get_xauthority())
         .spawn()
-        .unwrap_or_else(|_| panic!("Could not run graphical command in background: {command}"))
+        .unwrap_or_else(|e| panic!("Could not run graphical command in background: {command}: {e}"))
 }
 
 fn get_command_from_string(command: &str) -> Command {
     let parts = shellwords::split(command)
-        .unwrap_or_else(|_| panic!("Could not parse command parts: {command}"));
+        .unwrap_or_else(|e| panic!("Could not parse command parts: {command}: {e}"));
     let (cmd, args) = parts
         .split_first()
         .unwrap_or_else(|| panic!("Could not split first of arguments vector: {command}"));
