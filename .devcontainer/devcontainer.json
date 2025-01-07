@@ -1,0 +1,8 @@
+{
+    "name": "Ubuntu 24.04 Codespace",
+    "image": "mcr.microsoft.com/vscode/devcontainers/base:ubuntu-24.04",
+    "features": {
+        "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+    },
+    "postCreateCommand": "chmod +x .devcontainer/setup.sh && ./.devcontainer/setup.sh"
+}
