@@ -21,6 +21,7 @@ async fn main() {
         .await
         .expect("Could not get profile override");
 
+    #[allow(clippy::zombie_processes)]
     let mut process = tray_process(&profiles_info, profile_override.is_some());
 
     loop {
