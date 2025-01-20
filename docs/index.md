@@ -50,13 +50,13 @@ Power Option includes the following features:
 
 Simple, lightweight, and native with a straightforward interface. Recommended for most users.
 
-![GTK Slideshow](../static/gtk-slideshow.gif)
+![GTK Slideshow](./static/gtk-slideshow.gif)
 
 ### WebKit Frontend
 
 Offers more advanced options and greater control. Recommended for advanced users and those looking to use Power Options alongside other power management solutions.
 
-![Webview Slideshow](../static/webview-slideshow.gif)
+![Webview Slideshow](./static/webview-slideshow.gif)
 
 ## Installation
 
