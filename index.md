@@ -10,6 +10,20 @@ Power Options is a comprehensive power management tool for Linux, designed to pr
 
 Power Options generates profiles manually based on your system so that you don't have to touch anything if you don't want to. For a list of default configurations please refer to [this page](/defaults)
 
+## Available Frontends/Interfaces
+
+### Native GTK Frontend
+
+Simple, lightweight, and native with a straightforward interface. Recommended for most users.
+
+![GTK Slideshow](./static/gtk-slideshow.gif)
+
+### WebKit Frontend
+
+Offers more advanced options and greater control. Recommended for advanced users and those looking to use Power Options alongside other power management solutions.
+
+![Webview Slideshow](./static/webview-slideshow.gif)
+
 ## Features
 
 Power options was made based on a recollection of all the tips and
@@ -45,19 +59,6 @@ Power Option includes the following features:
 - GPU Options
 - Intel Running Average Power Limit (RAPL) settings
 
-## Available Frontends/Interfaces
-
-### Native GTK Frontend
-
-Simple, lightweight, and native with a straightforward interface. Recommended for most users.
-
-![GTK Slideshow](./static/gtk-slideshow.gif)
-
-### WebKit Frontend
-
-Offers more advanced options and greater control. Recommended for advanced users and those looking to use Power Options alongside other power management solutions.
-
-![Webview Slideshow](./static/webview-slideshow.gif)
 
 ## Installation
 
