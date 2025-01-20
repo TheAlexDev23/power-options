@@ -75,7 +75,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  jekyll (~> 4.3.4)
+  jekyll
   just-the-docs
 
 BUNDLED WITH
