@@ -1,6 +1,7 @@
 ---
 layout: default
 title: Install
+nav-order: 1
 ---
 
 # Install power options
