@@ -1,8 +1,0 @@
-[Desktop Entry]
-Name=Power Options Tray
-Comment=System tray item for the Power Options daemon
-Exec=power-options-tray
-Icon=power-options-tray
-Terminal=false
-Type=Application
-Categories=Utility;Settings;
