@@ -620,18 +620,20 @@ impl NetworkSettings {
         }
 
         let entries = fs::read_dir("/sys/class/net").expect("Could not read sysfs path");
-        let eth_pattern = regex::Regex::new(r"^(eth|enp|ens|eno)").unwrap();
-
         for entry in entries.flatten() {
+            let path = entry.path();
             let name = entry.file_name();
             let name_str = name.to_string_lossy();
 
-            if eth_pattern.is_match(&name_str) {
-                run_command(&format!(
-                    "ifconfig {} {}",
-                    &name_str,
-                    if disable { "down" } else { "up" }
-                ))
+            let type_path = path.join("type");
+            if let Ok(device_type) = fs::read_to_string(&type_path) {
+                if device_type.trim() == "1" {
+                    run_command(&format!(
+                        "ifconfig {} {}",
+                        &name_str,
+                        if disable { "down" } else { "up" }
+                    ));
+                }
             }
         }
     }
