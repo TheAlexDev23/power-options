@@ -1,14 +1,14 @@
 ---
 layout: default
 title: Power Options
-nav-order: 0
+nav_order: 0
 ---
 
 # Power Options
 
-Power Options is a comprehensive power management tool for Linux, designed to provide greater control over power-saving features and system profiles. It includes both a daemon and multiple GUI frontends for ease of use. It is very feature complete and provides significantly more options and control over alternatives.
+Power Options is the most feature complete and performant GUI battery saving application for Linux.
 
-Power Options generates profiles manually based on your system so that you don't have to touch anything if you don't want to. For a list of default configurations please refer to [this page](/defaults.html)
+Power Options generates profiles manually based on your system so that you don't have to touch anything if you don't want to. For a list of default configurations please refer to [this page](./defaults.html)
 
 ## Available Frontends/Interfaces
 
@@ -62,4 +62,4 @@ Power Option includes the following features:
 
 ## Installation
 
-Refer to the [install page](/install.html)
+Refer to the [install page](./install.html)

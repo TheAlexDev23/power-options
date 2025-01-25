@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Defaults
-nav-order: 2
+nav_order: 2
 ---
 
 # Default settings
