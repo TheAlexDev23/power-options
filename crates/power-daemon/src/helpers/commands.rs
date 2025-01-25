@@ -9,7 +9,7 @@ pub fn command_exists(command: &str) -> bool {
     Command::new("which")
         .arg(command)
         .output()
-        .map_or(false, |output| output.status.success())
+        .is_ok_and(|output| output.status.success())
 }
 
 pub fn run_command(command_name: &str) {
