@@ -20,6 +20,50 @@ jobs:
                 components: clippy
             - run: cargo check
             - run: cargo clippy
+
+    build_and_distropack:
+        name: build release + distropack upload
+        runs-on: ubuntu-24.04
+        needs:
+            - check_and_format
+        steps:
+            - uses: actions/checkout@v4
+
+            - run: sudo apt-get update
+            - run: sudo apt-get install -y pkg-config libglib2.0-dev libgtk-4-dev libwebkit2gtk-4.1-dev libjavascriptcoregtk-4.1-dev libsoup-3.0-dev libadwaita-1-dev 
+
+            - uses: actions-rust-lang/setup-rust-toolchain@v1
+              with:
+                toolchain: stable
+
+            - name: build power-daemon-mgr (release)
+              run: cargo build --release -p power-daemon-mgr
+
+            - name: build frontend-gtk (release)
+              run: cargo build --release -p frontend-gtk
+
+            - name: upload power-daemon-mgr binary
+              uses: distropack/distropack-action@v1.0
+              with:
+                api-token: ${{ secrets.DISTROPACK_API_TOKEN }}
+                package-id: 2
+                version: ${{ github.ref_name }}
+                files: |
+                  {
+                    "power-daemon-mgr": "target/release/power-daemon-mgr"
+                  }
+
+            - name: upload frontend-gtk binary
+              uses: distropack/distropack-action@v1.0
+              with:
+                api-token: ${{ secrets.DISTROPACK_API_TOKEN }}
+                package-id: 3
+                version: ${{ github.ref_name }}
+                files: |
+                  {
+                    "power-options-gtk": "target/release/frontend-gtk"
+                  }
+
     publish_aur_packages:
         name: Publish AUR packages
         runs-on: ubuntu-latest
