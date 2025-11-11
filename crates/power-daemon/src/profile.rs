@@ -790,7 +790,11 @@ impl USBSettings {
             let path = entry.path();
 
             // Those are hubs I believe, and they do not have product/vendor info so we skip them
-            if path.file_name().unwrap().to_string_lossy().contains(":") {
+            if let Some(file_name) = path.file_name() {
+                if file_name.to_string_lossy().contains(":") {
+                    continue;
+                }
+            } else {
                 continue;
             }
 
