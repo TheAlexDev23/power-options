@@ -398,7 +398,7 @@ fn CoreSettings(
 
             for (logical_cpu_id , core) in cpu_info.cores.into_iter().map(|c| (c.logical_cpu_id, c)) {
                 tr {
-                    class: if selected().iter().any(|s| *s == logical_cpu_id) { "selected" },
+                    class: if selected().contains(&logical_cpu_id) { "selected" },
 
                     onclick: move |_| {
                         let ctrl = ctrl_pressed();
@@ -450,7 +450,7 @@ fn CoreSettings(
                         if core.online.is_some() {
                             input {
                                 onclick: move |e| {
-                                    if selected().iter().any(|c| *c == logical_cpu_id) {
+                                    if selected().contains(&logical_cpu_id) {
                                         e.stop_propagation();
                                     }
                                 },
@@ -605,7 +605,7 @@ fn CoreSettings(
                                     }
                                 },
                                 onclick: move |e: MouseEvent| {
-                                    if selected().iter().any(|c| *c == logical_cpu_id) {
+                                    if selected().contains(&logical_cpu_id) {
                                         e.stop_propagation();
                                     }
                                 }
@@ -651,7 +651,7 @@ fn CoreSettings(
                                         }
                                     },
                                     onclick: move |e: MouseEvent| {
-                                        if selected().iter().any(|c| *c == logical_cpu_id) {
+                                        if selected().contains(&logical_cpu_id) {
                                             e.stop_propagation();
                                         }
                                     }

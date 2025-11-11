@@ -75,7 +75,7 @@ impl SystemInfoClient {
         )
     }
 
-    async fn get_proxy(&self) -> zbus::Result<SystemInfoDBusProxy> {
+    async fn get_proxy(&self) -> zbus::Result<SystemInfoDBusProxy<'_>> {
         SystemInfoDBusProxy::new(&self.dbus_con).await
     }
 }
@@ -225,7 +225,7 @@ impl ControlClient {
         self.get_proxy().await?.remove_profile_override().await
     }
 
-    async fn get_proxy(&self) -> zbus::Result<ControlDBusProxy> {
+    async fn get_proxy(&self) -> zbus::Result<ControlDBusProxy<'_>> {
         ControlDBusProxy::new(&self.dbus_con).await
     }
 }

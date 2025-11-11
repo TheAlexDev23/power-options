@@ -28,7 +28,7 @@ impl<T: PartialEq + Clone + Debug> SyncedValue<T> {
         self.value.lock().await.is_none()
     }
 
-    pub async fn get(&self) -> tokio::sync::MutexGuard<Option<T>> {
+    pub async fn get(&self) -> tokio::sync::MutexGuard<'_, Option<T>> {
         self.value.lock().await
     }
 
