@@ -46,7 +46,7 @@ jobs:
               uses: distropack/distropack-action@v1.0
               with:
                 api-token: ${{ secrets.DISTROPACK_API_TOKEN }}
-                package-id: 4
+                package-id: f6fee267-5e8e-4fe1-b4b1-f724736d598d
                 version: ${{ github.ref_name }}
                 files: |
                   {
@@ -57,7 +57,7 @@ jobs:
               uses: distropack/distropack-action@v1.0
               with:
                 api-token: ${{ secrets.DISTROPACK_API_TOKEN }}
-                package-id: 5
+                package-id: 9668ac33-5166-4952-a364-24d3dbc5abeb
                 version: ${{ github.ref_name }}
                 files: |
                   {
