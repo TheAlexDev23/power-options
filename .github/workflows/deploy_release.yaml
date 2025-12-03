@@ -1,126 +1,133 @@
-name: Release Deployment
+name: release deployment
 
 on:
   push:
     tags:
-        "*"
+      - "*"
+
+env:
+  # remove leading v if present in tag name
+  VERSION: ${{ github.ref_name && startsWith(github.ref_name, 'v') && github.ref_name != 'v' && github.ref_name[1:] || github.ref_name }}
 
 jobs:
-    check_and_format:
-        name: cargo check and clippy
-        runs-on: ubuntu-24.04
-        steps:
-            - run: sudo apt-get update
-            - run: sudo apt-get install -y pkg-config libglib2.0-dev libgtk-4-dev libgtk-3-dev libwebkit2gtk-4.1-dev libjavascriptcoregtk-4.1-dev libsoup-3.0-dev libadwaita-1-dev 
-            - uses: actions/checkout@v4
-            - uses: actions-rust-lang/setup-rust-toolchain@v1
-              with:
-                components: clippy
-            - run: cargo check
-            - run: cargo clippy
-    build_and_distropack:
-        name: build release + distropack upload
-        runs-on: ubuntu-24.04
-        needs:
-          - check_and_format
-        steps:
-            - uses: actions/checkout@v4
+  check_and_format:
+    name: cargo check and clippy
+    runs-on: ubuntu-24.04
+    steps:
+      - run: sudo apt-get update
+      - run: sudo apt-get install -y pkg-config libglib2.0-dev libgtk-4-dev libwebkit2gtk-4.1-dev libjavascriptcoregtk-4.1-dev libsoup-3.0-dev libadwaita-1-dev 
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: clippy
+      - run: cargo check
+      - run: cargo clippy
 
-            - run: sudo apt-get update
-            - run: sudo apt-get install -y pkg-config libglib2.0-dev libgtk-4-dev libwebkit2gtk-4.1-dev libjavascriptcoregtk-4.1-dev libsoup-3.0-dev libadwaita-1-dev 
+  build_and_distropack:
+    name: build release + distropack upload
+    runs-on: ubuntu-24.04
+    needs:
+      - check_and_format
+    steps:
+      - uses: actions/checkout@v4
 
-            - uses: actions-rust-lang/setup-rust-toolchain@v1
-              with:
-                toolchain: stable
+      - run: sudo apt-get update
+      - run: sudo apt-get install -y pkg-config libglib2.0-dev libgtk-4-dev libwebkit2gtk-4.1-dev libjavascriptcoregtk-4.1-dev libsoup-3.0-dev libadwaita-1-dev 
 
-            - name: build power-daemon-mgr (release)
-              run: cargo build --release -p power-daemon-mgr
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
 
-            - name: build frontend-gtk (release)
-              run: cargo build --release -p frontend-gtk
+      - name: build power-daemon-mgr (release)
+        run: cargo build --release -p power-daemon-mgr
 
-            - name: upload power-daemon-mgr binary
-              uses: distropack/distropack-action@v1.0
-              with:
-                api-token: ${{ secrets.DISTROPACK_API_TOKEN }}
-                package-id: f6fee267-5e8e-4fe1-b4b1-f724736d598d
-                version: ${{ github.ref_name }}
-                files: |
-                  {
-                    "power-daemon-mgr": "target/release/power-daemon-mgr"
-                  }
+      - name: build frontend-gtk (release)
+        run: cargo build --release -p frontend-gtk
 
-            - name: upload frontend-gtk binary
-              uses: distropack/distropack-action@v1.0
-              with:
-                api-token: ${{ secrets.DISTROPACK_API_TOKEN }}
-                package-id: 9668ac33-5166-4952-a364-24d3dbc5abeb
-                version: ${{ github.ref_name }}
-                files: |
-                  {
-                    "power-options-gtk": "target/release/frontend-gtk"
-                  }
-                  
-    publish_aur_packages:
-        name: Publish AUR packages
-        runs-on: ubuntu-latest
-        needs:
-            - check_and_format
-        steps:
-            - uses: actions/checkout@v4
-              with:
-                # Fetches entire history, this is necessary to properly generate
-                # version in aur
-                fetch-depth: 0
+      - name: upload power-daemon-mgr binary
+        uses: distropack/distropack-action@v1.0
+        with:
+          api-token: ${{ secrets.DISTROPACK_API_TOKEN }}
+          package-id: f6fee267-5e8e-4fe1-b4b1-f724736d598d
+          version: ${{ env.VERSION }}
+          files: |
+            {
+              "power-daemon-mgr": "target/release/power-daemon-mgr"
+            }
 
-            - name: Generate PKGBUILDs
-              run: |
-                python ./ci/gen_daemon_pkgbuild.py
-                python ./ci/gen_gtk_pkgbuild.py
-                python ./ci/gen_webview_pkgbuild.py
-                python ./ci/gen_tray_pkgbuild.py
+      - name: upload frontend-gtk binary
+        uses: distropack/distropack-action@v1.0
+        with:
+          api-token: ${{ secrets.DISTROPACK_API_TOKEN }}
+          package-id: 9668ac33-5166-4952-a364-24d3dbc5abeb
+          version: ${{ env.VERSION }}
+          files: |
+            {
+              "power-options-gtk": "target/release/frontend-gtk"
+            }
 
-            - name: Publish power-options-daemon to the AUR
-              uses: KSXGitHub/github-actions-deploy-aur@v3.0.1
-              with:
-                pkgname: power-options-daemon
-                pkgbuild: ./pkgbuilds/daemon/PKGBUILD
-                assets: ./pkgbuilds/daemon/daemon.install
-                commit_username: ${{ secrets.AUR_USERNAME }}
-                commit_email: ${{ secrets.AUR_EMAIL }}
-                ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
-                commit_message: "Automated update on GitHub release"
-                force_push: 'true'
-            - name: Publish power-options-gtk to the AUR
-              uses: KSXGitHub/github-actions-deploy-aur@v3.0.1
-              with:
-                pkgname: power-options-gtk
-                pkgbuild: ./pkgbuilds/gtk/PKGBUILD
-                updpkgsums: true
-                commit_username: ${{ secrets.AUR_USERNAME }}
-                commit_email: ${{ secrets.AUR_EMAIL }}
-                ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
-                commit_message: "Automated update on GitHub release"
-                force_push: 'true'
-            - name: Publish power-options-webview to the AUR
-              uses: KSXGitHub/github-actions-deploy-aur@v3.0.1
-              with:
-                pkgname: power-options-webview
-                pkgbuild: ./pkgbuilds/webview/PKGBUILD
-                updpkgsums: true
-                commit_username: ${{ secrets.AUR_USERNAME }}
-                commit_email: ${{ secrets.AUR_EMAIL }}
-                ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
-                commit_message: "Automated update on GitHub release"
-                force_push: 'true'
-            - name: Publish power-options-tray to the AUR
-              uses: KSXGitHub/github-actions-deploy-aur@v3.0.1
-              with:
-                pkgname: power-options-tray
-                pkgbuild: ./pkgbuilds/tray/PKGBUILD
-                updpkgsums: true
-                commit_username: ${{ secrets.AUR_USERNAME }}
-                commit_email: ${{ secrets.AUR_EMAIL }}
-                ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
-                commit_message: "Automated update on GitHub release"
-                force_push: 'true'
+  publish_aur_packages:
+    name: publish aur packages
+    runs-on: ubuntu-latest
+    needs:
+      - check_and_format
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # fetch entire history for proper aur versioning
+          fetch-depth: 0
+
+      - name: generate pkgbuilds
+        run: |
+          python ./ci/gen_daemon_pkgbuild.py
+          python ./ci/gen_gtk_pkgbuild.py
+          python ./ci/gen_webview_pkgbuild.py
+          python ./ci/gen_tray_pkgbuild.py
+
+      - name: publish power-options-daemon to the aur
+        uses: KSXGitHub/github-actions-deploy-aur@v3.0.1
+        with:
+          pkgname: power-options-daemon
+          pkgbuild: ./pkgbuilds/daemon/PKGBUILD
+          assets: ./pkgbuilds/daemon/daemon.install
+          commit_username: ${{ secrets.AUR_USERNAME }}
+          commit_email: ${{ secrets.AUR_EMAIL }}
+          ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          commit_message: "automated update on github release"
+          force_push: "true"
+
+      - name: publish power-options-gtk to the aur
+        uses: KSXGitHub/github-actions-deploy-aur@v3.0.1
+        with:
+          pkgname: power-options-gtk
+          pkgbuild: ./pkgbuilds/gtk/PKGBUILD
+          updpkgsums: true
+          commit_username: ${{ secrets.AUR_USERNAME }}
+          commit_email: ${{ secrets.AUR_EMAIL }}
+          ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          commit_message: "automated update on github release"
+          force_push: "true"
+
+      - name: publish power-options-webview to the aur
+        uses: KSXGitHub/github-actions-deploy-aur@v3.0.1
+        with:
+          pkgname: power-options-webview
+          pkgbuild: ./pkgbuilds/webview/PKGBUILD
+          updpkgsums: true
+          commit_username: ${{ secrets.AUR_USERNAME }}
+          commit_email: ${{ secrets.AUR_EMAIL }}
+          ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          commit_message: "automated update on github release"
+          force_push: "true"
+
+      - name: publish power-options-tray to the aur
+        uses: KSXGitHub/github-actions-deploy-aur@v3.0.1
+        with:
+          pkgname: power-options-tray
+          pkgbuild: ./pkgbuilds/tray/PKGBUILD
+          updpkgsums: true
+          commit_username: ${{ secrets.AUR_USERNAME }}
+          commit_email: ${{ secrets.AUR_EMAIL }}
+          ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          commit_message: "automated update on github release"
+          force_push: "true"
