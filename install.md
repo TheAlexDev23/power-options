@@ -16,7 +16,7 @@ Visit [https://distropack.dev/Install/Package/TheAlexDev23/power-options/power-o
 **System Tray:**
 Visit [https://distropack.dev/Install/Package/TheAlexDev23/power-options/power-options-tray](https://distropack.dev/Install/Package/TheAlexDev23/power-options/power-options-tray) for installation instructions specific to your distribution.
 
-**Daemon:**
+**Just the Daemon:**
 Visit [https://distropack.dev/Install/Package/TheAlexDev23/power-options/power-options-daemon](https://distropack.dev/Install/Package/TheAlexDev23/power-options/power-options-daemon) for installation instructions specific to your distribution.
 
 ## Arch Linux (AUR)
