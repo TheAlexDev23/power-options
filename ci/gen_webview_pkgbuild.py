@@ -20,7 +20,7 @@ url={url}
 license=('MIT')
 
 depends=('power-options-daemon' 'webkit2gtk' 'xdotool')
-makedepends=('cargo' 'dioxus-cli')
+makedepends=('cargo')
 
 provides=('power-options-webview')
 conflicts=('power-options-webview-git')
@@ -30,8 +30,8 @@ sha256sums=('SKIP')
 
 build() {{
   export RUSTUP_TOOLCHAIN=stable
-  cd "$srcdir/power-options-$pkgver/crates/frontend-webview"
-  dx build --release
+  cd "$srcdir/power-options-$pkgver"
+  cargo build --release --locked -p frontend --bin frontend
 }}
 
 package() {{

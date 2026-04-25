@@ -128,8 +128,6 @@ yay -S power-options-webview  # or power-options-webview-git for bleeding edge
 To build, requires dev libraries `libsoup-3.0-dev`, `libwebkit2gtk-4.1-dev` and
 `libxdo-dev` (or the equivalent in your distro)
 ```bash
-# dioxus-cli is required
-cargo install dioxus-cli
 git clone https://github.com/TheAlexDev23/power-options/ --depth=1
 cd power-options/scripts
 chmod +x *.sh
@@ -210,7 +208,6 @@ Optional:
 
 Webview frontend:
 - webkit2gtk
-- dioxus-cli
 
 GTK frontend:
 - yad

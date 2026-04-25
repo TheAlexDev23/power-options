@@ -4,8 +4,8 @@ set -e
 
 ./install-daemon.sh
 
-pushd ../crates/frontend-webview
-dx build --release
+pushd ..
+cargo build --release --locked -p frontend --bin frontend
 popd
 
 sudo cp -f ../target/release/frontend /usr/bin/power-options-webview

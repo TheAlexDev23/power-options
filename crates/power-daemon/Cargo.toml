@@ -18,7 +18,7 @@ natord = "1.0.9"
 rayon = "1.10.0"
 regex = "1.10.5"
 serde = { version = "1.0.204", features = ["serde_derive"] }
-serde-toml-merge = "0.3.8"
+serde-toml-merge = "=0.3.8"
 serde_json = "1.0.120"
 shellwords = "1.1.0"
 tokio = { version = "1.38.0", features = ["full"] }
