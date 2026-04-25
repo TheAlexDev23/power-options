@@ -7,7 +7,7 @@ pub mod profiles_updater;
 
 use std::fs;
 
-use clap::{command, Parser};
+use clap::Parser;
 use clap_verbosity_flag::{InfoLevel, Verbosity};
 use colored::Colorize;
 use log::{Level, Log, Metadata, Record};
