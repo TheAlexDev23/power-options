@@ -324,7 +324,7 @@ impl CPUInfo {
             }
         }
 
-        cores.sort_by(|a, b| a.logical_cpu_id.cmp(&b.logical_cpu_id));
+        cores.sort_by_key(|core| core.logical_cpu_id);
 
         let variations = base_frequency_variations.keys().count();
 
