@@ -162,8 +162,10 @@ fn default_pci_settings(settings: &mut PCISettings) {
 }
 
 fn default_aspm_settings(settings: &mut ASPMSettings, info: &ASPMInfo) {
-    if settings.mode.is_none() && info.supported_modes.is_some() {
-        settings.mode = Some(info.supported_modes.as_ref().unwrap()[0].clone());
+    if settings.mode.is_none() {
+        if let Some(supported_modes) = info.supported_modes.as_ref() {
+            settings.mode = Some(supported_modes[0].clone());
+        }
     }
 }
 
@@ -201,11 +203,12 @@ fn default_kernel_settings(settings: &mut KernelSettings) {
 }
 
 fn default_firmware_settings(settings: &mut FirmwareSettings, info: &FirmwareInfo) {
-    if settings.platform_profile.is_none() && info.platform_profiles.is_some() {
-        settings.platform_profile = info.platform_profiles.as_ref().unwrap()
-            [info.platform_profiles.as_ref().unwrap().len() / 2]
-            .to_string()
-            .into();
+    if settings.platform_profile.is_none() {
+        if let Some(platform_profiles) = info.platform_profiles.as_ref() {
+            settings.platform_profile = platform_profiles[platform_profiles.len() / 2]
+                .to_string()
+                .into();
+        }
     }
 }
 
@@ -267,16 +270,20 @@ fn default_rapl_settings(settings: &mut IntelRaplSettings, info: &IntelRaplInfo)
             }
 
             if let Some(ref mut interface) = interface {
-                if interface.long_term_limit.is_none() && info.long_term.is_some() {
-                    interface.long_term_limit = info.long_term.as_ref().unwrap().power_limit.into();
+                if interface.long_term_limit.is_none() {
+                    if let Some(long_term) = info.long_term.as_ref() {
+                        interface.long_term_limit = long_term.power_limit.into();
+                    }
                 }
-                if interface.short_term_limit.is_none() && info.short_term.is_some() {
-                    interface.short_term_limit =
-                        info.short_term.as_ref().unwrap().power_limit.into();
+                if interface.short_term_limit.is_none() {
+                    if let Some(short_term) = info.short_term.as_ref() {
+                        interface.short_term_limit = short_term.power_limit.into();
+                    }
                 }
-                if interface.peak_power_limit.is_none() && info.peak_power.is_some() {
-                    interface.peak_power_limit =
-                        info.peak_power.as_ref().unwrap().power_limit.into();
+                if interface.peak_power_limit.is_none() {
+                    if let Some(peak_power) = info.peak_power.as_ref() {
+                        interface.peak_power_limit = peak_power.power_limit.into();
+                    }
                 }
             }
         }
