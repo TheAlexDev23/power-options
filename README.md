@@ -6,9 +6,6 @@
     <a href="https://discord.gg/KyZt97MvdU">
         <img src="https://img.shields.io/badge/Discord-%235865F2.svg?style=for-the-badge&logo=discord&logoColor=white">
     </a>
-    <a href="https://www.paypal.com/paypalme/AlexanderKarpukhin2">
-        <img src="https://img.shields.io/badge/PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white">
-    </a>
 </div>
 
 <br/>
