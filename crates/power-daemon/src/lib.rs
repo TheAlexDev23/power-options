@@ -233,7 +233,7 @@ impl Instance {
 
         fs::remove_file(
             self.profiles_path
-                .join(format!("{}.toml", &profile_to_remove_name)),
+                .join(format!("{}.toml", profile_to_remove_name)),
         )
         .expect("Could not remove profile file");
 

@@ -630,7 +630,7 @@ impl NetworkSettings {
                 if device_type.trim() == "1" {
                     run_command(&format!(
                         "ifconfig {} {}",
-                        &name_str,
+                        name_str,
                         if disable { "down" } else { "up" }
                     ));
                 }

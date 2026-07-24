@@ -15,7 +15,7 @@ pkgname={pkgname}
 pkgver={pkgver}
 pkgrel=1
 pkgdesc="A Web Renderer frontend for Power Options, a blazingly fast power management solution."
-arch=('x86_64')
+arch=('x86_64' 'aarch64')
 url={url}
 license=('MIT')
 

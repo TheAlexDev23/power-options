@@ -8,10 +8,14 @@ on:
 jobs:
   check_and_format:
     name: cargo check and clippy
-    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86_64, aarch64]
+    runs-on: ${{ matrix.arch == 'aarch64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
     steps:
       - run: sudo apt-get update
-      - run: sudo apt-get install -y pkg-config libglib2.0-dev libgtk-4-dev libwebkit2gtk-4.1-dev libjavascriptcoregtk-4.1-dev libsoup-3.0-dev libadwaita-1-dev 
+      - run: sudo apt-get install -y pkg-config libglib2.0-dev libgtk-4-dev libwebkit2gtk-4.1-dev libjavascriptcoregtk-4.1-dev libsoup-3.0-dev libadwaita-1-dev
       - uses: actions/checkout@v4
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
@@ -20,15 +24,19 @@ jobs:
       - run: cargo clippy
 
   build_and_distropack:
-    name: build release + distropack upload
-    runs-on: ubuntu-24.04
+    name: build release + distropack upload (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86_64, aarch64]
+    runs-on: ${{ matrix.arch == 'aarch64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
     needs:
       - check_and_format
     steps:
       - uses: actions/checkout@v4
 
       - run: sudo apt-get update
-      - run: sudo apt-get install -y pkg-config libglib2.0-dev libgtk-4-dev libwebkit2gtk-4.1-dev libjavascriptcoregtk-4.1-dev libsoup-3.0-dev libadwaita-1-dev 
+      - run: sudo apt-get install -y pkg-config libglib2.0-dev libgtk-4-dev libwebkit2gtk-4.1-dev libjavascriptcoregtk-4.1-dev libsoup-3.0-dev libadwaita-1-dev
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
@@ -57,7 +65,7 @@ jobs:
         uses: distropack/distropack-action@v1.0
         with:
           api-token: ${{ secrets.DISTROPACK_API_TOKEN }}
-          package-id: f6fee267-5e8e-4fe1-b4b1-f724736d598d
+          package-id: ${{ matrix.arch == 'aarch64' && secrets.DISTROPACK_DAEMON_AARCH64 || 'f6fee267-5e8e-4fe1-b4b1-f724736d598d' }}
           version: ${{ steps.version.outputs.version }}
           files: |
             {
@@ -68,7 +76,7 @@ jobs:
         uses: distropack/distropack-action@v1.0
         with:
           api-token: ${{ secrets.DISTROPACK_API_TOKEN }}
-          package-id: 9668ac33-5166-4952-a364-24d3dbc5abeb
+          package-id: ${{ matrix.arch == 'aarch64' && secrets.DISTROPACK_GTK_AARCH64 || '9668ac33-5166-4952-a364-24d3dbc5abeb' }}
           version: ${{ steps.version.outputs.version }}
           files: |
             {
@@ -79,7 +87,7 @@ jobs:
         uses: distropack/distropack-action@v1.0
         with:
           api-token: ${{ secrets.DISTROPACK_API_TOKEN }}
-          package-id: 019afefc-abbc-7ce1-8466-53d0f351c347
+          package-id: ${{ matrix.arch == 'aarch64' && secrets.DISTROPACK_TRAY_AARCH64 || '019afefc-abbc-7ce1-8466-53d0f351c347' }}
           version: ${{ steps.version.outputs.version }}
           files: |
             {
